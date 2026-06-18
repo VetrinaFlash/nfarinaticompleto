@@ -1,0 +1,3242 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>N'Farinati Modern Pizza - Menu & Delivery</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
+
+    <style>
+        :root {
+            --bg-main: #f4f6f8; 
+            --bg-card: #ffffff; 
+            --text-dark: #2a3324; 
+            --text-muted: #6b7a5d; 
+            --accent-main: #d32f2f; 
+            --border-light: #e9ecef;
+            --success: #28a745;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-main); color: var(--text-dark); padding-bottom: 120px; min-height: 100vh; position: relative;}
+        
+        /* FILIGRANA IN BACKGROUND */
+        body::after {
+            content: ''; position: fixed; inset: 0; z-index: 90; 
+            background-image: url('images/filigrana.jpeg');
+            background-repeat: repeat; background-size: 250px;
+            opacity: 0.04; pointer-events: none; 
+        }
+        body > * { position: relative; z-index: 100; }
+
+        /* BANNER SCONTO */
+        .promo-banner {
+            background-color: var(--success);
+            color: #ffffff;
+            text-align: center;
+            padding: 10px 15px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 10001;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        }
+
+        header { background: var(--bg-card); text-align: center; padding: 30px 20px 40px; border-bottom: 1px solid var(--border-light); box-shadow: 0 2px 15px rgba(0,0,0,0.03); }
+        .logo-img { width: 170px; max-width: 100%; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);}
+        header h2 { font-family: 'Montserrat', sans-serif; font-size: 1rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;}
+        
+        .restaurant-info { display: inline-block; background: var(--bg-main); border: 1px solid var(--border-light); padding: 15px 25px; border-radius: 12px; text-align: left; }
+        .info-line { font-size: 0.85rem; color: var(--text-dark); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; font-weight: 500;}
+        .info-line:last-child { margin-bottom: 0; }
+        .info-line i { color: var(--accent-main); width: 16px; text-align: center;}
+
+        /* FILTRI */
+        .filters-container { display: flex; overflow-x: auto; gap: 10px; padding: 15px 20px; position: sticky; top: 0; background: rgba(244, 246, 248, 0.98); backdrop-filter: blur(10px); z-index: 1000; border-bottom: 1px solid var(--border-light); }
+        .filters-container::-webkit-scrollbar { display: none; }
+        .filter-btn { background: var(--bg-card); color: var(--text-dark); border: 1px solid var(--border-light); padding: 10px 20px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; white-space: nowrap; cursor: pointer; transition: all 0.3s ease; font-family: 'Montserrat', sans-serif;}
+        .filter-btn.active { background: var(--accent-main); color: #ffffff; border-color: var(--accent-main); box-shadow: 0 4px 12px rgba(211, 47, 47, 0.3); }
+        
+        .menu-container { padding: 0 15px; max-width: 900px; margin: 0 auto;}
+        .category-section { animation: fadeIn 0.4s ease-in-out; display: block; }
+        .category-section.hidden { display: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .category-title { font-family: 'Montserrat', sans-serif; padding: 25px 5px 10px; font-size: 1.6rem; font-weight: 900; color: var(--text-dark); text-transform: uppercase; border-bottom: 3px solid var(--accent-main); margin-bottom: 15px; display: inline-block;}
+        
+        /* CARD PRODOTTI */
+        .menu-item { background-color: var(--bg-card); border: 1px solid var(--border-light); border-radius: 16px; padding: 18px; margin: 15px 0; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.03);}
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .item-name { font-family: 'Montserrat', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--text-dark); line-height: 1.2; padding-right: 10px;}
+        .item-price { font-family: 'Montserrat', sans-serif; font-size: 1.2rem; font-weight: 800; color: var(--accent-main); white-space: nowrap;}
+        .item-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 15px; font-weight: 500; flex-grow: 1;}
+        
+        .controls { display: flex; align-items: center; justify-content: flex-end; margin-top: auto; padding-top: 15px; border-top: 1px dashed var(--border-light); }
+        .qty-box { display: flex; align-items: center; gap: 15px; }
+        .btn-control { background: #ffffff; color: var(--accent-main); border: 2px solid var(--border-light); border-radius: 8px; width: 36px; height: 36px; font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;}
+        .btn-control:active { background: var(--accent-main); color: #ffffff; border-color: var(--accent-main);}
+        .qty { font-weight: 700; font-size: 1.2rem; min-width: 25px; text-align: center; color: var(--text-dark);}
+        
+        /* VARIANTI IN CARRELLO */
+        .variant-item { background: var(--bg-main); padding: 12px; border-radius: 8px; margin-top: 12px; border-left: 4px solid var(--accent-main); border: 1px solid var(--border-light);}
+        .variant-desc { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 5px; line-height: 1.4; font-weight: 600;}
+        .variant-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; color: var(--text-dark); font-weight: 700; margin-bottom: 5px;}
+
+        /* MODALE PERSONALIZZAZIONE */
+        .custom-section-title { font-family: 'Montserrat', sans-serif; font-weight: 800; color: var(--text-dark); margin: 25px 0 10px; font-size: 1.1rem; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--border-light); padding-bottom: 5px;}
+        .custom-section-title:first-child { margin-top: 0; }
+        .badge-req { font-size: 0.65rem; background: var(--text-dark); color: #fff; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 700;}
+        .badge-opt { font-size: 0.65rem; background: var(--success); color: #fff; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; font-weight: 700;}
+        
+        .custom-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; }
+        .custom-option-card { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; color: var(--text-dark); background: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid var(--border-light); font-weight: 500; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.02); transition: all 0.2s;}
+        .custom-option-card.selected { border-color: var(--accent-main); background: rgba(211, 47, 47, 0.03); }
+        .custom-option-card.opt-removal { border-color: var(--border-light); }
+        .custom-option-card.opt-removal.selected { border-color: #6b7a5d; background: rgba(107, 122, 93, 0.05); text-decoration: line-through; color: var(--text-muted);}
+        .custom-option-left { display: flex; align-items: center; width: 100%; cursor: pointer;}
+        .custom-option-left input { margin-right: 15px; accent-color: var(--accent-main); transform: scale(1.4); }
+        .custom-option-card.opt-removal input { accent-color: #6b7a5d; }
+        .custom-price { margin-left: auto; color: var(--accent-main); font-weight: 700; font-size: 0.95rem; }
+
+        /* CARRELLO FOOTER */
+        .cart-footer { position: fixed; bottom: 0; left: 0; width: 100%; background: #ffffff; padding: 15px 20px calc(20px + env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: center; border-top: 3px solid var(--accent-main); transform: translateY(120%); transition: transform 0.3s ease; z-index: 3000; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 25px rgba(0,0,0,0.15);}
+        .cart-footer.visible { transform: translateY(0); }
+        .cart-total { font-size: 1.4rem; font-weight: 800; color: var(--accent-main); font-family: 'Montserrat', sans-serif; display: flex; flex-direction: column;}
+        .cart-total span { font-size: 0.75rem; color: var(--text-dark); text-transform: uppercase; margin-bottom: 2px; }
+        
+        .old-price-strike { text-decoration: line-through; color: var(--text-muted); font-size: 0.95rem; font-weight: 600; margin-right: 8px;}
+        .discount-badge { background: var(--success); color: white; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; vertical-align: middle; margin-left: 5px; font-weight: 700;}
+        
+        .summary-breakdown { background: #f9f9f9; border: 1px solid var(--border-light); border-radius: 12px; padding: 15px; margin-bottom: 20px; margin-top: 15px;}
+        .summary-line { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; color: var(--text-dark); font-weight: 500;}
+        .summary-line.discount-line { color: var(--success); font-weight: 700; }
+        .summary-line.total-line { font-size: 1.25rem; font-weight: 800; color: var(--accent-main); border-top: 2px dashed var(--border-light); padding-top: 12px; margin-top: 8px; font-family: 'Montserrat', sans-serif;}
+
+        /* BOTTONI PRINCIPALI */
+        .btn-checkout { background: var(--accent-main); color: #ffffff; border: none; padding: 14px 24px; border-radius: 50px; font-weight: 700; font-size: 1rem; display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: uppercase; font-family: 'Montserrat', sans-serif; box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);}
+
+        .btn-confirm-order { width: 100%; background: var(--accent-main); color: white; border: none; padding: 18px; border-radius: 12px; font-size: 1.1rem; font-weight: 800; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; text-transform: uppercase; font-family: 'Montserrat', sans-serif; transition: opacity 0.3s, background 0.3s;}
+        .btn-confirm-order:disabled { background: #ced4da; cursor: not-allowed; color: #fff; box-shadow: none;}
+
+        /* MODALI LAYOUT */
+        .checkout-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 4000; display: none; align-items: center; justify-content: center; padding: 15px; }
+        .checkout-modal.active { display: flex; }
+        
+        .checkout-content { background: var(--bg-main); border-radius: 16px; width: 100%; max-width: 500px; max-height: 85vh; display: flex; flex-direction: column; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.3); overflow: hidden;}
+        
+        .modal-header { padding: 15px 20px; background: #ffffff; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+        .modal-header h3 { font-family: 'Montserrat', sans-serif; color: var(--text-dark); margin: 0; font-weight: 900; font-size: 1.2rem; text-transform: uppercase;}
+        .close-modal { color: var(--text-muted); font-size: 1.6rem; cursor: pointer; padding: 5px;}
+        
+        .modal-body { padding: 15px 20px; overflow-y: auto; flex-grow: 1; -webkit-overflow-scrolling: touch;}
+        
+        .modal-footer { padding: 15px 20px; background: #ffffff; border-top: 1px solid var(--border-light); flex-shrink: 0;}
+
+        .type-toggle { display: flex; gap: 10px; margin-bottom: 20px; background: #ffffff; padding: 5px; border-radius: 10px; border: 1px solid var(--border-light);}
+        .type-toggle label { flex: 1; text-align: center; padding: 12px; border-radius: 8px; cursor: pointer; color: var(--text-muted); font-weight: 600; font-size: 0.9rem; transition: 0.3s; text-transform: uppercase;}
+        .type-toggle input[type="radio"] { display: none; }
+        .type-toggle label.active { background: var(--accent-main); color: #fff; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; font-size: 0.85rem; color: var(--text-dark); margin-bottom: 5px; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 14px; border-radius: 8px; background: #ffffff; border: 1px solid var(--border-light); color: var(--text-dark); outline: none; font-size: 1rem; appearance: none; -webkit-appearance: none; font-family: 'Poppins', sans-serif; font-weight: 500;}
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent-main); box-shadow: 0 0 0 3px rgba(211, 47, 47, 0.1);}
+
+        /* CART SUMMARY IN MODAL */
+        .cart-summary-box { margin-bottom: 20px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); }
+        .cart-summary-title { font-family: 'Montserrat', sans-serif; font-size: 1.1rem; font-weight: 800; color: var(--text-dark); margin-bottom: 15px; border-bottom: 2px solid var(--border-light); padding-bottom: 8px;}
+        
+        /* UPSELL SECTION FLUIDA E ORDINATA */
+        .upsell-section { background: rgba(211, 47, 47, 0.03); border: 1px dashed var(--accent-main); border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+        .upsell-title { font-family: 'Montserrat', sans-serif; font-size: 0.95rem; font-weight: 800; color: var(--accent-main); margin-bottom: 12px; text-transform: uppercase; text-align: center; }
+        .upsell-scroller { display: flex; flex-direction: column; gap: 8px; }
+        .upsell-card { background: #fff; border: 1px solid var(--border-light); border-radius: 10px; padding: 10px 15px; text-align: left; display: flex; flex-direction: row; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.03);}
+        .upsell-card-info { flex: 1; padding-right: 10px;}
+        .upsell-name { font-size: 0.8rem; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; line-height: 1.2; }
+        .upsell-price { font-size: 0.85rem; font-weight: 800; color: var(--accent-main); }
+        .upsell-btn { white-space: nowrap; background: rgba(211, 47, 47, 0.1); color: var(--accent-main); border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; cursor: pointer; transition: 0.2s; font-family: 'Montserrat', sans-serif;}
+        .upsell-btn:active { background: var(--accent-main); color: #fff; transform: scale(0.95);}
+
+        /* WIDGET SUMUP CONTAINER */
+        #sumup-card-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); text-align: center;}
+        
+        @media (min-width: 768px) {
+            .filters-container { justify-content: center; flex-wrap: wrap; overflow-x: visible; padding: 20px; border-bottom: 1px solid var(--border-light); }
+            .filter-btn { font-size: 1rem; padding: 10px 24px; }
+            .menu-container { padding: 30px 20px; }
+            .category-section { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+            .category-title { grid-column: span 2; text-align: center; margin-top: 20px; font-size: 2rem; }
+            .menu-item { margin: 0; height: 100%; }
+            .cart-footer { justify-content: center; gap: 50px; padding: 20px 0; }
+
+            .upsell-scroller { flex-direction: row; }
+            .upsell-card { flex: 1; flex-direction: column; text-align: center; }
+            .upsell-card-info { padding-right: 0; margin-bottom: 10px;}
+            .upsell-btn { width: 100%; }
+        }
+
+        /* SKELETON LOADER */
+        .skeleton-container { padding: 15px; max-width: 900px; margin: 0 auto; }
+        .skeleton-block { background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 12px; }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .skeleton-title { height: 36px; width: 180px; margin: 25px 5px 15px; }
+        .skeleton-item { height: 130px; margin: 15px 0; }
+        .skeleton-filter { height: 40px; width: 100px; border-radius: 30px; display: inline-block; margin: 10px 5px; }
+        #skeleton-loader { display: block; }
+        #skeleton-loader.hidden { display: none; }
+
+        /* PROMO CODE */
+        .promo-code-box { background: #fff; border: 1px dashed var(--accent-main); border-radius: 10px; padding: 14px; margin-bottom: 15px; }
+        .promo-code-box label { display: block; font-size: 0.85rem; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+        .promo-code-row { display: flex; gap: 8px; }
+        .promo-code-row input { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid var(--border-light); font-size: 0.95rem; text-transform: uppercase; font-weight: 600; }
+        .promo-code-row button { background: var(--text-dark); color: #fff; border: none; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 0.85rem; cursor: pointer; white-space: nowrap; font-family: 'Montserrat', sans-serif; }
+        .promo-feedback { font-size: 0.8rem; margin-top: 6px; font-weight: 600; }
+        .promo-feedback.ok { color: var(--success); }
+        .promo-feedback.err { color: var(--accent-main); }
+        .summary-line.promo-line { color: #e91e8c; font-weight: 700; }
+
+        /* IMMAGINE PRODOTTO */
+        .item-image { width: 100%; border-radius: 10px; object-fit: cover; max-height: 160px; margin-bottom: 10px; display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="promo-banner" id="promo-banner-text">🎉 10% di Sconto su tutti gli ordini online!</div>
+
+    <header>
+        <div class="header-content">
+            <img src="images/logo.jpg" alt="N'Farinati Logo" class="logo-img">
+            <h2>MODERN PIZZA & BURGER</h2>
+            
+            <div class="restaurant-info">
+                <div class="info-line"><i class="fa-solid fa-location-dot"></i> Via P. Togliatti 8, Bagheria (PA)</div>
+                <div class="info-line"><i class="fa-solid fa-phone"></i> 091 8432674</div>
+                <div class="info-line"><i class="fa-regular fa-clock"></i> Mar-Dom 18:30 - 23:30 (Lunedì Chiusi)</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- SKELETON LOADER -->
+    <div id="skeleton-loader">
+        <div class="skeleton-container">
+            <div style="padding: 10px 20px; border-bottom: 1px solid #e9ecef;">
+                <span class="skeleton-block skeleton-filter"></span>
+                <span class="skeleton-block skeleton-filter"></span>
+                <span class="skeleton-block skeleton-filter"></span>
+                <span class="skeleton-block skeleton-filter"></span>
+            </div>
+            <div class="skeleton-block skeleton-title"></div>
+            <div class="skeleton-block skeleton-item"></div>
+            <div class="skeleton-block skeleton-item"></div>
+            <div class="skeleton-block skeleton-item"></div>
+        </div>
+    </div>
+
+    <div class="filters-container" id="filters-container"></div>
+    <div id="menu-container" class="menu-container"></div>
+
+    <div class="cart-footer" id="cart-footer">
+        <div class="cart-total">
+            <span>Totale Ordine</span>
+            <div id="total-price">0,00 €</div>
+        </div>
+        <button class="btn-checkout" onclick="openCheckout()"><i class="fa-solid fa-cart-shopping"></i> Vai alla Cassa</button>
+    </div>
+
+    <!-- MODALE CASSA (CHECKOUT) -->
+    <div class="checkout-modal" id="checkout-modal" onclick="if(event.target === this) closeCheckout()">
+        <div class="checkout-content">
+            <div class="modal-header">
+                <h3>Riepilogo Ordine</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeCheckout()"></i>
+            </div>
+            
+            <div class="modal-body">
+                
+                <div id="dati-cliente-form">
+                    <!-- LISTA VISUALE DEI PRODOTTI SCELTI (CARRELLO) -->
+                    <div id="cart-items-summary" class="cart-summary-box"></div>
+
+                    <!-- BOX UPSELLING INTELLIGENTE -->
+                    <div id="upsell-container"></div>
+
+                    <div class="type-toggle">
+                        <label id="lbl-takeaway" class="active">
+                            <input type="radio" name="order-type" value="takeaway" checked onchange="toggleOrderType()">
+                            🛍️ Asporto
+                        </label>
+                        <label id="lbl-delivery">
+                            <input type="radio" name="order-type" value="delivery" onchange="toggleOrderType()">
+                            🛵 Domicilio
+                        </label>
+                    </div>
+
+                    <div class="form-group"><label>Nome e Cognome *</label><input type="text" id="cust-name" required></div>
+                    <div class="form-group"><label>Telefono *</label><input type="tel" id="cust-phone" required></div>
+				
+                    <div class="form-group">
+                        <label id="orario-label" for="orario-consegna">Orario di Ritiro *</label>
+                        <select id="orario-consegna" name="orario" required></select>
+                    </div>
+
+                    <div id="delivery-fields" style="display: none;">
+                        <div style="display: flex; gap: 10px;">
+                            <div class="form-group" style="flex: 2;">
+                                <label>Via e Civico *</label>
+                                <input type="text" id="cust-address" placeholder="Es. Via Roma 10" autocomplete="off">
+                            </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label>Comune *</label>
+                                <select id="cust-city" style="padding: 13px;">
+                                    <option value="Bagheria">Bagheria</option>
+                                    <option value="Aspra">Aspra</option>
+                                    <option value="Santa Flavia">Santa Flavia</option>
+                                    <option value="Porticello">Porticello</option>
+                                    <option value="Sant'Elia">Sant'Elia</option>
+                                    <option value="Ficarazzi">Ficarazzi</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group"><label>Note Aggiuntive per la cucina</label><textarea id="cust-notes" rows="2" placeholder="Es. Allergie, intolleranze..."></textarea></div>
+
+                    <!-- PROMO CODE -->
+                    <div class="promo-code-box">
+                        <label><i class="fa-solid fa-tag"></i> Hai un codice sconto?</label>
+                        <div class="promo-code-row">
+                            <input type="text" id="promo-code-input" placeholder="INSERISCI CODICE" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                            <button type="button" onclick="applyPromoCode()">Applica</button>
+                        </div>
+                        <div id="promo-feedback" class="promo-feedback"></div>
+                    </div>
+
+                    <!-- RIEPILOGO PREZZI TOTALI / SCONTO -->
+                    <div id="order-summary-breakdown" class="summary-breakdown"></div>
+
+                    <div class="form-group" style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid var(--border-light); margin-bottom: 20px;">
+                        <label>Metodo di Pagamento *</label>
+                        <select id="metodo-pagamento" name="metodo-pagamento" onchange="cambiaBottonePagamento()">
+                            <option value="contanti">💵 Contanti (alla consegna/ritiro)</option>
+                            <option value="carta">💳 Carta di Credito (SumUp)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- CONTAINER WIDGET SUMUP -->
+                <div id="sumup-card-container" style="display: none;">
+                    <h4 style="margin-bottom: 15px; font-family: 'Montserrat', sans-serif; color: var(--text-dark);">Inserisci i dati della Carta</h4>
+                    <div id="sumup-card"></div>
+                </div>
+
+            </div>
+            
+            <div class="modal-footer" id="modal-footer-cassa">
+                <button class="btn-confirm-order" onclick="sendOrderWithDetails()" id="pay-btn">
+                    <i class="fa-solid fa-check-to-slot"></i> Conferma Ordine
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODALE PERSONALIZZAZIONE -->
+    <div class="checkout-modal" id="custom-modal" onclick="if(event.target === this) closeCustomModal()">
+        <div class="checkout-content">
+            <div class="modal-header">
+                <h3 id="custom-title">Personalizza</h3>
+                <i class="fa-solid fa-xmark close-modal" onclick="closeCustomModal()"></i>
+            </div>
+            
+            <div class="modal-body" id="custom-dynamic-sections"></div>
+            
+            <div class="modal-footer">
+                <button class="btn-confirm-order" onclick="addCustomItemToCart()" id="btn-add-custom" disabled>
+                    <i class="fa-solid fa-triangle-exclamation"></i> Scegli le opzioni
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Array standardizzato per tutte le opzioni Patatine in Burgers, Wraps, Piastrati
+        const patatineOptions = [
+            { "valore": "Patate dolci (sweet potato)", "supplemento": 2.0 },
+            { "valore": "Curly fries", "supplemento": 2.5 },
+            { "valore": "Patate surecrisp Fry'n Dip Con Buccia", "supplemento": 1.5 },
+            { "valore": "Patate a spicchi piccanti (spicchi spicy)", "supplemento": 2.0 },
+            { "valore": "Chips di patate fresche", "supplemento": 0.0 },
+            { "valore": "Patatine fritte surgelate", "supplemento": 1.0 }
+        ];
+
+        const rawMenuData = [
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Mega mozza-stick",
+            "ingredienti": "Stick di mozzarella panata lunghezza circa 20 cm",
+            "prezzi": [ { "prezzo": 3.00 } ],
+            "scelte_obbligatorie": {},
+            "scelte_multiple": {
+              "Salse": [
+                { "valore": "Salsa rosa", "supplemento": 0.0 },
+                { "valore": "Salsa BBQ", "supplemento": 0.0 },
+                { "valore": "Honey mustard", "supplemento": 0.0 },
+                { "valore": "Ketchup", "supplemento": 0.0 },
+                { "valore": "BBQ mayo", "supplemento": 0.0 },
+                { "valore": "Ranch dressing", "supplemento": 0.0 },
+                { "valore": "Mango habanero sauce", "supplemento": 0.0 },
+                { "valore": "Mayonese", "supplemento": 0.0 },
+                { "valore": "Senza salse", "supplemento": 0.0 }
+              ]
+            }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Nuovo smash burger",
+            "ingredienti": "Doppio smashed burger, cheddar filante, bacon croccante, salsa burger, avvolto in un potato bun originale Martins",
+            "prezzi": [ { "prezzo": 6.50 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Quad smashed burger",
+            "ingredienti": "Quadruplo smashed burger alla perfezione, quadruplo cheddar, triplo bacon, doppia salsa burger, avvolto in un potato bun originale Martins",
+            "prezzi": [ { "prezzo": 14.50 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Drive in Burger",
+            "ingredienti": "burger di vitello, cheddar, salamino piccante, bacon, lattuga, cipolla rossa, pomodoro, Peppery White BBQ",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Pistacchino Burger",
+            "ingredienti": "Hamburger di vitello, mortadella, burrata, radicchio, pesto di pistacchio, servito con patatine al pistacchio",
+            "prezzi": [ { "prezzo": 13.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Country Burger",
+            "ingredienti": "hamburger di vitello, emmental, carote, chips di zucchine, chipotle mayo, rucola",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Greta Burger",
+            "ingredienti": "hamburger di vitello, avocado, funghi, cipolle, cheddar, rucola, chipotle mayo",
+            "prezzi": [ { "prezzo": 10.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Fat Bastard Burger",
+            "ingredienti": "doppio burger, sottiletta, onion rings, bacon, cheddar, barbecue maionese, lattuga",
+            "prezzi": [ { "prezzo": 13.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "GB Style Burger",
+            "ingredienti": "Burger, emmental, salsa rosa, pomodorini, lattuga a filetti e cipolle",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "The Lo Galbo's Burger",
+            "ingredienti": "burger, cheddar, salsa rosa, lattuga a filetti e pomodoro a fette",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Jersey Boy Burger",
+            "ingredienti": "burger, peperoni, cipolla, funghi, emmental, lattuga a filetti, pomodoro",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Sinaloa Mexico Burger",
+            "ingredienti": "burger, bruschetta, salsa buffalo, salsiccia piccante, avocado, lattuga a filetti e cheddar",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "Good Fellas Burger",
+            "ingredienti": "burger, mozzarella, radicchio, spinaci, bacon, funghi, chipotle mayo",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "N'farinati Original Burger",
+            "ingredienti": "burger di vitello, salsa chipotle, avocado, bacon, funghi, onion rings, rucola, mozzarella filante",
+            "prezzi": [ { "prezzo": 10.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "American Hamburger",
+            "prodotto": "New York Times Burger",
+            "ingredienti": "burger, bacon, onion rings, salsa barbecue, sottilette, lattuga a filetti",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Caprese Agro-Sarnese",
+            "ingredienti": "pomodoro San Marzano, pecorino stagionato, origano siciliano; in uscita mozzarella di bufala D.O.P., pomodoro secco sott’olio, caviale di pesto di basilico, rucola",
+            "prezzi": [
+              { "prezzo": 12.0, "variante": "Personale" },
+              { "prezzo": 14.0, "variante": "Gluten free" },
+              { "prezzo": 14.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Marinara elegante D.O.P.",
+            "ingredienti": "pomodoro San Marzano D.O.P., origano siciliano, stracciatella di bufala D.O.P., acciughe di aspra, perlage di basilico, olio biologico locale",
+            "prezzi": [
+              { "prezzo": 11.0, "variante": "Personale" },
+              { "prezzo": 13.5, "variante": "Gluten free" },
+              { "prezzo": 13.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "La Quinta Margherita",
+            "ingredienti": "salsa di pomodoro giallo, fiordilatte, grana padana, pomodorini confit, pesto di basilico fresco",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 18.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Gluten free" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Queen Margherita D.O.P.",
+            "ingredienti": "pomodoro San Marzano D.O.P., pecorino romano stagionato, mozzarella di bufala campana D.O.P., basilico, olio biologico locale",
+            "prezzi": [
+              { "prezzo": 10.5, "variante": "Personale" },
+              { "prezzo": 21.0, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Gluten free" },
+              { "prezzo": 12.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Margherita 1983",
+            "ingredienti": "salsa di pomodoro giallo, mozzarella di bufala, pesto di pistacchio, mandorle tostate, basilico",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 19.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Gluten free" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Margherita 23",
+            "ingredienti": "pomodoro, provola di Agerola affumicata; in uscita burrata, granella e pesto di nocciole, basilico",
+            "prezzi": [
+              { "prezzo": 10.5, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Gluten free" },
+              { "prezzo": 12.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Margherita classica",
+            "ingredienti": "pomodoro e mozzarella fiordilatte",
+            "prezzi": [
+              { "prezzo": 6.0, "variante": "Personale" },
+              { "prezzo": 12.5, "variante": "Familiare" },
+              { "prezzo": 8.0, "variante": "Gluten free" },
+              { "prezzo": 8.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Naples",
+            "ingredienti": "pomodoro, mozzarella e acciughe",
+            "prezzi": [
+              { "prezzo": 6.5, "variante": "Personale" },
+              { "prezzo": 13.0, "variante": "Familiare" },
+              { "prezzo": 9.0, "variante": "Gluten free" },
+              { "prezzo": 8.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Romana",
+            "ingredienti": "pomodoro, mozzarella fiordilatte e prosciutto cotto",
+            "prezzi": [
+              { "prezzo": 7.5, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Gluten free" },
+              { "prezzo": 9.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Diavola",
+            "ingredienti": "pomodoro, mozzarella fiordilatte e salamino piccante",
+            "prezzi": [
+              { "prezzo": 7.5, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Gluten free" },
+              { "prezzo": 9.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Don Calogero",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, salamino piccante e salsiccia",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.5, "variante": "Familiare" },
+              { "prezzo": 10.0, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "4 Gusti",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto cotto, wurstel, funghi, olio extravergine d'oliva",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.0, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Capricciosa",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto cotto, wurstel, carciofi, funghi, olive, olio extravergine d'oliva",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.0, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Gluten free" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Bresa Hola Pizza",
+            "ingredienti": "mozzarella fiordilatte, bresaola punta d'anca, rucola, scaglie di grana, limone e olio extravergine d'oliva",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 20.0, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Eggplant Parmigiana",
+            "ingredienti": "pomodoro, mozzarella, melanzane fritte, pecorino romano, ricotta e basilico fresco",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Orto Bio",
+            "ingredienti": "mozzarella fiordilatte, polpa di pomodoro, zucchine, melanzane fritte, ricotta e mandorle",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 18.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "San Francesco",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto crudo di Parma, scaglie di grana, rucola e olio extravergine d'oliva",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 18.0, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Gluten free" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Parmigiana",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, melanzane fritte e grana padano",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.0, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Veggy Pizza",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, funghi, cipolle, peperoni, olive, melanzane e spinaci",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.0, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Gluten free" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Patabom",
+            "ingredienti": "pomodoro, mozzarella e patatine fritte",
+            "prezzi": [
+              { "prezzo": 7.5, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Bianca",
+            "ingredienti": "mozzarella fiordilatte",
+            "prezzi": [
+              { "prezzo": 5.5, "variante": "Personale" },
+              { "prezzo": 10.5, "variante": "Familiare" },
+              { "prezzo": 8.0, "variante": "Gluten free" },
+              { "prezzo": 7.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "4 Cheese",
+            "ingredienti": "mozzarella fiordilatte, provoletta, ricotta, pecorino e gorgonzola",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Sfincione Modern Pizza",
+            "ingredienti": "crema di cipolle caramellate, mozzarella, acciughe, ricotta, tocchetti di tuma fritta, pecorino grattugiato, origano",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 18.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze",
+            "prodotto": "Aspra Mare",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, tonno in olio d’oliva, cipolle rosse e olive verdi",
+            "prezzi": [
+              { "prezzo": 8.0, "variante": "Personale" },
+              { "prezzo": 16.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Gluten free" },
+              { "prezzo": 10.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Cuzin Tano",
+            "ingredienti": "mozzarella di bufala, alfredo sauce, salsiccia, bacon; all’uscita rucola e prosciutto crudo di Parma",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Don Francisco Taco",
+            "ingredienti": "mozzarella fiordilatte, carne taco piccante, bruschetta, lattuga, cheddar e buffalo sauce",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 11.58, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Mango Habanero Chicken Pizza",
+            "ingredienti": "mango habanero sauce, pollo fritto, bacon, cipolla rossa a cubetti, mozzarella fiordilatte; in uscita ranch dressing",
+            "prezzi": [
+              { "prezzo": 11.5, "variante": "Personale" },
+              { "prezzo": 24.5, "variante": "Familiare" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Buffalo Bill Chicken",
+            "ingredienti": "mozzarella fiordilatte, pollo piccante al buffalo sauce, cheddar e blue cheese",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Grandma NCY Pizza",
+            "ingredienti": "mozzarella fiordilatte, pomodoro polpa, basilico fresco, pecorino e olio extravergine d'oliva",
+            "prezzi": [
+              { "prezzo": 7.0, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Gluten free" },
+              { "prezzo": 9.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "BBQ Chicken",
+            "ingredienti": "mozzarella fiordilatte, pollo al barbecue e cheddar cheese",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Chicken Parm",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, pollo fritto, pecorino romano e basilico",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Sicilian in New Jersey",
+            "ingredienti": "mozzarella fiordilatte, salsiccia, spinaci, pomodorini, limone e rucola",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Gluten free" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Chicken & Pesto",
+            "ingredienti": "mozzarella fiordilatte, pollo fritto, pomodoro, bruschetta e pesto di basilico",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Only Meat Lover",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, salsiccia, prosciutto cotto DOC, salsiccia piccante, bacon e wurstel",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Chicken Rancho",
+            "ingredienti": "mozzarella fiordilatte, pollo fritto, ranch dressing, bacon e cheddar cheese",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Heart Attack",
+            "ingredienti": "mozzarella, salsa segreta al barbecue, patatine fritte, pollo fritto, anelli di cipolla, mozzarella sticks, bacon e ranch",
+            "prezzi": [
+              { "prezzo": 11.5, "variante": "Personale" },
+              { "prezzo": 23.0, "variante": "Familiare" },
+              { "prezzo": 13.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Pizza Mania Original",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, funghi, cipolle, peperoni, salsiccia, prosciutto cotto DOC e salsiccia piccante",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Potato & Onion Deluxe",
+            "ingredienti": "mozzarella, patate a spicchi fritte, cipolle, salsiccia e salsa buffalo ranch",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 18.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Greenfield",
+            "ingredienti": "misto 4 formaggi (mozzarella, provoletta, gorgonzola, pecorino), funghi, bacon; all’uscita pesto di pistacchio e granella di pistacchi",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Stuffed Meat Pizza Familiare Ripiena",
+            "ingredienti": "mozzarella fiordilatte, prosciutto cotto, salsiccia, salamino piccante, bacon (ripieno); sopra salsa di pomodoro, mozzarella, würstel",
+            "prezzi": [
+              { "prezzo": 25.0 }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Chicken Caesar Crust",
+            "ingredienti": "mozzarella fiordilatte, pollo alla griglia, lattuga romana, pecorino e caesar dressing",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Gluten free" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Tropical Hawaiian",
+            "ingredienti": "mozzarella fiordilatte, ricotta, bacon e ananas a cubetti",
+            "prezzi": [
+              { "prezzo": 7.5, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Twenty Miles",
+            "ingredienti": "mozzarella fiordilatte, alfredo sauce, pollo fritto, bacon e cheddar",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Sweet Alabama",
+            "ingredienti": "pollo fritto, bacon, mozzarella, cheddar e honey mustard dressing",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 19.0, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Las Vegas Nevada",
+            "ingredienti": "mozzarella fiordilatte, alfredo sauce, bacon, patate e cheddar",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Brooklyn Original",
+            "ingredienti": "mozzarella fiordilatte, provoletta, pomodoro, origano e pecorino",
+            "prezzi": [
+              { "prezzo": 7.0, "variante": "Personale" },
+              { "prezzo": 14.5, "variante": "Familiare" },
+              { "prezzo": 9.5, "variante": "Gluten free" },
+              { "prezzo": 9.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "French Fries Pie",
+            "ingredienti": "mozzarella fiordilatte, salsa rosa, patatine fritte, bacon e cheddar",
+            "prezzi": [
+              { "prezzo": 8.5, "variante": "Personale" },
+              { "prezzo": 17.5, "variante": "Familiare" },
+              { "prezzo": 10.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Cheese Steak and Bake",
+            "ingredienti": "mozzarella fiordilatte, bistecca sfilettata cheesesteak con cipolle, funghi, peperoni e cheddar",
+            "prezzi": [
+              { "prezzo": 11.0, "variante": "Personale" },
+              { "prezzo": 23.5, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Americane",
+            "prodotto": "Chips Pizza",
+            "ingredienti": "mozzarella fiordilatte, patatine chips classiche, salsa rosa, salsa ranch, cheddar e pollo fritto",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 18.5, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Bronx",
+            "ingredienti": "mozzarella di bufala, cipolle; all’uscita rucola, grana, prosciutto cotto all’erbette aromatiche e mandorle tostate",
+            "prezzi": [
+              { "prezzo": 10.5, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Orton Zola",
+            "ingredienti": "mozzarella fiordilatte, fonduta di gorgonzola, zucchine, melanzane, mandorle e pesto di basilico",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.0, "variante": "Familiare" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "La Maria",
+            "ingredienti": "polpa di pomodoro giallo; mix formaggi (provola, gorgonzola, fiordilatte) in uscita; pomodorini, pesto di pistacchio, grana e prosciutto crudo di Parma 18 mesi",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "October Fest Pizza",
+            "ingredienti": "crema di zucca, mozzarella di bufala, chips di zucchine, speck; burrata, rucola, mandorle tostate e crema di cipolle caramellate",
+            "prezzi": [
+              { "prezzo": 12.0, "variante": "Personale" },
+              { "prezzo": 25.5, "variante": "Familiare" },
+              { "prezzo": 14.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Atlantic City Pizza",
+            "ingredienti": "polpa di pomodoro giallo, provola di Agerola; in uscita pecorino stagionato, mandorle tostate, pomodoro secco, acciughe, ciliegino di fiordilatte, basilico, filetti di peperoncino",
+            "prezzi": [
+              { "prezzo": 12.0 }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Malcolm Ave",
+            "ingredienti": "crema di zucca, mozzarella di bufala DOP, bacon, pistacchio e basilico",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Focarcina",
+            "ingredienti": "pomodoro, mozzarella di bufala DOP, funghi porcini; all’uscita prosciutto crudo di Parma e rucola",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Raffinata",
+            "ingredienti": "mozzarella di bufala, funghi, ciliegino, rucola, prosciutto crudo, glassa balsamica, pecorino romano e olio evo",
+            "prezzi": [
+              { "prezzo": 11.0, "variante": "Personale" },
+              { "prezzo": 22.5, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Romana Luxury",
+            "ingredienti": "salsa di pomodoro giallo, provola di Agerola; in uscita prosciutto cotto aromatizzato, pesto+granella di nocciole, sesamo nero, fiocchi di pomodoro, filetti di peperoncino, burrata, basilico",
+            "prezzi": [
+              { "prezzo": 13.5, "variante": "Personale" },
+              { "prezzo": 15.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Saint Thomas",
+            "ingredienti": "mozzarella di bufala DOP, cipolle, gorgonzola; all’uscita mortadella, mandorle tostate, granella+pesto di pistacchio, miele",
+            "prezzi": [
+              { "prezzo": 11.5, "variante": "Personale" },
+              { "prezzo": 24.5, "variante": "Familiare" },
+              { "prezzo": 13.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Pumpkin Pizza",
+            "ingredienti": "crema di zucca rossa, datterino rosso, speck e rucola",
+            "prezzi": [
+              { "prezzo": 9.0, "variante": "Personale" },
+              { "prezzo": 19.5, "variante": "Familiare" },
+              { "prezzo": 11.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "N'farinati Originale",
+            "ingredienti": "mozzarella fiordilatte, salsiccia, bacon, cipolle, rucola e buffalo ranch piccante",
+            "prezzi": [
+              { "prezzo": 9.5, "variante": "Personale" },
+              { "prezzo": 20.0, "variante": "Familiare" },
+              { "prezzo": 12.0, "variante": "Gluten free" },
+              { "prezzo": 11.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Guancia-Tella",
+            "ingredienti": "Salsa di pomodoro San Marzano dell'agro Sarnese Nocerino D.O.P., provola di Agerola affumicata. In uscita: guanciale croccante, stracciatella di bufala D.O.P., perlage di basilico, grana padano",
+            "prezzi": [
+              { "prezzo": 12.5, "variante": "Personale" },
+              { "prezzo": 14.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Serenata",
+            "ingredienti": "mozzarella fiordilatte, fonduta di gorgonzola, pere, prosciutto crudo, noci, rucola e glassa balsamica",
+            "prezzi": [
+              { "prezzo": 10.5, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Gluten free" },
+              { "prezzo": 12.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "South Beach",
+            "ingredienti": "mozzarella di bufala DOP, crema di cipolle caramellate; in uscita rucola, cotto alle erbette, pomodoro secco, ciliegine di mozzarella, burrata, pesto e granella di pistacchio",
+            "prezzi": [
+              { "prezzo": 12.0, "variante": "Personale" },
+              { "prezzo": 25.5, "variante": "Familiare" },
+              { "prezzo": 14.5, "variante": "Gluten free" },
+              { "prezzo": 14.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Sole Giallo",
+            "ingredienti": "polpa di pomodoro giallo, mozzarella di bufala; all’uscita rucola e prosciutto cotto alle erbette",
+            "prezzi": [
+              { "prezzo": 10.5, "variante": "Personale" },
+              { "prezzo": 20.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Porcini Mushroom",
+            "ingredienti": "mozzarella di bufala, crema di porcini, radicchio e speck",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 21.0, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Wall Street Pizza",
+            "ingredienti": "salsa di datterino giallo; in uscita mozzarella di bufala DOP, speck, chips di zucchine croccanti, noci, miele",
+            "prezzi": [
+              { "prezzo": 11.0, "variante": "Personale" },
+              { "prezzo": 23.5, "variante": "Familiare" },
+              { "prezzo": 13.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Murtade'",
+            "ingredienti": "mozzarella di bufala, crema di ricotta e pistacchio in cottura; in uscita mortadella, granella di pistacchio, rucola, pesto di pistacchio",
+            "prezzi": [
+              { "prezzo": 10.0, "variante": "Personale" },
+              { "prezzo": 21.5, "variante": "Familiare" },
+              { "prezzo": 12.5, "variante": "Gluten free" },
+              { "prezzo": 12.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Gourmet",
+            "prodotto": "Lady Brown Pizza",
+            "ingredienti": "provola di Agerola affumicata; in uscita radicchio, mortadella, pesto+granella di nocciola, pomodoro secco in olio, ciliegino di mozzarella, basilico",
+            "prezzi": [
+              { "prezzo": 12.0, "variante": "Personale" },
+              { "prezzo": 25.5, "variante": "Familiare" },
+              { "prezzo": 14.5, "variante": "Gluten free" },
+              { "prezzo": 14.0, "variante": "Impasto integrale ai semi misti" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Naples SG",
+            "ingredienti": "pomodoro, mozzarella e acciughe",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Sicilian in New Jersey SG",
+            "ingredienti": "mozzarella fiordilatte, salsiccia, spinaci, pomodorini, limone e rucola",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Aspra Mare SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, tonno in olio d’oliva, cipolle rosse e olive verdi",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "La Maria SG",
+            "ingredienti": "polpa di pomodoro giallo; mix formaggi (provola, gorgonzola, fiordilatte) in uscita; pomodorini, pesto di pistacchio, grana e prosciutto crudo di Parma 18 mesi",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "San Francesco SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto crudo di Parma, scaglie di grana, rucola e olio extravergine d'oliva",
+            "prezzi": [ { "prezzo": 11.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Parmigiana SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, melanzane fritte e grana padano",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Brooklyn Original SG",
+            "ingredienti": "mozzarella fiordilatte, provoletta, pomodoro, origano e pecorino",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Serenata SG",
+            "ingredienti": "mozzarella fiordilatte, fonduta di gorgonzola, pere, prosciutto crudo, noci, rucola e glassa balsamica",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Veggy Pizza SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, funghi, cipolle, peperoni, olive, melanzane e spinaci",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Murtade' SG",
+            "ingredienti": "mozzarella di bufala, crema di ricotta e pistacchio in cottura; in uscita mortadella, granella di pistacchio, rucola, pesto di pistacchio",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "4 Gusti SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto cotto, wurstel, funghi, olio extravergine d'oliva",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Diavola SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte e salamino piccante",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Only Meat Lover SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, salsiccia, prosciutto cotto DOC, salsiccia piccante, bacon e wurstel",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Eggplant Parmigiana SG",
+            "ingredienti": "pomodoro, mozzarella, melanzane fritte, pecorino romano, ricotta e basilico fresco",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Romana SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte e prosciutto cotto",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Capricciosa SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, prosciutto cotto, wurstel, carciofi, funghi, olive, olio extravergine d'oliva",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Malcolm Ave SG",
+            "ingredienti": "crema di zucca, mozzarella di bufala DOP, bacon, pistacchio e basilico",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Bianca SG",
+            "ingredienti": "mozzarella fiordilatte",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Greenfield SG",
+            "ingredienti": "misto 4 formaggi (mozzarella, provoletta, gorgonzola, pecorino), funghi, bacon; all’uscita pesto di pistacchio, granella di pistacchi",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "4 Cheese SG",
+            "ingredienti": "mozzarella fiordilatte, provoletta, ricotta, pecorino e gorgonzola",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Don Calogero SG",
+            "ingredienti": "pomodoro, mozzarella fiordilatte, salamino piccante e salsiccia",
+            "prezzi": [ { "prezzo": 10.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "South Beach SG",
+            "ingredienti": "mozzarella di bufala DOP, crema di cipolle caramellate; in uscita rucola, cotto alle erbette, pomodoro secco, ciliegine di mozzarella, burrata, pesto e granella di pistacchio",
+            "prezzi": [ { "prezzo": 14.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Chicken Caesar Crust SG",
+            "ingredienti": "mozzarella fiordilatte, pollo alla griglia, lattuga romana, pecorino e caesar dressing",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Bresa Hola Pizza SG",
+            "ingredienti": "mozzarella fiordilatte, bresaola punta d'anca, rucola, scaglie di grana, limone e olio extravergine d'oliva",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Grandma NCY Pizza SG",
+            "ingredienti": "mozzarella fiordilatte, pomodoro polpa, basilico fresco, pecorino e olio extravergine d'oliva",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Senza Glutine",
+            "prodotto": "Margherita classica SG",
+            "ingredienti": "pomodoro e mozzarella fiordilatte",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Calzoni",
+            "prodotto": "Ham & Cheese Calzone",
+            "ingredienti": "mozzarella fiordilatte e prosciutto cotto DOC",
+            "prezzi": [ { "prezzo": 7.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Calzoni",
+            "prodotto": "BBQ Chicken Calzone",
+            "ingredienti": "mozzarella, pollo fritto, salsa BBQ",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Calzoni",
+            "prodotto": "Buffalo Chicken Calzone",
+            "ingredienti": "mozzarella fiordilatte e pollo fritto al buffalo piccante",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Calzoni",
+            "prodotto": "Veggie Calzone",
+            "ingredienti": "mozzarella fiordilatte, funghi, cipolle, spinaci, peperoni, olive e carciofi",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Calzoni",
+            "prodotto": "Hot Boy Calzone",
+            "ingredienti": "mozzarella fiordilatte, salsiccia piccante, peperoni, salsiccia e cipolle",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Chicken Nuggets",
+            "ingredienti": "bocconcini di pollo (8 pezzi)",
+            "prezzi": [ { "prezzo": 6.0, "variante": "8 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Jalapeños Red Hot",
+            "ingredienti": "jalapeños ripieni al formaggio, panati e fritti (6 pezzi)",
+            "prezzi": [ { "prezzo": 6.5, "variante": "6 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Pizza Fries",
+            "ingredienti": "patate curly aromatizzate alla cipolla + salsa di pomodoro, mozzarella fiordilatte, salamino piccante",
+            "prezzi": [ { "prezzo": 6.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Crazy Fries",
+            "ingredienti": "patatine fritte, wurstel fritti, bacon, salsa rosa Ranch, mozzarella, sottilette e cheddar",
+            "prezzi": [ { "prezzo": 7.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Mozzarella Sticks",
+            "ingredienti": "listelle di mozzarella home made, panate e fritte (6 pezzi)",
+            "prezzi": [ { "prezzo": 5.0, "variante": "6 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Seasoned Fries (spicchi spicy)",
+            "ingredienti": "spicchi di patate con buccia e rivestimento speziato",
+            "prezzi": [
+              { "prezzo": 3.5, "variante": "1 porzione" },
+              { "prezzo": 4.5, "variante": "2 porzioni" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Cheese Fries",
+            "ingredienti": "patatine fritte con cheddar fuso",
+            "prezzi": [ { "prezzo": 4.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "French Fries",
+            "ingredienti": "patatine fritte",
+            "prezzi": [
+              { "prezzo": 2.0, "variante": "1 porzione" },
+              { "prezzo": 3.0, "variante": "2 porzioni" }
+            ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Combo Platter",
+            "ingredienti": "chicken wings 2 pz, mozzarella sticks 2 pz, nuggets 2 pz, onion rings 2 pz e patatine fritte",
+            "prezzi": [ { "prezzo": 7.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Onion Rings",
+            "ingredienti": "anelli di cipolla fritti home made",
+            "prezzi": [ { "prezzo": 4.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Chicken Wings",
+            "ingredienti": "alette di pollo fritte (6 pezzi)",
+            "prezzi": [ { "prezzo": 6.0, "variante": "6 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Patate Surecrisp Fry'n Dip Con Buccia",
+            "ingredienti": "bastoncini di patate concavi con buccia e rivestimento croccante",
+            "prezzi": [ { "prezzo": 4.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Chicken Fingers",
+            "ingredienti": "straccetti di pollo croccanti (8 pezzi)",
+            "prezzi": [ { "prezzo": 6.5, "variante": "8 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Sweet Potato Fries",
+            "ingredienti": "patate dolci fritte con rivestimento croccante",
+            "prezzi": [ { "prezzo": 5.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Wurstel alla Griglia",
+            "ingredienti": "wurstel grigliati con olio, limone, sale, pepe e origano",
+            "prezzi": [ { "prezzo": 5.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Crostini di Tuma Fritta",
+            "ingredienti": "stick di tuma panata e fritta (6 pezzi)",
+            "prezzi": [ { "prezzo": 6.5, "variante": "6 pezzi" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Misto Caldo",
+            "ingredienti": "panelle, crocchette e patatine",
+            "prezzi": [ { "prezzo": 6.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Curly Fries",
+            "ingredienti": "patate a spirale con aromi speciali",
+            "prezzi": [ { "prezzo": 5.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Appetizers",
+            "prodotto": "Franky Fries",
+            "ingredienti": "patatine fritte, bacon, sottilette, mozzarella, ranch e cheddar",
+            "prezzi": [ { "prezzo": 6.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Burger Salad",
+            "ingredienti": "lattuga, burger di vitello, crispy bacon, funghi freschi, pomodorini, ciliegino di fiordilatte, ceasar dressing",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Cesar Palace Salad",
+            "ingredienti": "lattuga, pollo grigliato, bacon croccante, Cesar dressing, pecorino stagionato",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Los Angeles Salad",
+            "ingredienti": "lattuga, crudo di Parma, pomodorini, chips di zucchine, mozzarella di bufala, pesto+granella di pistacchio",
+            "prezzi": [ { "prezzo": 14.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Finest Salad",
+            "ingredienti": "lattuga, rucola, radicchio, scaglie di grana, bresaola punta d’anca, mandorle tostate, funghi freschi, glassa balsamica",
+            "prezzi": [ { "prezzo": 14.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Midland Salad",
+            "ingredienti": "lattuga, pollo grigliato, pomodorini, avocado, scaglie di grana, ciliegino di fiordilatte, salsa yogurt",
+            "prezzi": [ { "prezzo": 12.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Insalate",
+            "prodotto": "Crispy Salad",
+            "ingredienti": "lattuga, pollo croccante, crispy bacon, cipolla rossa cruda, avocado, ciliegino di fiordilatte, ranch dressing",
+            "prezzi": [ { "prezzo": 14.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Mini burgers",
+            "prodotto": "Mini Chicken 2",
+            "ingredienti": "mini buns + anelli di pollo, cheddar, salsa rosa, anelli di cipolla",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": { "Patatine": [ { "valore": "Patatine fritte surgelate", "supplemento": 1.0 } ] }
+          },
+          {
+            "categoria": "Mini burgers",
+            "prodotto": "Mini Burger 1",
+            "ingredienti": "Mini buns produzione nostra con mini smashed cheeseburger con cheddar e salsa rosa",
+            "prezzi": [ { "prezzo": 2.0 } ],
+            "scelte_obbligatorie": { "Patatine": [ { "valore": "Patatine fritte surgelate", "supplemento": 1.0 } ] }
+          },
+          {
+            "categoria": "Mini burgers",
+            "prodotto": "Mini Chicken 1",
+            "ingredienti": "Mini buns produzione nostra con anelli di pollo Amadori prima scelta, cheddar e salsa rosa",
+            "prezzi": [ { "prezzo": 2.0 } ],
+            "scelte_obbligatorie": { "Patatine": [ { "valore": "Patatine fritte surgelate", "supplemento": 1.0 } ] }
+          },
+          {
+            "categoria": "Mini burgers",
+            "prodotto": "Mini Burger 2",
+            "ingredienti": "mini buns + smashed cheeseburger, cheddar, bacon, salsa rosa",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": { "Patatine": [ { "valore": "Patatine fritte surgelate", "supplemento": 1.0 } ] }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Pump It Up Wrap",
+            "ingredienti": "pollo alla griglia marinato, spinaci, funghi, mozzarella, radicchio, avocado, salsa yogurt",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Burger Wrap",
+            "ingredienti": "hamburger di vitello, bacon, cheddar, cipolle, lattuga, pomodoro, salsa rosa",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "NY Giants Wrap",
+            "ingredienti": "pollo fritto, cheddar, bacon, rucola, carote a filetti, cipolle, ranch dressing",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Chicken Quesadillas Wrap",
+            "ingredienti": "pollo alla griglia, cheddar, lattuga, pomodoro",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Hip Hop Wrap",
+            "ingredienti": "pollo fritto, mozzarella sticks, onion rings, bacon, lattuga a filetti, maionese al barbecue, cheddar",
+            "prezzi": [ { "prezzo": 10.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Buffalo Style Wrap",
+            "ingredienti": "pollo fritto buffalo piccante, emmental, lattuga a filetti, pomodoro a fette, blue cheese dressing",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Chicken Chips Wrap",
+            "ingredienti": "pollo fritto croccante, chips di patate, bacon, salsa cheddar, ranch dressing, lattuga",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "West Palm Beach Wrap",
+            "ingredienti": "pollo fritto, mozzarella fiordilatte, lattuga a filetti, pomodorini, avocado e maionese",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Baby Wrap",
+            "ingredienti": "prosciutto cotto, mozzarella, patatine fritte",
+            "prezzi": [ { "prezzo": 6.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "High Class Wrap",
+            "ingredienti": "prosciutto di Parma, grana a scaglie, rucola, pomodorini, mozzarella di bufala, glassa balsamica",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Chicago Wrap",
+            "ingredienti": "pollo fritto honey mustard homemade, bacon croccante, cheddar, lattuga a filetti",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "BBQ Chicken Wrap",
+            "ingredienti": "pollo fritto al barbecue, patatine fritte, mozzarella, lattuga a filetti e cipolle",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Belmar Wrap",
+            "ingredienti": "hamburger di vitello, cheddar, bacon, onion rings, crocchè di patate, honey mustard",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Chicken Caesar Wrap",
+            "ingredienti": "pollo alla griglia marinato, lattuga, ceasar dressing, pecorino romano",
+            "prezzi": [ { "prezzo": 7.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Wrap",
+            "prodotto": "Tom's River Wraps",
+            "ingredienti": "pollo fritto croccante, chips di zucchine, chipotle mayo, avocado, lattuga, patate a spicchi aromatizzate",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino California Chicken",
+            "ingredienti": "pollo fritto, lattuga, pomodoro, cipolla rossa cruda, maionese, olio, sale e pepe",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Chicken BLT",
+            "ingredienti": "pollo fritto, bacon, lattuga, pomodoro, olio, sale e pepe",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Chicken Parm",
+            "ingredienti": "pollo fritto, salsa di pomodoro, mozzarella fiordilatte, pecorino romano, basilico",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Chicken Bacon Ranch",
+            "ingredienti": "pollo fritto, bacon croccante, salsa ranch, lattuga, pomodoro",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Fat Bastard",
+            "ingredienti": "pollo fritto, bacon croccante, salamino piccante, patatine fritte, mozzarella sticks, salsa barbecue, cheddar",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Cardiac Arrest",
+            "ingredienti": "chicken fingers, mozzarella sticks, onion rings, patatine fritte, salsa ranch, sottiletta e salsa americana piccante buffalo sauce",
+            "prezzi": [ { "prezzo": 11.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Hot Dog Maxi",
+            "ingredienti": "hot dog, mostarda e ketchup",
+            "prezzi": [ { "prezzo": 6.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Italian Hot Dog",
+            "ingredienti": "wurstel arrostiti, cipolle, peperoni, patatine fritte e cheddar",
+            "prezzi": [ { "prezzo": 7.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panino Heavy Hitter Piccante",
+            "ingredienti": "pollo fritto marinato con salsa americana piccante buffalo sauce, cipolle, funghi, emmental, salsa ranch, lattuga a filetti e pomodoro",
+            "prezzi": [ { "prezzo": 10.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Americani",
+            "prodotto": "Panini Grilled Chicken",
+            "ingredienti": "pollo grigliato con peperoni, funghi, cipolle, emmental, rucola",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Cheesesteak",
+            "ingredienti": "carne di vitello sfilacciata philly style, mozzarella fiordilatte",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Original Philly Sandwich",
+            "ingredienti": "carne di vitello sfilacciata philly style, mozzarella fiordilatte, peperoni, cipolle e funghi",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "California Style",
+            "ingredienti": "carne di vitello sfilacciata philly style, mozzarella fiordilatte, lattuga, pomodoro a fette e maionese",
+            "prezzi": [ { "prezzo": 9.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Cheesesteak on Steroids",
+            "ingredienti": "carne di vitello sfilacciata philly style, cheddar, funghi, peperoni, cipolle, patatine fritte e salsa BBQ Mayo",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Bacon Ranch",
+            "ingredienti": "carne di vitello sfilacciata philly style, cheddar, cipolla, bacon, ranch dressing, lattuga e pomodoro",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "'Nfari Steak Sandwich",
+            "ingredienti": "carne di vitello sfilacciata philly style, sottiletta, bacon, funghi, cipolle, rucola e pomodoro a fette",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Devil Melt",
+            "ingredienti": "carne di vitello sfilacciata philly style, emmental, salsa americana buffalo piccante, salamino piccante, lattuga e pomodoro",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Philly Style Cheesesteaks",
+            "prodotto": "Southern Style",
+            "ingredienti": "carne di vitello sfilacciata philly style, mozzarella fiordilatte, peperoni, funghi, cipolle fritte croccanti, salsa BBQ e lattuga",
+            "prezzi": [ { "prezzo": 9.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Cartoccio",
+            "ingredienti": "prosciutto, mozzarella e salsa a scelta",
+            "prezzi": [ { "prezzo": 5.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Topolino",
+            "ingredienti": "prosciutto, wurstel, mozzarella e salsa a scelta",
+            "prezzi": [ { "prezzo": 5.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino San Daniele",
+            "ingredienti": "prosciutto crudo di Parma, mozzarella, scaglie di grana, rucola, olio, sale e pepe",
+            "prezzi": [ { "prezzo": 8.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Piccantino",
+            "ingredienti": "salamino piccante, mozzarella, tabasco, cipolle in padella e lattuga",
+            "prezzi": [ { "prezzo": 7.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Tonno e Cipolla",
+            "ingredienti": "tonno in olio d'oliva, cipolla rossa cruda, rucola, olio, sale, pepe, leggera spremuta di limone",
+            "prezzi": [ { "prezzo": 7.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Bresa Hola",
+            "ingredienti": "bresaola punta d'anca, mozzarella di bufala, grana, rucola, limone, olio, sale e pepe",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino Alessio Player",
+            "ingredienti": "patatine fritte, cheddar",
+            "prezzi": [ { "prezzo": 5.0 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Panino 'Nfarinati Special",
+            "ingredienti": "mortadella, mozzarella di bufala, crema di cipolle caramellate, radicchio e granella di pistacchio",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Panini Piastrati",
+            "prodotto": "Sofisticato",
+            "ingredienti": "prosciutto crudo di Parma, chips di zucchine, mozzarella di bufala, rucola, pesto di pistacchio",
+            "prezzi": [ { "prezzo": 8.5 } ],
+            "scelte_obbligatorie": { "Patatine": patatineOptions }
+          },
+          {
+            "categoria": "Specialità",
+            "prodotto": "Family Style",
+            "ingredienti": "mozzarella, prosciutto cotto, funghi, salsiccia, salamino piccante, peperoni, cipolle",
+            "prezzi": [ { "prezzo": 8.0, "variante": "Per Uno" }, { "prezzo": 16.5, "variante": "Per Tre" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Specialità",
+            "prodotto": "Cool Ranch",
+            "ingredienti": "mozzarella fiordilatte, pollo fritto al ranch, bacon",
+            "prezzi": [ { "prezzo": 8.5, "variante": "Per Uno" }, { "prezzo": 17.5, "variante": "Per Tre" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Specialità",
+            "prodotto": "Mr Potato",
+            "ingredienti": "mozzarella, patatine fritte, pollo fritto, bacon, salsa barbecue",
+            "prezzi": [ { "prezzo": 8.5, "variante": "Per Uno" }, { "prezzo": 17.5, "variante": "Per Tre" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Specialità",
+            "prodotto": "American Classic",
+            "ingredienti": "mozzarella, salsiccia, salamino piccante",
+            "prezzi": [ { "prezzo": 7.5, "variante": "Per Uno" }, { "prezzo": 15.5, "variante": "Per Tre" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Dessert",
+            "prodotto": "Oreos Pizza",
+            "ingredienti": "nutella, oreo, smarties, zucchero a velo",
+            "prezzi": [ { "prezzo": 8.0, "variante": "Personale" }, { "prezzo": 16.5, "variante": "Familiare" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Dessert",
+            "prodotto": "Nutella's",
+            "ingredienti": "nutella, smarties, zucchero a velo",
+            "prezzi": [ { "prezzo": 6.5, "variante": "Personale" }, { "prezzo": 13.5, "variante": "Familiare" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Dessert",
+            "prodotto": "Green Love",
+            "ingredienti": "crema al pistacchio, mandorle, zucchero a velo",
+            "prezzi": [ { "prezzo": 8.0, "variante": "Personale" }, { "prezzo": 16.5, "variante": "Familiare" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Pizze Dessert",
+            "prodotto": "Black and White",
+            "ingredienti": "crema al cioccolato bianco, oreo frantumati, zucchero a velo, caramello",
+            "prezzi": [ { "prezzo": 8.0, "variante": "Personale" }, { "prezzo": 16.5, "variante": "Familiare" } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "COCA-COLA Original Taste PET 1,5 L",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Sprite PET 1,5 L",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Sprite Sleek Can 330 ml",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Coca-Cola Sleek 33cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Acqua Naturale 50cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 1.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Bibita in Lattina 33cl Chinotto",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Bibita in Lattina 33cl Tè al Limone",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Bibita in Lattina 33cl Tè alla Pesca",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Bevande",
+            "prodotto": "Fanta Original Sleek 33 cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 2.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Birra 33cl Heineken",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Birra 33cl Ceres",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 4.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Birra 33cl Ichnusa",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 4.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Birra 33cl Beck's 33cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.0 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Heineken 66cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.5 } ],
+            "scelte_obbligatorie": {}
+          },
+          {
+            "categoria": "Birre",
+            "prodotto": "Moretti 66cl",
+            "ingredienti": "",
+            "prezzi": [ { "prezzo": 3.5 } ],
+            "scelte_obbligatorie": {}
+          }
+        ];
+
+        let menuData = [];
+        let cart = {};
+        let itemMap = {};
+        let rawItemsList = [];
+        let currentModalState = { itemId: null, selections: {}, multi: {}, removals: {} };
+        let appliedPromoCode = null; // { valid, code, type, value, discountAmount }
+
+        function buildMenuData(sourceData) {
+            const data = (sourceData && sourceData.length > 0) ? sourceData : rawMenuData;
+            let catMap = {};
+            let currentId = 1;
+            menuData = [];
+            itemMap = {};
+            rawItemsList = [];
+
+            data.forEach(rj => {
+                if (!catMap[rj.categoria]) {
+                    catMap[rj.categoria] = {
+                        id: rj.categoria.toLowerCase().replace(/[\s\']/g, '-'),
+                        category: rj.categoria,
+                        items: []
+                    };
+                    menuData.push(catMap[rj.categoria]);
+                }
+                
+                let parsedIngredients = [];
+                // Niente rimozioni per la categoria Appetizers
+                if(rj.ingredienti && rj.categoria !== "Appetizers") {
+                    let cleaned = rj.ingredienti.replace(/in uscita[:]?/gi, '').replace(/all['’]uscita[:]?/gi, '');
+                    // Splitta l'ingrediente se c'è una virgola, un punto e virgola, o la lettera "e" isolata tra spazi
+                    parsedIngredients = cleaned.split(/[,;]|\s+e\s+/gi).map(s => {
+                        let trimS = s.trim();
+                        // Nascondi il pane dalle opzioni di rimozione
+                        if (trimS.toLowerCase().includes('bun')) return null;
+                        
+                        // INTELLIGENZA PER IL DOPPIO BURGER
+                        if (trimS.toLowerCase() === 'doppio smashed burger') return '1 smashed burger';
+                        if (trimS.toLowerCase() === 'doppio burger') return '1 burger';
+                        if (trimS.toLowerCase() === 'doppio hamburger') return '1 hamburger';
+                        
+                        return trimS;
+                    }).filter(s => s && s.length > 2);
+                }
+
+                let itm = {
+                    id: currentId++,
+                    db_id: rj.db_id || null,
+                    categoryName: rj.categoria,
+                    name: rj.prodotto,
+                    desc: rj.ingredienti,
+                    image_url: rj.image_url || '',
+                    ingredientsList: parsedIngredients,
+                    prezzi: rj.prezzi,
+                    price: rj.prezzi[0].prezzo,
+                    scelte_obbligatorie: rj.scelte_obbligatorie || {},
+                    scelte_multiple: rj.scelte_multiple || {}
+                };
+
+                catMap[rj.categoria].items.push(itm);
+                itemMap[itm.id] = itm;
+                rawItemsList.push(itm);
+            });
+        }
+
+        async function loadMenuFromAPI() {
+            try {
+                const resp = await fetch('/api/menu');
+                if (!resp.ok) throw new Error('API non disponibile');
+                const data = await resp.json();
+                return (Array.isArray(data) && data.length > 0) ? data : null;
+            } catch {
+                return null;
+            }
+        }
+
+        async function loadPublicSettings() {
+            try {
+                const resp = await fetch('/api/settings');
+                if (!resp.ok) return;
+                const s = await resp.json();
+                if (s.promo_bar_text) {
+                    const banner = document.getElementById('promo-banner-text');
+                    if (banner) banner.textContent = s.promo_bar_text;
+                }
+            } catch {}
+        }
+
+        async function initApp() {
+            // Carica impostazioni pubbliche (promo bar, ecc.)
+            loadPublicSettings();
+
+            // Mostra skeleton, nascondi menu
+            const skeleton = document.getElementById('skeleton-loader');
+            const filtersEl = document.getElementById('filters-container');
+            const menuEl = document.getElementById('menu-container');
+            if (skeleton) skeleton.classList.remove('hidden');
+            if (filtersEl) filtersEl.style.display = 'none';
+            if (menuEl) menuEl.style.display = 'none';
+
+            // Prova a caricare da API, fallback su rawMenuData
+            const apiData = await loadMenuFromAPI();
+            buildMenuData(apiData);
+
+            // Mostra menu, nascondi skeleton
+            if (skeleton) skeleton.classList.add('hidden');
+            if (filtersEl) filtersEl.style.display = '';
+            if (menuEl) menuEl.style.display = '';
+
+            renderFilters();
+            renderMenu();
+
+            document.addEventListener('click', function(e) {
+                if(e.target.id !== 'cust-address') {
+                    let container = document.getElementById('address-suggestions');
+                    if(container) container.innerHTML = '';
+                }
+            });
+        }
+
+        function renderFilters() {
+            const filterContainer = document.getElementById('filters-container');
+            const btnAll = document.createElement('button'); btnAll.className = 'filter-btn active'; btnAll.innerText = 'Tutti';
+            btnAll.onclick = () => filterMenu('all', btnAll); filterContainer.appendChild(btnAll);
+            menuData.forEach(cat => {
+                const btn = document.createElement('button'); btn.className = 'filter-btn'; btn.innerText = cat.category;
+                btn.onclick = () => filterMenu(cat.id, btn); filterContainer.appendChild(btn);
+            });
+        }
+
+        function filterMenu(categoryId, btnElement) {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active')); btnElement.classList.add('active');
+            document.querySelectorAll('.category-section').forEach(section => {
+                if (categoryId === 'all' || section.id === `cat-${categoryId}`) section.classList.remove('hidden'); else section.classList.add('hidden');
+            });
+            window.scrollTo({ top: document.getElementById('filters-container').offsetTop - 20, behavior: 'smooth' });
+        }
+
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            menuData.forEach(category => {
+                const sectionDiv = document.createElement('div'); sectionDiv.className = 'category-section'; sectionDiv.id = `cat-${category.id}`;
+                sectionDiv.innerHTML = `<h2 class="category-title">${category.category}</h2>`;
+                category.items.forEach(item => {
+                    
+                    let hasVariants = item.prezzi.length > 1;
+                    let hasMandatory = Object.keys(item.scelte_obbligatorie).length > 0;
+                    let hasMulti = item.scelte_multiple && Object.keys(item.scelte_multiple).length > 0;
+                    
+                    let displayPrice = (hasVariants || hasMandatory || hasMulti) ? `da ${item.price.toFixed(2).replace('.',',')}€` : `${item.price.toFixed(2).replace('.',',')}€`;
+
+                    const imgHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.name}" class="item-image" loading="lazy" onerror="this.style.display='none'">` : '';
+                    sectionDiv.innerHTML += `
+                        <div class="menu-item">
+                            ${imgHtml}
+                            <div class="item-header"><div class="item-name">${item.name}</div><div class="item-price">${displayPrice}</div></div>
+                            <p class="item-desc">${item.desc || ''}</p>
+                            <div class="controls">
+                                <div style="flex-grow: 1;"></div>
+                                <div class="qty-box">
+                                    <button class="btn-control" onclick="handleRemoveClick(${item.id})"><i class="fa-solid fa-minus"></i></button>
+                                    <span class="qty" id="qty-${item.id}">0</span>
+                                    <button class="btn-control" onclick="handleAddClick(${item.id})"><i class="fa-solid fa-plus"></i></button>
+                                </div>
+                            </div>
+                            <div id="variants-${item.id}"></div>
+                        </div>`;
+                });
+                container.appendChild(sectionDiv);
+            });
+        }
+
+        function handleAddClick(id) {
+            const item = itemMap[id];
+            let hasVariants = item.prezzi.length > 1;
+            let hasMandatory = Object.keys(item.scelte_obbligatorie).length > 0;
+            let hasMulti = item.scelte_multiple && Object.keys(item.scelte_multiple).length > 0;
+            let hasRemovals = item.ingredientsList.length > 0;
+            
+            if (hasVariants || hasMandatory || hasMulti || hasRemovals) {
+                openCustomModal(id);
+            } else {
+                updateQty(id, 1);
+            }
+        }
+        
+        function handleUpsellClick(id) {
+            const item = itemMap[id];
+            let hasVariants = item.prezzi.length > 1;
+            let hasMandatory = Object.keys(item.scelte_obbligatorie).length > 0;
+            let hasMulti = item.scelte_multiple && Object.keys(item.scelte_multiple).length > 0;
+            let hasRemovals = item.ingredientsList.length > 0;
+            
+            if (hasVariants || hasMandatory || hasMulti || hasRemovals) {
+                openCustomModal(id);
+            } else {
+                updateQty(id, 1); 
+                renderUpsell();   
+            }
+        }
+
+        function handleRemoveClick(id) {
+            let baseCount = cart[id] || 0;
+            let variantsInCart = Object.keys(cart).filter(k => k.startsWith('c_' + id + '_') && cart[k] > 0);
+            
+            if (variantsInCart.length === 1 && baseCount === 0) {
+                updateQty(variantsInCart[0], -1);
+            } else if (variantsInCart.length > 0) {
+                alert("Hai diverse personalizzazioni nel carrello. Usa i tasti '-' delle singole varianti qui sotto per rimuoverle.");
+            } else if (baseCount > 0) {
+                updateQty(id, -1);
+            }
+        }
+
+        function openCustomModal(id) {
+            const item = itemMap[id];
+            document.getElementById('custom-title').innerText = item.name;
+            
+            currentModalState = {
+                itemId: id,
+                selections: {},
+                multi: {},
+                removals: {}
+            };
+
+            renderModalContent();
+            document.getElementById('custom-modal').classList.add('active');
+        }
+
+        function renderModalContent() {
+            const item = itemMap[currentModalState.itemId];
+            const container = document.getElementById('custom-dynamic-sections');
+            const modalBody = document.querySelector('#custom-modal .modal-body');
+            
+            let scrollPos = modalBody ? modalBody.scrollTop : 0;
+            let html = '';
+
+            if (item.prezzi.length > 1) {
+                html += `<div class="custom-section-title">Formato / Impasto <span class="badge-req">Obbligatorio</span></div><div class="custom-group">`;
+                item.prezzi.forEach(opt => {
+                    const isChecked = currentModalState.selections['variante'] === opt.variante ? 'checked' : '';
+                    let safeVariante = opt.variante.replace(/"/g, '&quot;');
+                    html += `
+                        <label class="custom-option-card ${isChecked ? 'selected' : ''}">
+                            <div class="custom-option-left">
+                                <input type="radio" name="variante" value="${safeVariante}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${opt.variante}
+                            </div>
+                            <span class="custom-price">${opt.prezzo.toFixed(2).replace('.',',')}€</span>
+                        </label>`;
+                });
+                html += `</div>`;
+            }
+
+            if (Object.keys(item.scelte_obbligatorie).length > 0) {
+                for (let gruppo in item.scelte_obbligatorie) {
+                    let safeGruppo = gruppo.replace(/"/g, '&quot;');
+                    html += `<div class="custom-section-title">${gruppo} <span class="badge-req">Obbligatorio</span></div><div class="custom-group">`;
+                    item.scelte_obbligatorie[gruppo].forEach(opt => {
+                        const isChecked = currentModalState.selections[gruppo] === opt.valore ? 'checked' : '';
+                        let pText = opt.supplemento > 0 ? `+${opt.supplemento.toFixed(2)}€` : '';
+                        let safeValore = opt.valore.replace(/"/g, '&quot;');
+                        
+                        html += `
+                            <label class="custom-option-card ${isChecked ? 'selected' : ''}">
+                                <div class="custom-option-left">
+                                    <input type="radio" name="${safeGruppo}" value="${safeValore}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${opt.valore}
+                                </div>
+                                <span class="custom-price">${pText}</span>
+                            </label>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+
+            if (item.scelte_multiple && Object.keys(item.scelte_multiple).length > 0) {
+                for (let gruppo in item.scelte_multiple) {
+                    let safeGruppo = gruppo.replace(/"/g, '&quot;');
+                    
+                    // --- INIZIO MODIFICA TESTO ---
+                    let badgeText = (gruppo === 'Salse') ? 'Obbligatorio (Max 2)' : 'Obbligatorio (1 o più)';
+                    html += `<div class="custom-section-title">${gruppo} <span class="badge-req">${badgeText}</span></div><div class="custom-group">`;
+                    // --- FINE MODIFICA TESTO ---
+
+                    item.scelte_multiple[gruppo].forEach(opt => {
+                        let isChecked = false;
+                        if (currentModalState.multi && currentModalState.multi[gruppo] && currentModalState.multi[gruppo].includes(opt.valore)) {
+                            isChecked = true;
+                        }
+                        let pText = opt.supplemento > 0 ? `+${opt.supplemento.toFixed(2)}€` : '';
+                        let safeValore = opt.valore.replace(/"/g, '&quot;');
+                        
+                        html += `
+                            <label class="custom-option-card ${isChecked ? 'selected' : ''}">
+                                <div class="custom-option-left">
+                                    <input type="checkbox" name="${safeGruppo}" value="${safeValore}" ${isChecked ? 'checked' : ''} onchange="updateMultiState('${safeGruppo}', '${safeValore}')"> ${opt.valore}
+                                </div>
+                                <span class="custom-price">${pText}</span>
+                            </label>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+
+            if (item.ingredientsList.length > 0) {
+                html += `<div class="custom-section-title">Rimuovi Ingredienti <span class="badge-opt">Gratis</span></div><div class="custom-group">`;
+                item.ingredientsList.forEach(ingr => {
+                    const isChecked = currentModalState.removals[ingr] ? 'checked' : '';
+                    let safeIngr = ingr.replace(/"/g, '&quot;');
+                    html += `
+                        <label class="custom-option-card opt-removal ${isChecked ? 'selected' : ''}">
+                            <div class="custom-option-left">
+                                <input type="checkbox" value="${safeIngr}" ${isChecked} onchange="toggleRemoval(this.value)"> Senza: ${ingr}
+                            </div>
+                        </label>`;
+                });
+                html += `</div>`;
+            }
+
+            container.innerHTML = html;
+            validateAndCalculatePrice();
+
+            if (modalBody) {
+                modalBody.scrollTop = scrollPos;
+            }
+        }
+
+        function updateModalState(groupName, value) {
+            currentModalState.selections[groupName] = value;
+            renderModalContent(); 
+        }
+
+        function updateMultiState(gruppo, valore) {
+            if (!currentModalState.multi) currentModalState.multi = {};
+            if (!currentModalState.multi[gruppo]) currentModalState.multi[gruppo] = [];
+            
+            if (valore === 'Senza salse') {
+                if (currentModalState.multi[gruppo].includes('Senza salse')) {
+                    currentModalState.multi[gruppo] = [];
+                } else {
+                    currentModalState.multi[gruppo] = ['Senza salse'];
+                }
+            } else {
+                if (currentModalState.multi[gruppo].includes(valore)) {
+                    currentModalState.multi[gruppo] = currentModalState.multi[gruppo].filter(v => v !== valore);
+                } else {
+                    currentModalState.multi[gruppo] = currentModalState.multi[gruppo].filter(v => v !== 'Senza salse');
+                    currentModalState.multi[gruppo].push(valore);
+                }
+            }
+            renderModalContent();
+        }
+
+        function toggleRemoval(ingr) {
+            if (currentModalState.removals[ingr]) {
+                delete currentModalState.removals[ingr];
+            } else {
+                currentModalState.removals[ingr] = true;
+            }
+            renderModalContent();
+        }
+
+        function validateAndCalculatePrice() {
+            const item = itemMap[currentModalState.itemId];
+            let basePrice = item.price;
+            let extraPrice = 0;
+            let isValid = true;
+
+            if (item.prezzi.length > 1) {
+                if (!currentModalState.selections['variante']) {
+                    isValid = false;
+                } else {
+                    let sc = item.prezzi.find(p => p.variante === currentModalState.selections['variante']);
+                    if(sc) basePrice = sc.prezzo;
+                }
+            }
+
+            for (let gruppo in item.scelte_obbligatorie) {
+                if (!currentModalState.selections[gruppo]) {
+                    isValid = false;
+                } else {
+                    let sc = item.scelte_obbligatorie[gruppo].find(o => o.valore === currentModalState.selections[gruppo]);
+                    if(sc) extraPrice += sc.supplemento;
+                }
+            }
+
+            if (item.scelte_multiple) {
+                for (let gruppo in item.scelte_multiple) {
+                    if (!currentModalState.multi || !currentModalState.multi[gruppo] || currentModalState.multi[gruppo].length === 0) {
+                        isValid = false;
+                    } else {
+                        currentModalState.multi[gruppo].forEach(val => {
+                            let sc = item.scelte_multiple[gruppo].find(o => o.valore === val);
+                            if(sc) extraPrice += sc.supplemento;
+                        });
+                    }
+                }
+            }
+
+            let newPrice = basePrice + extraPrice;
+            const btn = document.getElementById('btn-add-custom');
+            
+            if (!isValid) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Scegli le opzioni obbligatorie';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-plus"></i> Aggiungi a ' + newPrice.toFixed(2).replace('.',',') + '€';
+            }
+        }
+
+        function closeCustomModal() {
+            document.getElementById('custom-modal').classList.remove('active');
+            currentModalState = { itemId: null, selections: {}, multi: {}, removals: {} };
+        }
+
+        function addCustomItemToCart() {
+            const item = itemMap[currentModalState.itemId];
+            let basePrice = item.price;
+            let extraPrice = 0;
+            let customParts = [];
+            
+            if (item.prezzi.length > 1) {
+                let sc = item.prezzi.find(p => p.variante === currentModalState.selections['variante']);
+                if(sc) { basePrice = sc.prezzo; customParts.push(sc.variante); }
+            }
+
+            for (let gruppo in item.scelte_obbligatorie) {
+                let sel = currentModalState.selections[gruppo];
+                let sc = item.scelte_obbligatorie[gruppo].find(o => o.valore === sel);
+                if(sc) { 
+                    extraPrice += sc.supplemento; 
+                    customParts.push(`${gruppo}: ${sel}`); 
+                }
+            }
+
+            if (item.scelte_multiple && currentModalState.multi) {
+                for (let gruppo in item.scelte_multiple) {
+                    if (currentModalState.multi[gruppo] && currentModalState.multi[gruppo].length > 0) {
+                        currentModalState.multi[gruppo].forEach(val => {
+                            let sc = item.scelte_multiple[gruppo].find(o => o.valore === val);
+                            if(sc) { 
+                                extraPrice += sc.supplemento; 
+                                customParts.push(`${gruppo}: ${val}`); 
+                            }
+                        });
+                    }
+                }
+            }
+
+            let removedArr = [];
+            for (let ingr in currentModalState.removals) {
+                if (currentModalState.removals[ingr]) {
+                    customParts.push(`SENZA: ${ingr}`);
+                    removedArr.push(ingr);
+                }
+            }
+
+            if (customParts.length === 0) {
+                updateQty(currentModalState.itemId, 1);
+                closeCustomModal();
+                return;
+            }
+
+            let newPrice = basePrice + extraPrice;
+            let signature = `${item.id}|${customParts.sort().join('|')}`;
+            
+            let hash = 0; 
+            for (let i = 0; i < signature.length; i++) hash = Math.imul(31, hash) + signature.charCodeAt(i) | 0;
+            let customId = "c_" + item.id + "_" + Math.abs(hash);
+
+            if (!itemMap[customId]) {
+                itemMap[customId] = { 
+                    id: customId, baseId: item.id, name: item.name, price: newPrice, isCustom: true, 
+                    customParts: customParts, removed: removedArr, categoryName: item.categoryName 
+                };
+                
+                let variantHtml = `
+                    <div class="variant-item" id="variant-${customId}">
+                        <div class="variant-header">
+                            <span>Variante (${newPrice.toFixed(2).replace('.',',')}€)</span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <button class="btn-control" style="width:26px;height:26px; border-color:var(--accent-main); color:var(--accent-main);" onclick="updateQty('${customId}', -1)"><i class="fa-solid fa-minus" style="font-size:0.8rem;"></i></button>
+                                <span class="qty" style="font-size:1rem; min-width:20px; color:var(--text-dark);" id="qty-${customId}">0</span>
+                                <button class="btn-control" style="width:26px;height:26px; border-color:var(--accent-main); color:var(--accent-main);" onclick="updateQty('${customId}', 1)"><i class="fa-solid fa-plus" style="font-size:0.8rem;"></i></button>
+                            </div>
+                        </div>
+                        <div class="variant-desc">
+                            ${customParts.join(' | ')}
+                        </div>
+                    </div>
+                `;
+                document.getElementById(`variants-${item.id}`).insertAdjacentHTML('beforeend', variantHtml);
+            }
+
+            updateQty(customId, 1);
+            closeCustomModal();
+            if(document.getElementById('checkout-modal').classList.contains('active')) {
+                renderUpsell();
+            }
+        }
+
+        function updateQty(itemId, change) {
+            if (!cart[itemId]) cart[itemId] = 0; 
+            cart[itemId] += change; 
+            if (cart[itemId] < 0) cart[itemId] = 0;
+            
+            if (itemMap[itemId] && itemMap[itemId].isCustom) {
+                if (cart[itemId] <= 0) {
+                    let variantEl = document.getElementById(`variant-${itemId}`);
+                    if(variantEl) variantEl.style.display = 'none';
+                } else {
+                    let variantEl = document.getElementById(`variant-${itemId}`);
+                    if(variantEl) variantEl.style.display = 'block';
+                }
+                let qtySpan = document.getElementById(`qty-${itemId}`);
+                if(qtySpan) qtySpan.innerText = cart[itemId];
+                updateBaseItemQty(itemMap[itemId].baseId);
+            } else {
+                let qtySpan = document.getElementById(`qty-${itemId}`);
+                if(qtySpan) qtySpan.innerText = cart[itemId];
+                updateBaseItemQty(itemId);
+            }
+            
+            updateCartUI();
+        }
+
+        function updateBaseItemQty(baseId) {
+            let total = cart[baseId] || 0;
+            for(let id in cart) {
+                if(cart[id] > 0 && itemMap[id] && itemMap[id].isCustom && itemMap[id].baseId == baseId) {
+                    total += cart[id];
+                }
+            }
+            let baseQtySpan = document.getElementById(`qty-${baseId}`);
+            if(baseQtySpan) baseQtySpan.innerText = total;
+        }
+
+        function updateCartUI() {
+            let total = 0, totalItems = 0;
+            for(let id in cart) {
+                if (cart[id] > 0 && itemMap[id]) {
+                    total += itemMap[id].price * cart[id];
+                    totalItems += cart[id];
+                }
+            }
+
+            let sconto = total * 0.10;
+
+            // Sconto promo code (aggiuntivo)
+            let promoDiscountAmt = 0;
+            if (appliedPromoCode && appliedPromoCode.valid) {
+                if (appliedPromoCode.type === 'percentage') {
+                    promoDiscountAmt = Math.round(total * (appliedPromoCode.value / 100) * 100) / 100;
+                } else {
+                    promoDiscountAmt = Math.min(appliedPromoCode.value, total - sconto);
+                }
+                promoDiscountAmt = Math.round(promoDiscountAmt * 100) / 100;
+            }
+
+            let deliveryFee = 0;
+            const orderTypeInput = document.querySelector('input[name="order-type"]:checked');
+            if(orderTypeInput && orderTypeInput.value === 'delivery') {
+                deliveryFee = 2.50;
+            }
+
+            let finalTotal = Math.max(0, total - sconto - promoDiscountAmt + deliveryFee);
+            finalTotal = Math.round(finalTotal * 100) / 100;
+
+            let priceHtml = "0,00 €";
+            if (total > 0) {
+                let badge = '-10%';
+                if (promoDiscountAmt > 0) badge = '-10% + promo';
+                priceHtml = `
+                    <span class="old-price-strike">${total.toFixed(2).replace('.',',')} €</span>
+                    <span>${finalTotal.toFixed(2).replace('.',',')} € <span class="discount-badge">${badge}</span></span>
+                `;
+            }
+            document.getElementById('total-price').innerHTML = priceHtml;
+
+            const footer = document.getElementById('cart-footer');
+            if (totalItems > 0) footer.classList.add('visible'); else footer.classList.remove('visible');
+
+            if(totalItems === 0 && document.getElementById('checkout-modal').classList.contains('active')) {
+                closeCheckout();
+            }
+
+            updateCheckoutSummary(total, sconto, promoDiscountAmt, deliveryFee, finalTotal);
+            renderCartSummary();
+        }
+
+        function updateCheckoutSummary(subtotale, sconto, promoDiscountAmt, deliveryFee, totaleFinale) {
+            const summaryContainer = document.getElementById('order-summary-breakdown');
+            if(summaryContainer) {
+                if(subtotale > 0) {
+                    summaryContainer.style.display = 'block';
+                    let html = `
+                        <div class="summary-line"><span>Subtotale:</span> <span>${subtotale.toFixed(2).replace('.',',')} €</span></div>
+                        <div class="summary-line discount-line"><span>Sconto Speciale (10%):</span> <span>- ${sconto.toFixed(2).replace('.',',')} €</span></div>
+                    `;
+                    if (promoDiscountAmt > 0 && appliedPromoCode) {
+                        const label = appliedPromoCode.type === 'percentage'
+                            ? `Promo "${appliedPromoCode.code}" (-${appliedPromoCode.value}%):`
+                            : `Promo "${appliedPromoCode.code}":`;
+                        html += `<div class="summary-line promo-line"><span>${label}</span> <span>- ${promoDiscountAmt.toFixed(2).replace('.',',')} €</span></div>`;
+                    }
+                    if (deliveryFee > 0) {
+                        html += `<div class="summary-line"><span>Costo Consegna:</span> <span>${deliveryFee.toFixed(2).replace('.',',')} €</span></div>`;
+                    }
+                    html += `<div class="summary-line total-line"><span>Totale da Pagare:</span> <span>${totaleFinale.toFixed(2).replace('.',',')} €</span></div>`;
+
+                    summaryContainer.innerHTML = html;
+                } else {
+                    summaryContainer.style.display = 'none';
+                }
+            }
+        }
+
+        async function applyPromoCode() {
+            const codeInput = document.getElementById('promo-code-input');
+            const feedback = document.getElementById('promo-feedback');
+            const code = (codeInput.value || '').trim().toUpperCase();
+
+            if (!code) {
+                feedback.className = 'promo-feedback err';
+                feedback.textContent = 'Inserisci un codice';
+                return;
+            }
+
+            // Calcola subtotale attuale
+            let subtotal = 0;
+            for(let id in cart) {
+                if (cart[id] > 0 && itemMap[id]) subtotal += itemMap[id].price * cart[id];
+            }
+            subtotal = Math.round(subtotal * 0.90 * 100) / 100; // dopo il 10% già applicato
+
+            feedback.className = 'promo-feedback';
+            feedback.textContent = '⏳ Verifica...';
+
+            try {
+                const resp = await fetch('/api/validate-promo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code, subtotal })
+                });
+                const data = await resp.json();
+
+                if (data.valid) {
+                    appliedPromoCode = data;
+                    const descr = data.type === 'percentage'
+                        ? `${data.value}% di sconto`
+                        : `${data.value.toFixed(2)}€ di sconto`;
+                    feedback.className = 'promo-feedback ok';
+                    feedback.textContent = `✅ Codice applicato: -${descr} (risparmio ${data.discountAmount.toFixed(2).replace('.',',')}€)`;
+                    updateCartUI();
+                } else {
+                    appliedPromoCode = null;
+                    feedback.className = 'promo-feedback err';
+                    feedback.textContent = `❌ ${data.error || 'Codice non valido'}`;
+                    updateCartUI();
+                }
+            } catch {
+                feedback.className = 'promo-feedback err';
+                feedback.textContent = '❌ Errore di rete. Riprova.';
+            }
+        }
+
+        function renderCartSummary() {
+            const container = document.getElementById('cart-items-summary');
+            if(!container) return;
+            
+            let html = '<h4 class="cart-summary-title">Cosa stai ordinando:</h4>';
+            let hasItems = false;
+            
+            for(let id in cart) {
+                if (cart[id] > 0 && itemMap[id]) {
+                    hasItems = true;
+                    let item = itemMap[id];
+                    let lineTotal = item.price * cart[id];
+                    let customTesto = "";
+                    if(item.isCustom && item.customParts && item.customParts.length > 0) {
+                        customTesto = `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.3;">↳ ${item.customParts.join('<br>↳ ')}</div>`;
+                    }
+                    
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; font-size:0.95rem; font-weight:600; color:var(--text-dark); border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">
+                            <div style="flex:1; padding-right:10px;">
+                                <span><strong style="color:var(--accent-main); font-size:1.05rem;">${cart[id]}x</strong> ${item.name}</span>
+                                ${customTesto}
+                            </div>
+                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                                <div style="font-weight:800; color:var(--text-dark);">${lineTotal.toFixed(2).replace('.',',')} €</div>
+                                <button type="button" onclick="updateQty('${id}', -${cart[id]})" style="background:none; border:none; color:var(--accent-main); cursor:pointer; font-size:0.8rem; font-weight:700;"><i class="fa-solid fa-trash-can"></i> Rimuovi</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            if(!hasItems) {
+                html += '<p style="font-size:0.85rem; color:var(--text-muted);">Il carrello è vuoto.</p>';
+            }
+            container.innerHTML = html;
+        }
+
+        function renderUpsell() {
+            const upsellContainer = document.getElementById('upsell-container');
+            const cartItemsIds = [];
+            let hasDrinks = false;
+            let hasAppetizers = false;
+            let hasDessert = false;
+
+            for(let id in cart) {
+                if(cart[id] > 0 && itemMap[id]) {
+                    let baseId = itemMap[id].baseId || itemMap[id].id;
+                    cartItemsIds.push(baseId);
+                    
+                    let cat = (itemMap[baseId].categoryName || "").toLowerCase();
+                    if(cat.includes('bevande') || cat.includes('birre')) hasDrinks = true;
+                    if(cat.includes('appetizer') || cat.includes('specialit')) hasAppetizers = true;
+                    if(cat.includes('dessert')) hasDessert = true;
+                }
+            }
+
+            let candidates = [];
+            
+            rawItemsList.forEach(item => {
+                if(cartItemsIds.includes(item.id)) return;
+                let c = item.categoryName.toLowerCase();
+                
+                if(!hasDrinks && (c.includes('bevande') || c.includes('birre'))) {
+                    candidates.push(item);
+                } 
+                else if(hasDrinks && !hasAppetizers && (c.includes('appetizer') || c.includes('specialit'))) {
+                    candidates.push(item);
+                }
+                else if(hasDrinks && hasAppetizers && !hasDessert && c.includes('dessert')) {
+                    candidates.push(item);
+                }
+            });
+
+            if (candidates.length < 3) {
+                rawItemsList.forEach(item => {
+                    if(cartItemsIds.includes(item.id) || candidates.includes(item)) return;
+                    let c = item.categoryName.toLowerCase();
+                    if(c.includes('bevande') || c.includes('dessert') || c.includes('appetizer') || c.includes('birre')) {
+                        candidates.push(item);
+                    }
+                });
+            }
+
+            candidates = candidates.sort(() => 0.5 - Math.random()).slice(0, 3);
+
+            if(candidates.length === 0) {
+                upsellContainer.innerHTML = '';
+                return;
+            }
+
+            let titleText = !hasDrinks ? "Hai dimenticato da bere?" : "Completa il tuo ordine al volo!";
+            
+            let html = `
+                <div class="upsell-section">
+                    <div class="upsell-title"><i class="fa-solid fa-bolt"></i> ${titleText}</div>
+                    <div class="upsell-scroller">
+            `;
+
+            candidates.forEach(c => {
+                html += `
+                    <div class="upsell-card">
+                        <div class="upsell-card-info">
+                            <div class="upsell-name">${c.name}</div>
+                            <div class="upsell-price">+${c.price.toFixed(2).replace('.',',')} €</div>
+                        </div>
+                        <button class="upsell-btn" type="button" onclick="handleUpsellClick(${c.id});">AGGIUNGI</button>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            upsellContainer.innerHTML = html;
+        }
+
+        function handleAddressInput(inputElem) {
+            let val = inputElem.value;
+            let container = document.getElementById('address-suggestions');
+            container.innerHTML = '';
+            
+            if (!val) return;
+            
+            let escapedVal = val.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+            let matches = databaseVie.filter(s => s.toLowerCase().includes(val.toLowerCase()));
+            
+            matches.slice(0, 8).forEach(match => {
+                let div = document.createElement('div');
+                let regex = new RegExp(`(${escapedVal})`, "gi");
+                div.innerHTML = match.replace(regex, "<strong style='color:var(--accent-main);'>$1</strong>");
+                
+                div.addEventListener('mousedown', function(e) {
+                    e.preventDefault(); 
+                    inputElem.value = match + ", ";
+                    container.innerHTML = '';
+                    inputElem.focus();
+                });
+                container.appendChild(div);
+            });
+        }
+
+        function popolaOrari() {
+            const select = document.getElementById('orario-consegna');
+            const payBtn = document.getElementById('pay-btn');
+            select.innerHTML = '';
+            
+            const now = new Date();
+            const currentDay = now.getDay(); 
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const minTimeInMinutes = (currentHour * 60) + currentMinute + 20;
+
+            if (currentDay === 1) {
+                select.innerHTML = `<option value="">Oggi siamo chiusi (Lunedì)</option>`;
+                payBtn.disabled = true;
+                payBtn.style.boxShadow = 'none';
+                return;
+            }
+
+            let startHour = 18;
+            let startMin = 30;
+            let endHour = 22;
+            let endMin = 30;
+
+            if (currentDay === 6) {
+                startHour = 18;
+                startMin = 0;
+                endHour = 23;
+                endMin = 0;
+            }
+
+            let slotAggiunti = 0;
+            for(let h = startHour; h <= endHour; h++) {
+                for(let m = 0; m < 60; m += 15) {
+                    if (h === startHour && m < startMin) continue; 
+                    if (h === endHour && m > endMin) continue; 
+                    
+                    const slotTimeInMinutes = (h * 60) + m;
+                    if (slotTimeInMinutes >= minTimeInMinutes || currentHour < startHour) {
+                        let hh = h.toString().padStart(2, '0');
+                        let mm = m.toString().padStart(2, '0');
+                        select.innerHTML += `<option value="${hh}:${mm}">${hh}:${mm}</option>`;
+                        slotAggiunti++;
+                    }
+                }
+            }
+
+            if (slotAggiunti === 0) {
+                select.innerHTML = `<option value="">Orari esauriti per oggi</option>`;
+                payBtn.disabled = true;
+                payBtn.style.boxShadow = 'none';
+            } else {
+                payBtn.disabled = false;
+                payBtn.style.boxShadow = '0 4px 15px rgba(211, 47, 47, 0.3)';
+            }
+        }
+
+        function toggleOrderType() {
+            const type = document.querySelector('input[name="order-type"]:checked').value;
+            const labelOrario = document.getElementById('orario-label');
+            
+            if(type === 'takeaway') {
+                document.getElementById('lbl-takeaway').classList.add('active');
+                document.getElementById('lbl-delivery').classList.remove('active');
+                document.getElementById('delivery-fields').style.display = 'none';
+                labelOrario.innerText = "Orario di Ritiro *";
+            } else {
+                document.getElementById('lbl-takeaway').classList.remove('active');
+                document.getElementById('lbl-delivery').classList.add('active');
+                document.getElementById('delivery-fields').style.display = 'block';
+                labelOrario.innerText = "Orario di Consegna *";
+            }
+            updateCartUI(); 
+        }
+
+        function openCheckout() { 
+            document.getElementById('checkout-modal').classList.add('active'); 
+            popolaOrari();
+            updateCartUI(); 
+            renderUpsell(); 
+        }
+
+        function closeCheckout() {
+            document.getElementById('checkout-modal').classList.remove('active');
+            
+            document.getElementById('dati-cliente-form').style.display = 'block';
+            document.getElementById('modal-footer-cassa').style.display = 'block';
+            document.getElementById('sumup-card-container').style.display = 'none';
+            document.getElementById('sumup-card').innerHTML = ''; 
+            cambiaBottonePagamento();
+        }
+
+        function cambiaBottonePagamento() {
+            const metodo = document.getElementById('metodo-pagamento').value;
+            const btn = document.getElementById('pay-btn');
+            if (metodo === 'contanti') {
+                btn.innerHTML = '<i class="fa-solid fa-check-to-slot"></i> Conferma Ordine';
+                btn.style.background = '#28a745';
+                btn.style.boxShadow = '0 4px 15px rgba(40, 167, 69, 0.3)';
+            } else {
+                btn.innerHTML = '<i class="fa-regular fa-credit-card"></i> Paga con SumUp';
+                btn.style.background = 'var(--accent-main)';
+                btn.style.boxShadow = '0 4px 15px rgba(211, 47, 47, 0.3)';
+            }
+        }
+
+        async function sendOrderWithDetails() {
+            const name = document.getElementById('cust-name').value.trim();
+            const phone = document.getElementById('cust-phone').value.trim();
+            const orderType = document.querySelector('input[name="order-type"]:checked').value;
+            const notes = document.getElementById('cust-notes').value.trim();
+            const orario = document.getElementById('orario-consegna').value;
+            const metodoPagamento = document.getElementById('metodo-pagamento').value;
+
+            if(!name || !phone) { alert("Compila Nome e Telefono per continuare!"); return; }
+
+            let deliveryInfo = "";
+            let deliveryFee = 0;
+
+            if (orderType === 'delivery') {
+                const address = document.getElementById('cust-address').value.trim();
+                const city = document.getElementById('cust-city').value;
+                if(!address) { alert("Inserisci la via e il numero civico."); return; }
+                
+                deliveryFee = 2.50;
+                deliveryInfo = `🛵 *Consegna a Domicilio*\n📍 Indirizzo: ${address}, ${city}\n🕒 Orario Richiesto: ${orario}`;
+            } else {
+                deliveryInfo = `🛍️ *Ritiro al Locale*\n🕒 Orario Richiesto: ${orario}`;
+            }
+
+            const cleanName = name.replace(/\s+/g, '').toUpperCase(); 
+            const firstLetter = cleanName.charAt(0) || 'N';
+            const lastLetter = cleanName.charAt(cleanName.length - 1) || 'F';
+            const randomNum = Math.floor(1000 + Math.random() * 9000);
+            
+            const orderId = `NFAR-${firstLetter}${lastLetter}-${randomNum}_${orario}`;
+
+            let total = 0; 
+            let cartItems = [];
+            let text = `🆔 *Rif:* ${orderId}\n\n👤 *Cliente:* ${name}\n📱 *Telefono:* ${phone}\n${deliveryInfo}\n`;
+            if(notes) text += `📝 *Note:* ${notes}\n`; 
+            text += `\n*RIEPILOGO ORDINE:*\n`;
+
+            for(let id in cart) {
+                if (cart[id] > 0 && itemMap[id]) {
+                    let item = itemMap[id];
+                    const lineTotal = item.price * cart[id]; 
+                    total += lineTotal;
+                    
+                    cartItems.push({ name: item.name, price: item.price, qty: cart[id] });
+                    
+                    let customTesto = "";
+                    if(item.isCustom && item.customParts) {
+                        customTesto += `\n   ↳ ${item.customParts.join('\n   ↳ ')}`;
+                    }
+                    
+                    text += `▪️ ${cart[id]}x ${item.name} (${lineTotal.toFixed(2)}€)${customTesto}\n`;
+                }
+            }
+
+            let sconto = total * 0.10;
+
+            // Sconto promo code
+            let promoDiscountAmt = 0;
+            let promoCodeStr = '';
+            if (appliedPromoCode && appliedPromoCode.valid) {
+                if (appliedPromoCode.type === 'percentage') {
+                    promoDiscountAmt = Math.round(total * (appliedPromoCode.value / 100) * 100) / 100;
+                } else {
+                    promoDiscountAmt = Math.min(appliedPromoCode.value, total - sconto);
+                }
+                promoDiscountAmt = Math.round(promoDiscountAmt * 100) / 100;
+                promoCodeStr = appliedPromoCode.code;
+            }
+
+            let finalTotal = Math.max(0, Math.round((total - sconto - promoDiscountAmt + deliveryFee) * 100) / 100);
+
+            if (finalTotal < 1.00) { alert("L'ordine minimo è 1.00 €!"); return; }
+
+            text += `\n📉 *Subtotale:* ${total.toFixed(2)} €`;
+            text += `\n🎉 *Sconto Speciale 10%:* -${sconto.toFixed(2)} €`;
+            if (promoDiscountAmt > 0) {
+                text += `\n🏷️ *Promo "${promoCodeStr}":* -${promoDiscountAmt.toFixed(2)} €`;
+            }
+            if (deliveryFee > 0) {
+                text += `\n🛵 *Costo Consegna:* +${deliveryFee.toFixed(2)} €`;
+            }
+            text += `\n💰 *TOTALE DA PAGARE: ${finalTotal.toFixed(2)} €*\n`;
+
+            // Salva dati strutturati per POST /api/orders
+            const orderData = {
+                orderId,
+                customerName: name,
+                customerPhone: phone,
+                pickupTime: orario,
+                orderType,
+                deliveryAddress: orderType === 'delivery' ? `${document.getElementById('cust-address').value.trim()}, ${document.getElementById('cust-city').value}` : '',
+                notes,
+                items: cartItems,
+                subtotal: total,
+                discountRate: 0.10,
+                promoCode: promoCodeStr,
+                promoDiscount: promoDiscountAmt,
+                deliveryFee,
+                total: finalTotal,
+                paymentMethod: metodoPagamento,
+            };
+            localStorage.setItem('NFARINATI_order_data', JSON.stringify(orderData));
+
+            const btn = document.getElementById('pay-btn');
+
+            if (metodoPagamento === "contanti") {
+                text = `⚠️ *ORDINE DA PAGARE IN CONTANTI* ⚠️\n\n` + text;
+                localStorage.setItem('peterbun_order_message', text);
+                window.location.href = "successo.html";
+                return;
+            }
+
+            text = `✅ *ORDINE PAGATO ONLINE (SumUp)*\n\n` + text;
+            localStorage.setItem('peterbun_order_message', text);
+            
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Collegamento SumUp...'; 
+            btn.disabled = true;
+
+            try {
+                const response = await fetch("/paga", {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ items: cartItems, orderId: orderId, totalAmount: Math.round(finalTotal * 100) / 100 })
+                });
+                const data = await response.json();
+                
+                if (data.checkoutId) { 
+                    document.getElementById('dati-cliente-form').style.display = 'none';
+                    document.getElementById('modal-footer-cassa').style.display = 'none';
+                    document.getElementById('sumup-card-container').style.display = 'block';
+                    
+                    SumUpCard.mount({
+                        id: 'sumup-card',
+                        checkoutId: data.checkoutId,
+                        googlePay: { merchantId: 'INSERISCI_ID_GOOGLE_QUI', merchantName: "N'Farinati Modern Pizza" },
+                        applePay: { merchantName: "N'Farinati Modern Pizza" },
+                        onResponse: function(type, body) {
+                            if (type === 'success' && body.status === 'PAID') {
+                                window.location.href = "successo.html";
+                            } 
+                            else if (type === 'success' && body.status === 'FAILED') {
+                                alert("Transazione negata dalla banca. Verifica i dati e riprova.");
+                                window.location.href = "errore.html";
+                            } 
+                            else if (type === 'error' || type === 'fail' || type === 'declined') {
+                                alert("Errore durante il pagamento:\n" + JSON.stringify(body));
+                                window.location.href = "errore.html";
+                            }
+                        }
+                    });
+                } else if (data.redirectUrl) {
+                    window.location.href = data.redirectUrl;
+                } else { 
+                    alert("ERRORE DI SUMUP:\n" + JSON.stringify(data, null, 2)); 
+                    cambiaBottonePagamento();
+                    btn.disabled = false; 
+                }
+            } catch (error) {
+                alert("Errore di connessione al server:\n" + error.message); 
+                cambiaBottonePagamento();
+                btn.disabled = false;
+            }
+        }
+
+        window.onload = initApp;
+    </script>
+</body>
+</html>

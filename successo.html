@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ordine Confermato - N'Farinati Modern Pizza</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-main: #f4f6f8; 
+            --bg-card: #ffffff; 
+            --text-dark: #2a3324; 
+            --text-muted: #6b7a5d; 
+            --accent-main: #d32f2f; 
+            --border-light: #e9ecef;
+            --whatsapp: #25D366;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        
+        body { 
+            background: var(--bg-main); 
+            color: var(--text-dark); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+            text-align: center;
+            position: relative;
+        }
+        
+        /* FILIGRANA IN OVERLAY NON BLOCCANTE */
+        body::after {
+            content: ''; position: fixed; inset: 0; z-index: 90;
+            background-image: url('images/filigrana.jpeg');
+            background-repeat: repeat; background-size: 250px;
+            opacity: 0.04; pointer-events: none;
+        }
+        
+        body > * { position: relative; z-index: 100; }
+
+        .logo-img { 
+            width: 160px; 
+            max-width: 100%; 
+            margin-bottom: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .card { 
+            background: var(--bg-card); 
+            padding: 40px 25px; 
+            border-radius: 16px; 
+            border: 1px solid var(--border-light); 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06); 
+            width: 100%; 
+            max-width: 400px; 
+            animation: slideUp 0.5s ease-out; 
+        }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .icon-circle { 
+            width: 80px; 
+            height: 80px; 
+            background: rgba(37, 211, 102, 0.1); 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            margin: 0 auto 20px; 
+            border: 2px solid var(--whatsapp); 
+        }
+        
+        .icon-circle i { font-size: 2.5rem; color: var(--whatsapp); }
+        
+        h1 { 
+            font-family: 'Montserrat', sans-serif; 
+            font-size: 1.8rem; 
+            color: var(--whatsapp); 
+            margin-bottom: 15px; 
+            font-weight: 900; 
+            line-height: 1.2; 
+            text-transform: uppercase;
+        }
+        
+        p { 
+            font-size: 0.95rem; 
+            color: var(--text-muted); 
+            margin-bottom: 25px; 
+            line-height: 1.6; 
+            font-weight: 500;
+        }
+        
+        .highlight { 
+            color: var(--accent-main); 
+            font-weight: 800; 
+            font-family: 'Montserrat', sans-serif; 
+            text-transform: uppercase; 
+            font-size: 1rem;
+        }
+        
+        .btn-whatsapp { 
+            background: var(--whatsapp); 
+            color: white; 
+            border: none; 
+            padding: 16px 20px; 
+            border-radius: 12px; 
+            font-size: 1.1rem; 
+            font-weight: 800; 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: 10px; 
+            width: 100%; 
+            text-decoration: none; 
+            box-shadow: 0 8px 20px rgba(37, 211, 102, 0.25); 
+            transition: transform 0.2s; 
+            font-family: 'Montserrat', sans-serif; 
+            text-transform: uppercase; 
+            animation: pulse 2s infinite;
+        }
+        
+        .btn-whatsapp:active { transform: scale(0.96); }
+        
+        @keyframes pulse { 
+            0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); } 
+            70% { box-shadow: 0 0 0 15px rgba(37, 211, 102, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } 
+        }
+    </style>
+</head>
+<body>
+
+
+    <div class="card">
+        <div class="icon-circle">
+            <i class="fa-solid fa-check"></i>
+        </div>
+        <h1 id="titolo-successo">Pagamento Riuscito!</h1>
+        <p>Il tuo ordine è stato ricevuto in cassa.<br><br>
+        <span class="highlight">Fai l'ultimo passo:</span><br> invia il resoconto per far avviare la preparazione!</p>
+        
+        <div style="background: rgba(211, 47, 47, 0.05); border-left: 3px solid var(--accent-main); padding: 12px; border-radius: 4px; margin-bottom: 25px; text-align: left;">
+            <span style="display: block; font-size: 0.8rem; color: var(--accent-main); font-weight: 800; font-family: 'Montserrat', sans-serif; margin-bottom: 3px;">⚠️ ATTENZIONE</span>
+            <span style="font-size: 0.75rem; color: var(--text-dark); line-height: 1.4; display: block; font-weight: 500;">Il numero WhatsApp è un sistema automatico esclusivo per la ricezione degli ordini. <b>Nessun operatore risponderà a messaggi o chiamate.</b></span>
+        </div>
+        
+        <button class="btn-whatsapp" onclick="sendFinalWhatsApp()">
+            <i class="fa-brands fa-whatsapp fa-xl"></i> AVVISA LA CUCINA
+        </button>
+    </div>
+
+    <script>
+        window.onload = async function() {
+            let orderMessage = localStorage.getItem('peterbun_order_message');
+
+            if (orderMessage && orderMessage.includes("CONTANTI")) {
+                document.getElementById('titolo-successo').innerText = "Ordine Ricevuto!";
+                document.getElementById('titolo-successo').style.color = "var(--accent-main)";
+                document.querySelector('.icon-circle').style.borderColor = "var(--accent-main)";
+                document.querySelector('.icon-circle').style.background = "rgba(211, 47, 47, 0.05)";
+                document.querySelector('.icon-circle i').style.color = "var(--accent-main)";
+                document.querySelector('.icon-circle i').className = "fa-solid fa-money-bill";
+            }
+
+            // Salva ordine nel DB via API
+            const orderDataRaw = localStorage.getItem('NFARINATI_order_data');
+            if (orderDataRaw) {
+                try {
+                    const orderData = JSON.parse(orderDataRaw);
+                    await fetch('/api/orders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(orderData)
+                    });
+                    localStorage.removeItem('NFARINATI_order_data');
+                } catch (e) {
+                    // Salvataggio DB fallito silenziosamente — ordine già confermato via SumUp
+                }
+            }
+        }
+
+        function sendFinalWhatsApp() {
+            let finalMessage = localStorage.getItem('peterbun_order_message');
+            if (!finalMessage) {
+                alert("Nessun ordine trovato in memoria. Torna al menu e riprova, o contatta il locale!");
+                return;
+            }
+            const phoneNumber = "+390918432674"; 
+            const safeMessage = encodeURIComponent(finalMessage);
+            window.location.href = `https://wa.me/${phoneNumber}?text=${safeMessage}`;
+        }
+    </script>
+</body>
+</html>

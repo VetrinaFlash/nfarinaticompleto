@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pagamento Annullato - N'Farinati</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+        body { background: #ffffff; color: #2a3324; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; }
+        .card { background: #f9fbf7; padding: 40px 25px; border-radius: 16px; border: 1px solid rgba(211, 47, 47, 0.3); box-shadow: 0 10px 40px rgba(0,0,0,0.06); width: 100%; max-width: 400px; animation: slideUp 0.4s ease-out; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .icon-circle { width: 80px; height: 80px; background: rgba(211, 47, 47, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; border: 2px solid #d32f2f; }
+        .icon-circle i { font-size: 2.5rem; color: #d32f2f; }
+        h1 { font-family: 'Montserrat', sans-serif; font-size: 2rem; color: #d32f2f; margin-bottom: 15px; font-weight: 800; line-height: 1.2; text-transform: uppercase;}
+        p { font-size: 1rem; color: #5e6b52; margin-bottom: 30px; line-height: 1.6; font-weight: 500;}
+        
+        .btn-back { background: #ffffff; color: #2a3324; border: 1px solid #e2e6dd; padding: 18px 20px; border-radius: 8px; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; text-decoration: none; transition: transform 0.2s; font-family: 'Montserrat', sans-serif;}
+        .btn-back:active { transform: scale(0.96); background: #d32f2f; color: #fff; border-color: #d32f2f;}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon-circle">
+            <i class="fa-solid fa-xmark"></i>
+        </div>
+        <h1>Pagamento Annullato</h1>
+        <p>Nessun addebito è stato effettuato sulla tua carta. L'operazione è stata interrotta.</p>
+        
+        <a href="menu.html" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i> TORNA AL MENÙ
+        </a>
+    </div>
+</body>
+</html>
