@@ -58,8 +58,8 @@
     .search-box i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .85rem; }
     .search-box input { width: 100%; padding: 12px 14px 12px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .9rem; outline: none; }
     .search-box input:focus { border-color: var(--gold); }
-    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
-    .chip { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .75rem; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; margin-bottom: 8px; }
+    .chip { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .75rem; font-weight: 600; cursor: pointer; }
     .chip.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.5); color: var(--gold); }
     .supplier-select { width: 100%; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .85rem; outline: none; margin-bottom: 12px; }
 

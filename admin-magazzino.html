@@ -45,8 +45,8 @@
     .topbar .title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
     .topbar .back { margin-left: auto; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 
-    .tabs { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; overflow-x: auto; }
-    .tab { flex-shrink: 0; padding: 9px 16px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .78rem; font-weight: 700; }
+    .tabs { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; }
+    .tab { flex-shrink: 0; padding: 9px 16px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .78rem; font-weight: 700; cursor: pointer; }
     .tab.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.4); color: var(--gold); }
     .content { padding: 14px 16px 40px; max-width: 1100px; margin: 0 auto; }
 
@@ -208,7 +208,7 @@
     .picker-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .85rem; }
     .picker-search input { width: 100%; padding: 12px 14px 12px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .9rem; outline: none; }
     .picker-search input:focus { border-color: var(--gold); }
-    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px; margin-bottom: 8px; }
     .chip { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .75rem; font-weight: 600; cursor: pointer; }
     .chip.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.5); color: var(--gold); }
     .picker-supplier { width: 100%; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .85rem; outline: none; margin-bottom: 12px; }
@@ -1031,9 +1031,10 @@ function renderPending() {
 // Vista fornitore: aggrega le righe NON evase per fornitore → "cosa ordinare a chi"
 let supplierAgg = {}; // fornitore → righe aggregate (per WhatsApp/copia)
 
-function renderSuppliers() {
-  const orders = getFiltered().filter(o => o.status === 'inviato');
-  const box = document.getElementById('view-suppliers');
+// Calcola cosa c'è da ordinare a ogni fornitore (ordini da evadere, righe non annullate).
+// Usato dalla vista "Per fornitore", dall'anagrafica e dai bottoni WhatsApp.
+function buildSupplierAgg(filtered) {
+  const orders = (filtered ? getFiltered() : allOrders).filter(o => o.status === 'inviato' && !o.is_draft);
   const bySup = {};
   for (const o of orders) {
     for (const it of o.items) {
@@ -1046,14 +1047,27 @@ function renderSuppliers() {
       bySup[key][mk].who.add(o.display_name);
     }
   }
-  const suppliers = Object.keys(bySup).sort((a, b) => a.localeCompare(b, 'it'));
   supplierAgg = {};
-  if (suppliers.length === 0) { box.innerHTML = '<div class="empty-note">Nessuna riga da ordinare ai fornitori</div>'; return; }
+  for (const s of Object.keys(bySup)) {
+    supplierAgg[s] = Object.values(bySup[s]).sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  }
+  return supplierAgg;
+}
+
+function renderSuppliers() {
+  const box = document.getElementById('view-suppliers');
+  buildSupplierAgg(true);
+  const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
+  if (suppliers.length === 0) {
+    box.innerHTML = `<div class="empty-note">🎉 Niente da ordinare al momento.<br><br>
+      <span style="font-size:.72rem">Le righe compaiono qui quando ci sono <b>ordini da evadere</b>: aggrega tutto per fornitore, col bottone WhatsApp per inviare l'ordine già scritto.<br>
+      I numeri WhatsApp si gestiscono nella tab <b>Fornitori</b>.</span></div>`;
+    return;
+  }
   box.innerHTML = `<div style="margin-bottom:12px;text-align:right">
     <button class="wa-btn" style="padding:11px 18px;font-size:.8rem" onclick="openSendAll()"><i class="fa-brands fa-whatsapp"></i> Invia a tutti i fornitori (${suppliers.length})</button>
   </div>` + suppliers.map(s => {
-    const rows = Object.values(bySup[s]).sort((a, b) => a.name.localeCompare(b.name, 'it'));
-    supplierAgg[s] = rows;
+    const rows = supplierAgg[s];
     const sup = allSuppliers.find(x => x.name === s);
     const hasWa = sup && sup.whatsapp;
     return `<div class="sup-card">
@@ -1106,6 +1120,14 @@ async function sendWhatsApp(supplierName) {
   }
   const number = normalizeWaNumber(sup.whatsapp);
   if (!number) { showToast('Numero WhatsApp non valido', true); return; }
+  // Se chiamato fuori dalla vista "Per fornitore" (es. anagrafica), calcola l'aggregato al volo
+  if (!supplierAgg[supplierName]) buildSupplierAgg(false);
+  const rows = supplierAgg[supplierName] || [];
+  if (rows.length === 0) {
+    // Niente da ordinare: apri comunque la chat, senza messaggio precompilato
+    window.open(`https://wa.me/${number}`, '_blank');
+    return;
+  }
   const msg = buildSupplierMessage(supplierName);
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`, '_blank');
 }
@@ -1217,18 +1239,28 @@ function renderAnagrafica() {
     box.innerHTML = '<div class="empty-note">Nessun fornitore trovato (inizializza il database)</div>';
     return;
   }
+  buildSupplierAgg(false);
   box.innerHTML = `<div class="wa-hint">📱 Inserisci il numero WhatsApp di ogni fornitore (es. <b>3331234567</b> o <b>+39 333 1234567</b>).
-    Dalla vista "Per fornitore" potrai inviare l'ordine con un click: il messaggio arriva già scritto con tutte le quantità.</div>
+    Col numero salvato, il bottone verde invia l'ordine su WhatsApp già scritto (dalla vista "Per fornitore" o da qui).</div>
     <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
       <input type="text" id="new-sup-name" placeholder="Nome nuovo fornitore" style="min-width:130px">
       <input type="tel" id="new-sup-wa" placeholder="WhatsApp (opzionale)">
       <button class="supplier-save" onclick="addSupplier()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
     </div>` +
-    allSuppliers.map(s => `<div class="supplier-row">
-      <div class="supplier-name"><i class="fa-solid fa-truck" style="color:var(--gold-l)"></i> ${esc(s.name)}</div>
-      <input type="tel" id="wa-${s.id}" value="${escAttr(s.whatsapp || '')}" placeholder="Numero WhatsApp (es. 3331234567)">
-      <button class="supplier-save" onclick="saveSupplierWhatsapp('${escJs(s.name)}', document.getElementById('wa-${s.id}').value)"><i class="fa-solid fa-floppy-disk"></i> Salva</button>
-    </div>`).join('');
+    allSuppliers.map(s => {
+      const pendingRows = (supplierAgg[s.name] || []).length;
+      const waBtn = s.whatsapp
+        ? `<button class="wa-btn" onclick="sendWhatsApp('${escJs(s.name)}')" title="${pendingRows > 0 ? 'Invia ordine WhatsApp' : 'Apri la chat WhatsApp'}">
+            <i class="fa-brands fa-whatsapp"></i> ${pendingRows > 0 ? `Invia ordine (${pendingRows})` : 'Chat'}
+          </button>`
+        : '';
+      return `<div class="supplier-row">
+        <div class="supplier-name"><i class="fa-solid fa-truck" style="color:var(--gold-l)"></i> ${esc(s.name)}</div>
+        <input type="tel" id="wa-${s.id}" value="${escAttr(s.whatsapp || '')}" placeholder="Numero WhatsApp (es. 3331234567)">
+        <button class="supplier-save" onclick="saveSupplierWhatsapp('${escJs(s.name)}', document.getElementById('wa-${s.id}').value).then(ok => { if (ok) renderAnagrafica(); })"><i class="fa-solid fa-floppy-disk"></i> Salva</button>
+        ${waBtn}
+      </div>`;
+    }).join('');
 }
 
 // ── GESTIONE PRODOTTI (anagrafica materie prime, solo admin) ──
