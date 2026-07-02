@@ -116,12 +116,47 @@ export async function onRequestPost(context) {
   }
 }
 
+// Elimina un fornitore (solo se nessun prodotto attivo lo usa ancora, per non
+// lasciare materie prime "orfane" — in quel caso va prima riassegnato il
+// fornitore ai prodotti dalla tab Prodotti)
+export async function onRequestDelete(context) {
+  const { env, request } = context;
+  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  if (!(await isAdminAuthorized(request, secret))) {
+    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const id = parseInt(url.searchParams.get('id') || '0');
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID mancante' }), { status: 400, headers: cors });
+    }
+    const sup = await env.DB.prepare('SELECT name FROM suppliers WHERE id = ?').bind(id).first();
+    if (!sup) {
+      return new Response(JSON.stringify({ error: 'Fornitore non trovato' }), { status: 404, headers: cors });
+    }
+    const used = await env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM raw_materials WHERE supplier = ? AND active = 1'
+    ).bind(sup.name).first();
+    if (used.n > 0) {
+      return new Response(JSON.stringify({
+        error: `Non eliminabile: ${used.n} prodott${used.n === 1 ? 'o è' : 'i sono'} ancora assegnat${used.n === 1 ? 'o' : 'i'} a "${sup.name}". Cambia il fornitore su quei prodotti dalla tab Prodotti, poi riprova.`,
+      }), { status: 400, headers: cors });
+    }
+    await env.DB.prepare('DELETE FROM suppliers WHERE id = ?').bind(id).run();
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+  }
+}
+
 export async function onRequestOptions() {
   return new Response(null, {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });

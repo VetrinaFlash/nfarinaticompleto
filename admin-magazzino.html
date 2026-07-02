@@ -1259,8 +1259,24 @@ function renderAnagrafica() {
         <input type="tel" id="wa-${s.id}" value="${escAttr(s.whatsapp || '')}" placeholder="Numero WhatsApp (es. 3331234567)">
         <button class="supplier-save" onclick="saveSupplierWhatsapp('${escJs(s.name)}', document.getElementById('wa-${s.id}').value).then(ok => { if (ok) renderAnagrafica(); })"><i class="fa-solid fa-floppy-disk"></i> Salva</button>
         ${waBtn}
+        <button class="edit-del" onclick="deleteSupplier(${s.id}, '${escJs(s.name)}')" title="Elimina fornitore"><i class="fa-solid fa-trash"></i></button>
       </div>`;
     }).join('');
+}
+
+// Elimina un fornitore dall'anagrafica (bloccato lato server se ancora usato da prodotti attivi)
+async function deleteSupplier(id, name) {
+  if (!confirm(`Eliminare il fornitore "${name}"?`)) return;
+  try {
+    const res = await fetch(`/admin/suppliers?id=${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore eliminazione');
+    allSuppliers = allSuppliers.filter(x => x.id !== id);
+    renderAnagrafica();
+    showToast('Fornitore eliminato');
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
 }
 
 // ── GESTIONE PRODOTTI (anagrafica materie prime, solo admin) ──
@@ -1269,6 +1285,7 @@ let prodottiQuery = '';
 
 async function renderProdotti() {
   const box = document.getElementById('view-prodotti');
+  if (allSuppliers.length === 0) await loadSuppliers();
   if (adminMaterials.length === 0) {
     box.innerHTML = '<div class="empty-note">Caricamento...</div>';
     try {
@@ -1284,24 +1301,57 @@ async function renderProdotti() {
   drawProdotti();
 }
 
+// Select con i fornitori attualmente in anagrafica, così si aggancia un
+// fornitore esistente invece di doverlo riscrivere (evita doppioni per
+// errori di battitura/maiuscole). "+ Nuovo fornitore" per crearne uno.
+function supplierSelectHtml(id, currentValue) {
+  const names = [...new Set(allSuppliers.map(s => s.name))];
+  if (currentValue && !names.includes(currentValue)) names.push(currentValue);
+  names.sort((a, b) => a.localeCompare(b, 'it'));
+  const opts = names.map(n => `<option value="${escAttr(n)}" ${n === currentValue ? 'selected' : ''}>${esc(n)}</option>`).join('');
+  return `<select id="${id}" onchange="toggleNewSupplierInput('${id}')" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none;min-width:120px">
+      <option value="">— nessun fornitore —</option>
+      ${opts}
+      <option value="__new__">➕ Nuovo fornitore...</option>
+    </select>
+    <input type="text" id="${id}-new" placeholder="Nome nuovo fornitore" style="display:none;min-width:120px;padding:9px 10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">`;
+}
+
+function toggleNewSupplierInput(selectId) {
+  const sel = document.getElementById(selectId);
+  const inp = document.getElementById(selectId + '-new');
+  if (!sel || !inp) return;
+  const isNew = sel.value === '__new__';
+  inp.style.display = isNew ? '' : 'none';
+  if (isNew) inp.focus();
+}
+
+function getSupplierValue(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return '';
+  if (sel.value === '__new__') {
+    const inp = document.getElementById(selectId + '-new');
+    return inp ? inp.value.trim() : '';
+  }
+  return sel.value;
+}
+
 function drawProdotti() {
   const box = document.getElementById('view-prodotti');
   const q = prodottiQuery.toLowerCase();
   const list = adminMaterials.filter(m =>
     !q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q) || m.department.toLowerCase().includes(q)
   );
-  const supplierNames = allSuppliers.map(s => s.name);
-  const supDatalist = `<datalist id="suppliers-dl">${supplierNames.map(s => `<option value="${escAttr(s)}"></option>`).join('')}</datalist>`;
   const depSelect = (id, val) => `<select id="${id}" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">
       <option value="Pizzeria" ${val === 'Pizzeria' ? 'selected' : ''}>🍕 Pizzeria</option>
       <option value="Cucina" ${val === 'Cucina' ? 'selected' : ''}>🍳 Cucina</option>
     </select>`;
-  box.innerHTML = supDatalist + `
-    <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto o fornitore, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Ricorda: la coppia nome + reparto è unica.</div>
+  box.innerHTML = `
+    <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto o fornitore, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Il fornitore si sceglie da quelli già in anagrafica (tab Fornitori), per non creare doppioni. Ricorda: la coppia nome + reparto è unica.</div>
     <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
       <input type="text" id="new-mat-name" placeholder="Nome nuovo prodotto" style="min-width:140px;text-transform:uppercase">
       ${depSelect('new-mat-dep', 'Pizzeria')}
-      <input type="text" id="new-mat-sup" list="suppliers-dl" placeholder="Fornitore" style="min-width:110px">
+      ${supplierSelectHtml('new-mat-sup', '')}
       <button class="supplier-save" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
     </div>
     <div class="search-box" style="position:relative;margin-bottom:10px">
@@ -1312,7 +1362,7 @@ function drawProdotti() {
     list.map(m => `<div class="supplier-row">
       <input type="text" id="mn-${m.id}" value="${escAttr(m.name)}" style="min-width:140px;flex:2;text-transform:uppercase">
       ${depSelect('md-' + m.id, m.department)}
-      <input type="text" id="ms-${m.id}" list="suppliers-dl" value="${escAttr(m.supplier)}" style="min-width:100px;flex:1">
+      ${supplierSelectHtml('ms-' + m.id, m.supplier)}
       <button class="supplier-save" onclick="saveMaterial(${m.id})"><i class="fa-solid fa-floppy-disk"></i></button>
       <button class="edit-del" onclick="deactivateMaterial(${m.id}, '${escJs(m.name)}')" title="Disattiva prodotto"><i class="fa-solid fa-trash"></i></button>
     </div>`).join('');
@@ -1321,7 +1371,7 @@ function drawProdotti() {
 async function addMaterial() {
   const name = document.getElementById('new-mat-name').value.trim();
   const department = document.getElementById('new-mat-dep').value;
-  const supplier = document.getElementById('new-mat-sup').value.trim();
+  const supplier = getSupplierValue('new-mat-sup');
   if (!name) { showToast('Inserisci il nome del prodotto', true); return; }
   try {
     const res = await fetch('/admin/materials', {
@@ -1333,6 +1383,7 @@ async function addMaterial() {
     if (!data.ok) throw new Error(data.error || 'Errore');
     showToast('✅ Prodotto aggiunto');
     adminMaterials = [];
+    await loadSuppliers(); // se è stato digitato un fornitore nuovo, ora compare nell'elenco
     await renderProdotti();
     loadMaterialsCatalog();
   } catch (e) {
@@ -1343,7 +1394,7 @@ async function addMaterial() {
 async function saveMaterial(id) {
   const name = document.getElementById('mn-' + id).value.trim();
   const department = document.getElementById('md-' + id).value;
-  const supplier = document.getElementById('ms-' + id).value.trim();
+  const supplier = getSupplierValue('ms-' + id);
   if (!name) { showToast('Il nome non può essere vuoto', true); return; }
   try {
     const res = await fetch('/admin/materials', {
@@ -1356,6 +1407,8 @@ async function saveMaterial(id) {
     const m = adminMaterials.find(x => x.id === id);
     if (m) { m.name = name.toUpperCase(); m.department = department; m.supplier = supplier; }
     showToast('✅ Prodotto aggiornato');
+    await loadSuppliers(); // se è stato digitato un fornitore nuovo, ora compare nell'elenco
+    drawProdotti();
     loadMaterialsCatalog();
   } catch (e) {
     showToast('Errore: ' + e.message, true);
