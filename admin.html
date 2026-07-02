@@ -1481,14 +1481,17 @@ function gotoCustomersPage(p) { customersPage = p; loadCustomers(); }
 })();
 </script>
 <script>
-/* Modulo Magazzino: badge notifica ordini materie prime da evadere
-   e caricamento lazy della sezione incorporata.
+/* Modulo Magazzino: badge + notifica (toast e suono, come per gli ordini
+   clienti) quando arriva un nuovo ordine materie prime, e caricamento lazy
+   della sezione incorporata.
    Script autonomo: non interagisce con la logica esistente della pagina. */
 function loadMagazzinoFrame() {
   const frame = document.getElementById('magazzino-frame');
   if (frame && !frame.src) frame.src = 'admin-magazzino.html';
 }
 (function () {
+  let lastPending = null; // null = primo rilevamento, non notificare
+
   async function updateMagazzinoBadge() {
     try {
       const res = await fetch('/admin/supply-orders?count=1');
@@ -1502,10 +1505,19 @@ function loadMagazzinoFrame() {
       } else {
         badge.style.display = 'none';
       }
+      // Nuovo ordine arrivato mentre la pagina è aperta → notifica come gli ordini clienti
+      if (lastPending !== null && data.pending > lastPending) {
+        const nuovi = data.pending - lastPending;
+        try {
+          notify(`📦 ${nuovi === 1 ? 'Nuovo ordine magazzino' : nuovi + ' nuovi ordini magazzino'} da evadere`, 'info', 8000);
+          playBeep();
+        } catch (e) {}
+      }
+      lastPending = data.pending;
     } catch (e) { /* non loggato o modulo non inizializzato: badge nascosto */ }
   }
   updateMagazzinoBadge();
-  setInterval(updateMagazzinoBadge, 60000);
+  setInterval(updateMagazzinoBadge, 30000);
   // Aggiorna subito dopo il login (quando #app diventa visibile) e a ogni cambio sezione
   const appEl = document.getElementById('app');
   if (appEl) {
