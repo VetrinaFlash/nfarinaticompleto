@@ -46,6 +46,7 @@ async function migrateSchema(env) {
     'ALTER TABLE supply_order_items ADD COLUMN added_by_admin INTEGER DEFAULT 0',
     'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
     'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
+    'ALTER TABLE supply_orders ADD COLUMN is_draft INTEGER DEFAULT 0',
   ];
   for (const sql of alters) {
     try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
@@ -63,16 +64,22 @@ export async function onRequestGet(context) {
 
   const url = new URL(request.url);
 
-  // Modalità leggera per il badge di notifica nel portale admin
+  // Modalità leggera per il badge di notifica nel portale admin (le bozze non contano)
   if (url.searchParams.get('count') === '1') {
+    const countSql = "SELECT COUNT(*) AS pending FROM supply_orders WHERE status = 'inviato' AND is_draft = 0";
     try {
-      const row = await env.DB.prepare(
-        "SELECT COUNT(*) AS pending FROM supply_orders WHERE status = 'inviato'"
-      ).first();
+      const row = await env.DB.prepare(countSql).first();
       return new Response(JSON.stringify({ pending: row.pending }), { status: 200, headers: cors });
     } catch (err) {
-      // Tabelle non ancora create: nessun ordine in attesa
-      return new Response(JSON.stringify({ pending: 0 }), { status: 200, headers: cors });
+      try {
+        // Colonna is_draft mancante su DB già inizializzati: migra e riprova
+        await migrateSchema(env);
+        const row = await env.DB.prepare(countSql).first();
+        return new Response(JSON.stringify({ pending: row.pending }), { status: 200, headers: cors });
+      } catch (err2) {
+        // Tabelle non ancora create: nessun ordine in attesa
+        return new Response(JSON.stringify({ pending: 0 }), { status: 200, headers: cors });
+      }
     }
   }
 
@@ -81,7 +88,8 @@ export async function onRequestGet(context) {
   const to = url.searchParams.get('to') || '';
   const userId = url.searchParams.get('user_id') || '';
 
-  let where = '1=1';
+  // Le bozze dello staff non sono visibili all'admin finché non vengono inviate
+  let where = 'o.is_draft = 0';
   const params = [];
   if (status) { where += ' AND o.status = ?'; params.push(status); }
   if (from) { where += ' AND date(o.created_at) >= ?'; params.push(from); }

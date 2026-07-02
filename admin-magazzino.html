@@ -175,12 +175,85 @@
     .setup-box { background: var(--card); border: 1px solid rgba(184,134,11,.4); border-radius: 14px; padding: 24px; text-align: center; margin: 30px auto; max-width: 480px; display: none; }
     .setup-box p { font-size: .82rem; color: var(--muted); margin-bottom: 16px; }
 
+    /* DETTAGLIO ORDINE A PAGINA INTERA */
+    .detail-overlay { display: none; position: fixed; inset: 0; z-index: 500; background: var(--bg); overflow-y: auto; }
+    .detail-overlay.open { display: block; }
+    .detail-topbar { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .detail-topbar .back-btn { background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 9px 14px; font-size: .8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+    .detail-topbar .dt-title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
+    .detail-content { max-width: 820px; margin: 0 auto; padding: 20px 16px 60px; }
+    .detail-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+    .detail-user { font-family: 'Montserrat', sans-serif; font-size: 1.15rem; font-weight: 800; }
+    .detail-user i { color: var(--gold-l); }
+    .detail-when { font-size: .85rem; color: var(--muted); }
+    .detail-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 16px 0; }
+    .detail-actions .act-btn { font-size: .8rem; padding: 11px 16px; }
+    .detail-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    .detail-items { list-style: none; }
+    .detail-items li { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 11px 0; border-bottom: 1px dashed var(--border); font-size: .95rem; }
+    .detail-items li:last-child { border-bottom: none; }
+    .detail-items .oi-qty { font-size: 1.05rem; }
+    .detail-items .oi-dep { font-size: .78rem; }
+    .detail-items .oi-price { font-size: .9rem; }
+    .detail-total { text-align: right; font-size: .95rem; color: var(--muted); margin-top: 12px; }
+    .detail-total b { color: var(--gold-l); font-size: 1.15rem; }
+    .detail-notes { background: var(--card2); border-radius: 10px; padding: 12px 14px; font-size: .85rem; color: var(--text); margin-top: 12px; }
+
+    /* SELETTORE PRODOTTI (nuovo ordine admin, stile pagina staff) */
+    .picker-overlay { display: none; position: fixed; inset: 0; z-index: 450; background: var(--bg); overflow-y: auto; }
+    .picker-overlay.open { display: block; }
+    .picker-topbar { position: sticky; top: 0; z-index: 10; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .picker-content { max-width: 720px; margin: 0 auto; padding: 14px 16px 110px; }
+    .picker-search { position: relative; margin-bottom: 10px; }
+    .picker-search i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .85rem; }
+    .picker-search input { width: 100%; padding: 12px 14px 12px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .9rem; outline: none; }
+    .picker-search input:focus { border-color: var(--gold); }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+    .chip { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .75rem; font-weight: 600; cursor: pointer; }
+    .chip.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.5); color: var(--gold); }
+    .picker-supplier { width: 100%; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .85rem; outline: none; margin-bottom: 12px; }
+    .mat-row { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .mat-row.selected { border-color: rgba(184,134,11,.55); background: rgba(184,134,11,.07); }
+    .mat-info { flex: 1; min-width: 0; }
+    .mat-name { font-size: .85rem; font-weight: 600; }
+    .mat-meta { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+    .stepper { display: flex; align-items: center; gap: 6px; }
+    .stepper button { width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: 1rem; font-weight: 700; }
+    .stepper button.plus { background: rgba(184,134,11,.18); border-color: rgba(184,134,11,.45); color: var(--gold-l); }
+    .stepper input { width: 54px; height: 36px; text-align: center; background: var(--card2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: .9rem; font-weight: 700; outline: none; }
+    .picker-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 460; background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px; display: none; }
+    .picker-bar.visible { display: block; }
+    .picker-bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+    .picker-count { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+    .picker-count b { color: var(--gold-l); font-size: 1rem; }
+    .picker-next { flex: 1; padding: 13px; background: var(--gold); border: none; border-radius: 12px; color: #000; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* MOBILE */
+    @media (max-width: 640px) {
+      .modal-overlay { padding: 0; align-items: flex-end; }
+      .modal { max-width: none; max-height: 94dvh; border-radius: 18px 18px 0 0; }
+      .order-actions { width: 100%; margin-left: 0; }
+      .order-actions .act-btn { flex: 1; text-align: center; padding: 10px 8px; }
+      .sup-head .sup-actions { margin-left: 0; width: 100%; }
+      .sup-head .sup-actions .wa-btn, .sup-head .sup-actions .copy-btn { flex: 1; justify-content: center; padding: 11px 10px; }
+      .filters { grid-template-columns: 1fr 1fr; }
+      .tool-btn { flex: 1; justify-content: center; padding: 11px 10px; }
+      .detail-actions .act-btn { flex: 1; text-align: center; }
+    }
+
     @media print {
       body { background: #fff; color: #000; }
-      .topbar, .tabs, .toolbar, .filters, .order-actions, .toast { display: none !important; }
+      .topbar, .tabs, .toolbar, .filters, .order-actions, .toast, .picker-overlay, .modal-overlay { display: none !important; }
       .order-card, .sup-card, .kpi-card, .chart-card { border: 1px solid #ccc; background: #fff; color: #000; break-inside: avoid; }
       .kpi-val, .oi-qty, .sup-head, .group-title, .order-total b { color: #000; }
       .order-when, .oi-dep, .oi-price, .order-notes, .kpi-label, .order-total { color: #444; }
+      /* Stampa del solo dettaglio quando è aperto a pagina intera */
+      .detail-open .topbar, .detail-open .tabs, .detail-open .content { display: none !important; }
+      .detail-open .detail-overlay { position: static; background: #fff; color: #000; display: block; }
+      .detail-open .detail-topbar, .detail-open .detail-actions { display: none !important; }
+      .detail-open .detail-card { border: 1px solid #ccc; background: #fff; color: #000; }
+      .detail-open .detail-user, .detail-open .detail-items .oi-qty, .detail-open .detail-total b { color: #000; }
+      .detail-open .detail-when, .detail-open .detail-items .oi-dep, .detail-open .detail-items .oi-price, .detail-open .detail-total, .detail-open .detail-notes { color: #444; }
     }
   </style>
 </head>
@@ -306,6 +379,44 @@
   </div>
 </div>
 
+<!-- DETTAGLIO ORDINE A PAGINA INTERA -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-topbar">
+    <button class="back-btn" onclick="closeDetail()"><i class="fa-solid fa-arrow-left"></i> Indietro</button>
+    <div class="dt-title">Dettaglio ordine</div>
+  </div>
+  <div class="detail-content" id="detail-content"></div>
+</div>
+
+<!-- SELETTORE PRODOTTI PER NUOVO ORDINE ADMIN (stile pagina staff) -->
+<div class="picker-overlay" id="picker-overlay">
+  <div class="picker-topbar">
+    <button class="back-btn" style="background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px 14px;font-size:.8rem;font-weight:700" onclick="closePicker()"><i class="fa-solid fa-xmark"></i> Annulla</button>
+    <div class="dt-title" style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:.85rem;text-transform:uppercase;letter-spacing:1px;color:var(--gold)">Nuovo ordine — scegli i prodotti</div>
+  </div>
+  <div class="picker-content">
+    <div class="picker-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="picker-search" placeholder="Cerca materia prima..." oninput="renderPicker()">
+    </div>
+    <div class="chips" id="picker-chips">
+      <div class="chip active" data-dep="" onclick="setPickerDep(this)">Tutti i reparti</div>
+      <div class="chip" data-dep="Pizzeria" onclick="setPickerDep(this)">🍕 Pizzeria</div>
+      <div class="chip" data-dep="Cucina" onclick="setPickerDep(this)">🍳 Cucina</div>
+    </div>
+    <select class="picker-supplier" id="picker-supplier" onchange="renderPicker()">
+      <option value="">Tutti i fornitori</option>
+    </select>
+    <div id="picker-list"></div>
+  </div>
+</div>
+<div class="picker-bar" id="picker-bar">
+  <div class="picker-bar-inner">
+    <div class="picker-count"><b id="picker-count">0</b> articoli</div>
+    <button class="picker-next" onclick="pickerNext()"><i class="fa-solid fa-arrow-right"></i> Avanti: prezzi e note</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -377,6 +488,43 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   loadOrders();
   loadMaterialsCatalog();
+  startAutoRefresh();
+}
+
+// ── AUTO-AGGIORNAMENTO: i nuovi ordini compaiono da soli, senza refresh ──
+let autoRefreshTimer = null;
+
+function ordersSignature(orders) {
+  return orders.map(o => `${o.id}:${o.status}:${o.modified_at || ''}:${o.items.length}`).join('|');
+}
+
+async function silentRefresh() {
+  // Non toccare la lista mentre l'admin sta modificando o creando un ordine
+  if (document.getElementById('edit-modal').classList.contains('open')) return;
+  if (document.getElementById('picker-overlay').classList.contains('open')) return;
+  if (document.hidden) return;
+  try {
+    const res = await fetch('/admin/supply-orders');
+    const data = await res.json();
+    if (data.error) return;
+    const fresh = data.orders || [];
+    if (ordersSignature(fresh) === ordersSignature(allOrders)) return;
+    const oldPending = allOrders.filter(o => o.status === 'inviato').length;
+    const newPending = fresh.filter(o => o.status === 'inviato').length;
+    allOrders = fresh;
+    allUsers = data.users || allUsers;
+    render();
+    if (newPending > oldPending) {
+      showToast(`📦 ${newPending - oldPending === 1 ? 'Nuovo ordine ricevuto' : (newPending - oldPending) + ' nuovi ordini ricevuti'}!`);
+    }
+  } catch (e) { /* tentativo silenzioso, riprova al giro dopo */ }
+}
+
+function startAutoRefresh() {
+  if (autoRefreshTimer) return;
+  autoRefreshTimer = setInterval(silentRefresh, 25000);
+  // Aggiorna anche quando si torna sulla pagina/scheda
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) silentRefresh(); });
 }
 
 // Catalogo materie prime per la rettifica (aggiunta prodotti)
@@ -494,6 +642,7 @@ function render() {
   if (currentTab === 'costs') renderCosts();
   if (currentTab === 'anagrafica') renderAnagrafica();
   if (currentTab === 'prodotti') renderProdotti();
+  if (detailOrderId) renderDetail(); // il dettaglio a pagina intera resta aggiornato
 }
 
 function updatePendingCount() {
@@ -549,6 +698,7 @@ function orderCard(o, showActions) {
   const activeCount = o.items.filter(it => !it.removed).length;
   const open = expandedOrders.has(o.id);
   const actions = showActions ? `<div class="order-actions">
+      <button class="act-btn" onclick="openDetail(${o.id})" title="Apri a pagina intera"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
       <button class="act-btn" onclick="openEdit(${o.id})" title="Rettifica quantità, prezzi e prodotti"><i class="fa-solid fa-pen"></i> Modifica</button>
       ${o.status === 'inviato'
         ? `<button class="act-btn evadi" onclick="setStatus(${o.id}, 'evaso')"><i class="fa-solid fa-check"></i> Evaso</button>`
@@ -573,6 +723,52 @@ function orderCard(o, showActions) {
   </div>`;
 }
 
+// ── DETTAGLIO ORDINE A PAGINA INTERA ──
+let detailOrderId = null;
+
+function openDetail(id) {
+  detailOrderId = id;
+  renderDetail();
+  document.getElementById('detail-overlay').classList.add('open');
+  document.body.classList.add('detail-open');
+}
+
+function closeDetail() {
+  detailOrderId = null;
+  document.getElementById('detail-overlay').classList.remove('open');
+  document.body.classList.remove('detail-open');
+}
+
+function renderDetail() {
+  if (!detailOrderId) return;
+  const o = allOrders.find(x => x.id === detailOrderId);
+  if (!o) { closeDetail(); return; }
+  const { total, priced } = orderTotal(o.items);
+  const activeCount = o.items.filter(it => !it.removed).length;
+  document.getElementById('detail-content').innerHTML = `
+    <div class="detail-meta">
+      <div class="detail-user"><i class="fa-solid fa-user"></i> ${esc(o.display_name)}</div>
+      ${o.modified ? '<div class="order-badge rettifica">✏️ Rettificato</div>' : ''}
+      <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Da evadere'}</div>
+    </div>
+    <div class="detail-when"><i class="fa-regular fa-calendar"></i> Inviato: ${esc(o.created_at)}${o.fulfilled_at ? ` · Evaso: ${esc(o.fulfilled_at)}` : ''}${o.modified_at ? ` · Rettificato: ${esc(o.modified_at)}` : ''}</div>
+    <div class="detail-actions">
+      <button class="act-btn" onclick="openEdit(${o.id})"><i class="fa-solid fa-pen"></i> Modifica</button>
+      ${o.status === 'inviato'
+        ? `<button class="act-btn evadi" onclick="setStatus(${o.id}, 'evaso')"><i class="fa-solid fa-check"></i> Segna evaso</button>`
+        : `<button class="act-btn" onclick="setStatus(${o.id}, 'inviato')"><i class="fa-solid fa-rotate-left"></i> Riapri</button>`}
+      <button class="act-btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Stampa</button>
+      <button class="act-btn del" onclick="deleteOrder(${o.id})"><i class="fa-solid fa-trash"></i> Elimina</button>
+    </div>
+    <div class="detail-card">
+      <div class="chart-title">${activeCount} prodotti</div>
+      <ul class="detail-items">${o.items.map(itemLine).join('')}</ul>
+      ${priced ? `<div class="detail-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+    </div>
+    ${o.notes ? `<div class="detail-notes">📝 ${esc(o.notes)}</div>` : ''}
+  `;
+}
+
 // ── RETTIFICA ORDINE ──
 let editState = null; // { orderId, items: [...], newItems: [...] }
 
@@ -595,11 +791,99 @@ function openEdit(orderId) {
   document.getElementById('edit-modal').classList.add('open');
 }
 
-// Nuovo ordine creato dall'admin (stesso modal, in modalità creazione)
+// ── NUOVO ORDINE ADMIN: selettore prodotti stile pagina staff ──
+let pickerCart = {}; // material_id -> quantity
+let pickerDep = '';
+
 function openCreate() {
-  editState = { orderId: null, items: [], newItems: [] };
+  pickerCart = {};
+  pickerDep = '';
+  document.getElementById('picker-search').value = '';
+  document.querySelectorAll('#picker-chips .chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+  const suppliers = [...new Set(materialsCatalog.map(m => m.supplier))].sort((a, b) => a.localeCompare(b, 'it'));
+  document.getElementById('picker-supplier').innerHTML = '<option value="">Tutti i fornitori</option>' +
+    suppliers.map(s => `<option value="${escAttr(s)}">${esc(s)}</option>`).join('');
+  renderPicker();
+  updatePickerBar();
+  document.getElementById('picker-overlay').classList.add('open');
+}
+
+function closePicker() {
+  document.getElementById('picker-overlay').classList.remove('open');
+  document.getElementById('picker-bar').classList.remove('visible');
+}
+
+function setPickerDep(el) {
+  document.querySelectorAll('#picker-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  pickerDep = el.dataset.dep;
+  renderPicker();
+}
+
+function renderPicker() {
+  const q = document.getElementById('picker-search').value.trim().toLowerCase();
+  const sup = document.getElementById('picker-supplier').value;
+  const list = materialsCatalog.filter(m =>
+    (!pickerDep || m.department === pickerDep) &&
+    (!sup || m.supplier === sup) &&
+    (!q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q))
+  );
+  const box = document.getElementById('picker-list');
+  if (list.length === 0) { box.innerHTML = '<div class="empty-note">Nessuna materia prima trovata</div>'; return; }
+  box.innerHTML = list.map(m => {
+    const qty = pickerCart[m.id] || 0;
+    return `<div class="mat-row ${qty > 0 ? 'selected' : ''}" id="pmat-${m.id}">
+      <div class="mat-info">
+        <div class="mat-name">${esc(m.name)}</div>
+        <div class="mat-meta">${m.department === 'Pizzeria' ? '🍕' : '🍳'} ${esc(m.department)} · ${esc(m.supplier)}</div>
+      </div>
+      <div class="stepper">
+        <button onclick="pickerChangeQty(${m.id}, -1)"><i class="fa-solid fa-minus"></i></button>
+        <input type="number" inputmode="decimal" min="0" step="any" value="${qty || ''}" placeholder="0" onchange="pickerSetQty(${m.id}, this.value)">
+        <button class="plus" onclick="pickerChangeQty(${m.id}, 1)"><i class="fa-solid fa-plus"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function pickerChangeQty(id, delta) {
+  pickerSetQty(id, Math.max(0, (pickerCart[id] || 0) + delta));
+}
+
+function pickerSetQty(id, value) {
+  const qty = parseFloat(value) || 0;
+  if (qty <= 0) delete pickerCart[id]; else pickerCart[id] = qty;
+  const row = document.getElementById(`pmat-${id}`);
+  if (row) {
+    row.classList.toggle('selected', qty > 0);
+    const input = row.querySelector('.stepper input');
+    if (input) input.value = qty || '';
+  }
+  updatePickerBar();
+}
+
+function updatePickerBar() {
+  const n = Object.keys(pickerCart).length;
+  document.getElementById('picker-count').textContent = n;
+  document.getElementById('picker-bar').classList.toggle('visible',
+    n > 0 && document.getElementById('picker-overlay').classList.contains('open'));
+}
+
+// Dal selettore al riepilogo: prezzi, note, aggiunte manuali, poi creazione
+function pickerNext() {
+  const newItems = Object.keys(pickerCart).map(id => {
+    const m = materialsCatalog.find(x => x.id == id);
+    return m ? { material_id: m.id, name: m.name, department: m.department, supplier: m.supplier, quantity: pickerCart[id], unit_price: '' } : null;
+  }).filter(Boolean);
+  if (newItems.length === 0) { showToast('Seleziona almeno un prodotto', true); return; }
+  closePicker();
+  openCreateReview(newItems);
+}
+
+function openCreateReview(newItems) {
+  editState = { orderId: null, items: [], newItems };
   document.getElementById('edit-title').textContent = 'Nuovo ordine (Admin)';
-  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> all\'ordine:';
+  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> manualmente all\'ordine:';
   document.getElementById('edit-notes-wrap').style.display = 'block';
   document.getElementById('edit-notes').value = '';
   document.getElementById('edit-save-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Crea ordine';
@@ -826,11 +1110,23 @@ async function sendWhatsApp(supplierName) {
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
-// Invio in sequenza a tutti i fornitori con righe da ordinare
+// Invio a tutti i fornitori con righe da ordinare
 function openSendAll() {
   const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
   const box = document.getElementById('sendall-list');
-  box.innerHTML = suppliers.map(s => {
+  const withWa = suppliers.filter(s => {
+    const sup = allSuppliers.find(x => x.name === s);
+    return sup && sup.whatsapp;
+  });
+  const missing = suppliers.length - withWa.length;
+  const openAllBtn = withWa.length > 1 ? `
+    <div style="margin-bottom:12px">
+      <button class="wa-btn" style="width:100%;justify-content:center;padding:13px;font-size:.85rem" onclick="sendAllAtOnce()">
+        <i class="fa-solid fa-bolt"></i> Apri tutti con un click (${withWa.length} chat)
+      </button>
+      <div class="edit-hint" style="text-align:center">${missing > 0 ? `⚠️ ${missing} fornitor${missing === 1 ? 'e è senza' : 'i sono senza'} numero: aggiungilo dalla tab Fornitori. ` : ''}Se il browser blocca le finestre extra, consenti i popup per questo sito oppure usa i bottoni singoli qui sotto.</div>
+    </div>` : '';
+  box.innerHTML = openAllBtn + suppliers.map(s => {
     const sup = allSuppliers.find(x => x.name === s);
     const hasWa = sup && sup.whatsapp;
     const n = (supplierAgg[s] || []).length;
@@ -846,6 +1142,32 @@ function openSendAll() {
     </div>`;
   }).join('');
   document.getElementById('sendall-modal').classList.add('open');
+}
+
+// Un click solo: apre una chat WhatsApp per ogni fornitore (richiede popup consentiti)
+function sendAllAtOnce() {
+  const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
+  let opened = 0, blocked = 0;
+  for (const s of suppliers) {
+    const sup = allSuppliers.find(x => x.name === s);
+    if (!sup || !sup.whatsapp) continue;
+    const number = normalizeWaNumber(sup.whatsapp);
+    if (!number) continue;
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(buildSupplierMessage(s))}`;
+    const w = window.open(url, 'wa_' + cssId(s));
+    if (w) {
+      opened++;
+      const row = document.getElementById('sendall-' + cssId(s));
+      if (row) { const d = row.querySelector('.sendall-done'); if (d) d.style.display = ''; }
+    } else {
+      blocked++;
+    }
+  }
+  if (blocked > 0) {
+    showToast(`${opened} chat aperte, ${blocked} bloccate dal browser: usa i bottoni singoli o consenti i popup`, true);
+  } else if (opened > 0) {
+    showToast(`✅ ${opened} chat WhatsApp aperte`);
+  }
 }
 
 async function sendAllOne(supplierName) {
@@ -1150,6 +1472,7 @@ async function deleteOrder(id) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Errore');
     allOrders = allOrders.filter(x => x.id !== id);
+    if (detailOrderId === id) closeDetail();
     showToast('Ordine eliminato');
     render();
   } catch (e) {

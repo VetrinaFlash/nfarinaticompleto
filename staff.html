@@ -125,6 +125,16 @@
     .order-total { margin-top: 8px; text-align: right; font-size: .78rem; color: var(--muted); }
     .order-total b { color: var(--gold-l); }
 
+    /* BOZZE */
+    .draft-btn { flex: 1; padding: 13px; background: rgba(66,165,245,.14); border: 1px solid rgba(66,165,245,.4); border-radius: 12px; color: #64b5f6; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; }
+    .send-btn { flex: 1.4; }
+    .draft-banner { background: rgba(66,165,245,.08); border: 1px dashed rgba(66,165,245,.4); border-radius: 12px; padding: 10px 14px; font-size: .75rem; color: #90caf9; margin-bottom: 12px; line-height: 1.5; }
+    .order-badge.bozza { background: rgba(66,165,245,.15); color: #64b5f6; }
+    .draft-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .draft-actions button { flex: 1; padding: 10px; border-radius: 10px; font-size: .75rem; font-weight: 800; }
+    .draft-actions .resume { background: rgba(184,134,11,.16); border: 1px solid rgba(184,134,11,.45); color: var(--gold-l); }
+    .draft-actions .delete { background: rgba(211,47,47,.1); border: 1px solid rgba(211,47,47,.3); color: var(--red); }
+
     /* RETTIFICHE ADMIN */
     .order-card.modified { border-color: rgba(230,81,0,.45); }
     .order-badge.rettifica { background: rgba(230,81,0,.18); color: #ffb74d; }
@@ -182,6 +192,7 @@
 
   <!-- NUOVO ORDINE -->
   <div class="content" id="view-new">
+    <div class="draft-banner" id="draft-banner" style="display:none"></div>
     <div class="search-box">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="text" id="search" placeholder="Cerca materia prima..." oninput="renderMaterials()">
@@ -226,7 +237,11 @@
     </div>
     <div class="modal-foot">
       <div class="modal-total" id="review-total"></div>
-      <button class="send-btn" id="confirm-send-btn" onclick="sendOrder()" style="width:100%"><i class="fa-solid fa-paper-plane"></i> Invia ordine</button>
+      <div style="display:flex;gap:8px">
+        <button class="draft-btn" id="save-draft-btn" onclick="saveDraft()"><i class="fa-solid fa-floppy-disk"></i> Salva bozza</button>
+        <button class="send-btn" id="confirm-send-btn" onclick="sendOrder()"><i class="fa-solid fa-paper-plane"></i> Invia ordine</button>
+      </div>
+      <div style="font-size:.68rem;color:var(--muted);text-align:center;margin-top:8px">💾 La bozza si salva senza inviare: puoi aggiungere prodotti durante la giornata e inviare a fine serata.</div>
     </div>
   </div>
 </div>
@@ -238,6 +253,17 @@ let currentUser = null;
 let materials = [];
 let cart = {}; // material_id -> { quantity, unit_price }
 let depFilter = '';
+let draftId = null; // bozza salvata sul server, in lavorazione
+
+function cartKey() { return 'nfarinati_cart_' + (currentUser ? currentUser.id : 0); }
+
+function cartItems() {
+  return Object.keys(cart).map(id => ({
+    material_id: parseInt(id),
+    quantity: cart[id].quantity,
+    unit_price: cart[id].unit_price === '' || cart[id].unit_price === undefined ? null : parseFloat(cart[id].unit_price),
+  }));
+}
 
 // ── AUTH ──
 async function checkAuth() {
@@ -283,7 +309,102 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   document.getElementById('who').textContent = `Ciao, ${currentUser.display_name}`;
   loadMaterials();
-  loadHistory();
+  restoreDraft();
+}
+
+// Al login: riprende la bozza salvata sul server (o il carrello locale non salvato)
+async function restoreDraft() {
+  try {
+    const res = await fetch('/staff/orders');
+    const data = await res.json();
+    const orders = data.orders || [];
+    renderHistoryList(orders);
+    const draft = orders.find(o => o.is_draft);
+    if (draft) {
+      draftId = draft.id;
+      cart = {};
+      for (const it of draft.items) {
+        if (it.material_id) cart[it.material_id] = { quantity: it.quantity, unit_price: it.unit_price ?? '' };
+      }
+      document.getElementById('order-notes').value = draft.notes || '';
+    } else {
+      // Nessuna bozza sul server: recupera l'eventuale carrello locale non salvato
+      try {
+        const saved = JSON.parse(localStorage.getItem(cartKey()) || 'null');
+        if (saved && Object.keys(cart).length === 0) cart = saved;
+      } catch (e2) {}
+    }
+    updateCartBar();
+    renderMaterials();
+    updateDraftBanner();
+  } catch (e) {
+    loadHistory();
+  }
+}
+
+function updateDraftBanner() {
+  const b = document.getElementById('draft-banner');
+  if (draftId) {
+    b.style.display = 'block';
+    b.innerHTML = `📝 Stai lavorando su una <b>bozza salvata</b>: aggiungi prodotti quando vuoi, a fine serata rivedi e invia.
+      <span style="text-decoration:underline;cursor:pointer;color:#ef9a9a" onclick="discardDraft()">Elimina bozza</span>`;
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+async function discardDraft() {
+  if (!confirm('Eliminare la bozza e svuotare il carrello?')) return;
+  try {
+    if (draftId) await fetch(`/staff/orders?id=${draftId}`, { method: 'DELETE' });
+    draftId = null;
+    cart = {};
+    document.getElementById('order-notes').value = '';
+    localStorage.removeItem(cartKey());
+    updateCartBar();
+    renderMaterials();
+    updateDraftBanner();
+    loadHistory();
+    showToast('Bozza eliminata');
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function saveDraft() {
+  const items = cartItems();
+  if (items.length === 0) { showToast('Aggiungi almeno una materia prima', true); return; }
+  const btn = document.getElementById('save-draft-btn');
+  btn.disabled = true;
+  try {
+    const notes = document.getElementById('order-notes').value;
+    let res;
+    if (draftId) {
+      res = await fetch('/staff/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: draftId, action: 'update', items, notes }),
+      });
+    } else {
+      res = await fetch('/staff/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, notes, draft: true }),
+      });
+    }
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore salvataggio bozza');
+    if (!draftId) draftId = data.order_id;
+    localStorage.removeItem(cartKey());
+    closeReview();
+    updateDraftBanner();
+    showToast('💾 Bozza salvata: la trovi qui anche più tardi');
+    loadHistory();
+  } catch (e) {
+    showToast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── MATERIE PRIME ──
@@ -362,6 +483,11 @@ function updateCartBar() {
   const n = Object.keys(cart).length;
   document.getElementById('cart-count').textContent = n;
   document.getElementById('cart-bar').classList.toggle('visible', n > 0);
+  // Backup locale del carrello: niente va perso se si chiude la pagina per sbaglio
+  try {
+    if (n > 0) localStorage.setItem(cartKey(), JSON.stringify(cart));
+    else localStorage.removeItem(cartKey());
+  } catch (e) {}
 }
 
 // ── RIEPILOGO E INVIO ──
@@ -419,23 +545,33 @@ async function sendOrder() {
   const btn = document.getElementById('confirm-send-btn');
   btn.disabled = true;
   try {
-    const items = Object.keys(cart).map(id => ({
-      material_id: parseInt(id),
-      quantity: cart[id].quantity,
-      unit_price: cart[id].unit_price === '' ? null : parseFloat(cart[id].unit_price),
-    }));
-    const res = await fetch('/staff/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, notes: document.getElementById('order-notes').value }),
-    });
+    const items = cartItems();
+    const notes = document.getElementById('order-notes').value;
+    let res;
+    if (draftId) {
+      // La bozza in lavorazione viene inviata con le righe attuali del carrello
+      res = await fetch('/staff/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: draftId, action: 'send', items, notes }),
+      });
+    } else {
+      res = await fetch('/staff/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items, notes }),
+      });
+    }
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Errore invio ordine');
     cart = {};
+    draftId = null;
     document.getElementById('order-notes').value = '';
+    localStorage.removeItem(cartKey());
     closeReview();
     updateCartBar();
     renderMaterials();
+    updateDraftBanner();
     showToast('✅ Ordine inviato!');
     loadHistory();
   } catch (e) {
@@ -450,9 +586,16 @@ async function loadHistory() {
   try {
     const res = await fetch('/staff/orders');
     const data = await res.json();
-    const orders = data.orders || [];
-    const box = document.getElementById('history-list');
-    if (orders.length === 0) { box.innerHTML = '<div class="empty-note">Non hai ancora inviato ordini</div>'; return; }
+    renderHistoryList(data.orders || []);
+  } catch (e) {
+    document.getElementById('history-list').innerHTML = '<div class="empty-note">Errore nel caricamento dello storico</div>';
+  }
+}
+
+function renderHistoryList(orders) {
+  const box = document.getElementById('history-list');
+  if (orders.length === 0) { box.innerHTML = '<div class="empty-note">Non hai ancora inviato ordini</div>'; return; }
+  {
     box.innerHTML = orders.map(o => {
       let total = 0, priced = false;
       const itemsHtml = o.items.map(it => {
@@ -473,20 +616,71 @@ async function loadHistory() {
         else if (isMod) tag = ` <span class="rtag mod">${it.quantity > it.original_quantity ? 'aumentato' : 'ridotto'}</span>`;
         return `<li class="${isRem ? 'oi-removed' : ''}">${qtyHtml} <span class="oi-name">${esc(it.name)}</span> <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span>${tag}<span class="oi-price">${priceStr}</span></li>`;
       }).join('');
+      const statusBadge = o.is_draft
+        ? '<div class="order-badge bozza">📝 Bozza</div>'
+        : `<div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Inviato'}</div>`;
+      const draftActions = o.is_draft ? `<div class="draft-actions">
+          <button class="resume" onclick="resumeDraft(${o.id})"><i class="fa-solid fa-pen-to-square"></i> Riprendi e completa</button>
+          <button class="delete" onclick="deleteDraftFromList(${o.id})"><i class="fa-solid fa-trash"></i> Elimina</button>
+        </div>` : '';
       return `<div class="order-card ${o.modified ? 'modified' : ''}">
         <div class="order-head">
           <div class="order-date"><i class="fa-regular fa-calendar"></i> ${esc(o.created_at)}</div>
           ${o.modified ? '<div class="order-badge rettifica">✏️ Rettificato</div>' : ''}
-          <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Inviato'}</div>
+          ${statusBadge}
         </div>
         ${o.modified ? `<div class="rettifica-note">✏️ L'admin ha rettificato questo ordine${o.modified_at ? ' il ' + esc(o.modified_at) : ''}: controlla le quantità evidenziate.</div>` : ''}
         <ul class="order-items">${itemsHtml}</ul>
         ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
         ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+        ${draftActions}
       </div>`;
     }).join('');
+  }
+}
+
+// Riprende una bozza dallo storico: carica le righe nel carrello e torna al form
+async function resumeDraft(id) {
+  try {
+    const res = await fetch('/staff/orders');
+    const data = await res.json();
+    const draft = (data.orders || []).find(o => o.id === id && o.is_draft);
+    if (!draft) { showToast('Bozza non trovata', true); return; }
+    draftId = draft.id;
+    cart = {};
+    for (const it of draft.items) {
+      if (it.material_id) cart[it.material_id] = { quantity: it.quantity, unit_price: it.unit_price ?? '' };
+    }
+    document.getElementById('order-notes').value = draft.notes || '';
+    updateCartBar();
+    renderMaterials();
+    updateDraftBanner();
+    switchTab('new');
+    showToast('📝 Bozza caricata nel carrello');
   } catch (e) {
-    document.getElementById('history-list').innerHTML = '<div class="empty-note">Errore nel caricamento dello storico</div>';
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function deleteDraftFromList(id) {
+  if (!confirm('Eliminare questa bozza?')) return;
+  try {
+    const res = await fetch(`/staff/orders?id=${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    if (draftId === id) {
+      draftId = null;
+      cart = {};
+      document.getElementById('order-notes').value = '';
+      localStorage.removeItem(cartKey());
+      updateCartBar();
+      renderMaterials();
+      updateDraftBanner();
+    }
+    showToast('Bozza eliminata');
+    loadHistory();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
   }
 }
 

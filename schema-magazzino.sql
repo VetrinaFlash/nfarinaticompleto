@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS supply_orders (
   fulfilled_at TEXT,
   modified INTEGER DEFAULT 0,
   modified_at TEXT,
+  is_draft INTEGER DEFAULT 0,
   FOREIGN KEY (staff_user_id) REFERENCES staff_users(id)
 );
 
