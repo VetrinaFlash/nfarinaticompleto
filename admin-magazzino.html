@@ -1304,7 +1304,8 @@ async function renderProdotti() {
       return;
     }
   }
-  drawProdotti();
+  renderProdottiShell();
+  drawProdottiList();
 }
 
 // Select con i fornitori attualmente in anagrafica, così si aggancia un
@@ -1342,36 +1343,51 @@ function getSupplierValue(selectId) {
   return sel.value;
 }
 
-function drawProdotti() {
-  const box = document.getElementById('view-prodotti');
-  const q = prodottiQuery.toLowerCase();
-  const list = adminMaterials.filter(m =>
-    !q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q) || m.department.toLowerCase().includes(q)
-  );
-  const depSelect = (id, val) => `<select id="${id}" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">
+function depSelectHtml(id, val) {
+  return `<select id="${id}" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">
       <option value="Pizzeria" ${val === 'Pizzeria' ? 'selected' : ''}>🍕 Pizzeria</option>
       <option value="Cucina" ${val === 'Cucina' ? 'selected' : ''}>🍳 Cucina</option>
     </select>`;
+}
+
+// Parte fissa della tab Prodotti (avviso, modulo "nuovo prodotto", casella di
+// ricerca): si ricostruisce solo quando serve davvero (apertura tab, dopo un
+// salvataggio). MAI a ogni carattere digitato nella ricerca — altrimenti il
+// campo di testo viene distrutto e ricreato a ogni tasto, perde il focus e
+// su telefono la tastiera si chiude/riapre continuamente mentre si scrive.
+function renderProdottiShell() {
+  const box = document.getElementById('view-prodotti');
   box.innerHTML = `
     <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto o fornitore, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Il fornitore si sceglie da quelli già in anagrafica (tab Fornitori), per non creare doppioni. Ricorda: la coppia nome + reparto è unica.</div>
     <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
       <input type="text" id="new-mat-name" placeholder="Nome nuovo prodotto" style="min-width:140px;text-transform:uppercase">
-      ${depSelect('new-mat-dep', 'Pizzeria')}
+      ${depSelectHtml('new-mat-dep', 'Pizzeria')}
       ${supplierSelectHtml('new-mat-sup', '')}
       <button class="supplier-save" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
     </div>
     <div class="search-box" style="position:relative;margin-bottom:10px">
-      <input type="text" value="${escAttr(prodottiQuery)}" placeholder="Cerca prodotto, reparto o fornitore..." oninput="prodottiQuery=this.value; drawProdotti()"
+      <input type="text" id="prodotti-search" value="${escAttr(prodottiQuery)}" placeholder="Cerca prodotto, reparto o fornitore..." oninput="prodottiQuery=this.value; drawProdottiList()"
         style="width:100%;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:.85rem;outline:none">
     </div>
-    <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">${list.length} prodotti</div>` +
-    list.map(m => `<div class="supplier-row">
+    <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px" id="prodotti-count"></div>
+    <div id="prodotti-list"></div>`;
+}
+
+// Solo la lista filtrata: questa sì si ridisegna a ogni carattere digitato,
+// ma senza mai toccare il campo di ricerca (vive fuori da #prodotti-list).
+function drawProdottiList() {
+  const q = prodottiQuery.toLowerCase();
+  const list = adminMaterials.filter(m =>
+    !q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q) || m.department.toLowerCase().includes(q)
+  );
+  document.getElementById('prodotti-count').textContent = `${list.length} prodotti`;
+  document.getElementById('prodotti-list').innerHTML = list.map(m => `<div class="supplier-row">
       <input type="text" id="mn-${m.id}" value="${escAttr(m.name)}" style="min-width:140px;flex:2;text-transform:uppercase">
-      ${depSelect('md-' + m.id, m.department)}
+      ${depSelectHtml('md-' + m.id, m.department)}
       ${supplierSelectHtml('ms-' + m.id, m.supplier)}
       <button class="supplier-save" onclick="saveMaterial(${m.id})"><i class="fa-solid fa-floppy-disk"></i></button>
       <button class="edit-del" onclick="deactivateMaterial(${m.id}, '${escJs(m.name)}')" title="Disattiva prodotto"><i class="fa-solid fa-trash"></i></button>
-    </div>`).join('');
+    </div>`).join('') || '<div class="empty-note">Nessun prodotto trovato</div>';
 }
 
 async function addMaterial() {
@@ -1414,7 +1430,8 @@ async function saveMaterial(id) {
     if (m) { m.name = name.toUpperCase(); m.department = department; m.supplier = supplier; }
     showToast('✅ Prodotto aggiornato');
     await loadSuppliers(); // se è stato digitato un fornitore nuovo, ora compare nell'elenco
-    drawProdotti();
+    renderProdottiShell();
+    drawProdottiList();
     loadMaterialsCatalog();
   } catch (e) {
     showToast('Errore: ' + e.message, true);
@@ -1428,7 +1445,7 @@ async function deactivateMaterial(id, name) {
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Errore');
     adminMaterials = adminMaterials.filter(x => x.id !== id);
-    drawProdotti();
+    drawProdottiList();
     showToast('Prodotto disattivato');
     loadMaterialsCatalog();
   } catch (e) {
