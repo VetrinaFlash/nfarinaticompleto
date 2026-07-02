@@ -1,0 +1,18 @@
+# ============================================================
+# ESEMPIO di wrangler.toml — SOLO per sviluppo locale.
+# Questo file NON viene letto dal deploy di Cloudflare Pages:
+# i binding (D1 "DB") sono configurati dal pannello Cloudflare
+# (Pages → Settings → Bindings), sia per Production che Preview.
+# Per usarlo in locale: copialo in wrangler.toml e inserisci
+# il database_id reale (dashboard → Storage & Databases → D1).
+# Non committare wrangler.toml: romperebbe il deploy se
+# contiene un database_id non valido.
+# ============================================================
+name = "nfarinati-modern-pizza"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nfarinati-db"
+database_id = "YOUR_D1_DATABASE_ID"
