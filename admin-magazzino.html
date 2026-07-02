@@ -345,14 +345,7 @@
       <div class="edit-hint">Modifica quantità e prezzi, annulla righe col cestino (lo staff vedrà la differenza rispetto a quanto richiesto) o aggiungi prodotti mancanti.</div>
       <div id="edit-list"></div>
       <div class="add-area">
-        <div class="edit-hint" style="margin-top:0" id="add-area-hint"><b style="color:var(--gold-l)">+ Aggiungi prodotto</b> non richiesto dallo staff:</div>
-        <div class="row">
-          <input list="materials-dl" id="add-mat" placeholder="Cerca materia prima...">
-          <datalist id="materials-dl"></datalist>
-          <input type="number" inputmode="decimal" min="0" step="any" class="edit-qty" id="add-qty" placeholder="Qtà">
-          <input type="number" inputmode="decimal" min="0" step="any" class="edit-price" id="add-price" placeholder="€/pz">
-          <button class="add-btn" onclick="addEditItem()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
-        </div>
+        <button class="add-btn" style="width:100%;justify-content:center;padding:12px" onclick="openAddProductPicker()"><i class="fa-solid fa-magnifying-glass"></i> Cerca e aggiungi prodotto</button>
       </div>
       <div id="edit-notes-wrap" style="display:none;margin-top:12px">
         <div class="edit-hint" style="margin-top:0"><b style="color:var(--gold-l)">Note</b> (opzionale):</div>
@@ -527,15 +520,13 @@ function startAutoRefresh() {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) silentRefresh(); });
 }
 
-// Catalogo materie prime per la rettifica (aggiunta prodotti)
+// Catalogo materie prime per il selettore prodotti (nuovo ordine / rettifica)
 let materialsCatalog = [];
 async function loadMaterialsCatalog() {
   try {
     const res = await fetch('/staff/materials');
     const data = await res.json();
     materialsCatalog = data.materials || [];
-    document.getElementById('materials-dl').innerHTML = materialsCatalog
-      .map(m => `<option value="${escAttr(`${m.name} — ${m.department} (${m.supplier})`)}"></option>`).join('');
   } catch (e) {}
 }
 
@@ -787,21 +778,21 @@ function openEdit(orderId) {
     newItems: [],
   };
   document.getElementById('edit-title').textContent = `Rettifica ordine di ${o.display_name}`;
-  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> non richiesto dallo staff:';
   document.getElementById('edit-notes-wrap').style.display = 'none';
   document.getElementById('edit-save-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva rettifica';
-  document.getElementById('add-mat').value = '';
-  document.getElementById('add-qty').value = '';
-  document.getElementById('add-price').value = '';
   renderEditList();
   document.getElementById('edit-modal').classList.add('open');
 }
 
-// ── NUOVO ORDINE ADMIN: selettore prodotti stile pagina staff ──
+// ── NUOVO ORDINE ADMIN / AGGIUNTA PRODOTTO A UN ORDINE: stesso selettore
+// (ricerca, filtri reparto/fornitore, quantità) usato dalla pagina staff,
+// così si sceglie sempre un prodotto vero dal catalogo — mai testo libero
+// che su iPhone mostra l'autofill del telefono invece dei prodotti reali. ──
 let pickerCart = {}; // material_id -> quantity
 let pickerDep = '';
+let pickerMode = 'create'; // 'create' = nuovo ordine, 'addToEdit' = aggiunge alla rettifica già aperta
 
-function openCreate() {
+function openPickerOverlay() {
   pickerCart = {};
   pickerDep = '';
   document.getElementById('picker-search').value = '';
@@ -811,7 +802,20 @@ function openCreate() {
     suppliers.map(s => `<option value="${escAttr(s)}">${esc(s)}</option>`).join('');
   renderPicker();
   updatePickerBar();
+  // Il selettore ha z-index maggiore della modale di rettifica: si apre sopra
+  // di essa senza chiuderla, così lo stato dell'ordine in modifica resta intatto.
   document.getElementById('picker-overlay').classList.add('open');
+}
+
+function openCreate() {
+  pickerMode = 'create';
+  openPickerOverlay();
+}
+
+// Aperto dal bottone "Cerca e aggiungi prodotto" dentro la rettifica/nuovo ordine
+function openAddProductPicker() {
+  pickerMode = 'addToEdit';
+  openPickerOverlay();
 }
 
 function closePicker() {
@@ -875,7 +879,8 @@ function updatePickerBar() {
     n > 0 && document.getElementById('picker-overlay').classList.contains('open'));
 }
 
-// Dal selettore al riepilogo: prezzi, note, aggiunte manuali, poi creazione
+// Dal selettore: se si stava creando un ordine nuovo apre il riepilogo,
+// se si stava rettificando/completando un ordine già aperto aggiunge lì i prodotti scelti
 function pickerNext() {
   const newItems = Object.keys(pickerCart).map(id => {
     const m = materialsCatalog.find(x => x.id == id);
@@ -883,19 +888,21 @@ function pickerNext() {
   }).filter(Boolean);
   if (newItems.length === 0) { showToast('Seleziona almeno un prodotto', true); return; }
   closePicker();
-  openCreateReview(newItems);
+  if (pickerMode === 'addToEdit' && editState) {
+    editState.newItems.push(...newItems);
+    renderEditList();
+    showToast(`✅ ${newItems.length} prodott${newItems.length === 1 ? 'o aggiunto' : 'i aggiunti'}: imposta quantità e prezzo se serve`);
+  } else {
+    openCreateReview(newItems);
+  }
 }
 
 function openCreateReview(newItems) {
   editState = { orderId: null, items: [], newItems };
   document.getElementById('edit-title').textContent = 'Nuovo ordine (Admin)';
-  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> manualmente all\'ordine:';
   document.getElementById('edit-notes-wrap').style.display = 'block';
   document.getElementById('edit-notes').value = '';
   document.getElementById('edit-save-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Crea ordine';
-  document.getElementById('add-mat').value = '';
-  document.getElementById('add-qty').value = '';
-  document.getElementById('add-price').value = '';
   renderEditList();
   document.getElementById('edit-modal').classList.add('open');
 }
@@ -938,19 +945,6 @@ function toggleRemove(i) {
   renderEditList();
 }
 
-function addEditItem() {
-  const label = document.getElementById('add-mat').value.trim();
-  const qty = parseFloat(document.getElementById('add-qty').value);
-  const price = document.getElementById('add-price').value;
-  const m = materialsCatalog.find(x => `${x.name} — ${x.department} (${x.supplier})` === label);
-  if (!m) { showToast('Scegli una materia prima dall\'elenco', true); return; }
-  if (!(qty > 0)) { showToast('Inserisci la quantità', true); return; }
-  editState.newItems.push({ material_id: m.id, name: m.name, department: m.department, supplier: m.supplier, quantity: qty, unit_price: price });
-  document.getElementById('add-mat').value = '';
-  document.getElementById('add-qty').value = '';
-  document.getElementById('add-price').value = '';
-  renderEditList();
-}
 
 async function saveEdit() {
   if (!editState) return;
