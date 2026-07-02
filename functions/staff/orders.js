@@ -79,9 +79,21 @@ export async function onRequestGet(context) {
   }
 
   try {
+    // Colonne rettifiche admin: aggiunte in corsa sui DB già inizializzati (idempotente)
+    const alters = [
+      'ALTER TABLE supply_order_items ADD COLUMN original_quantity REAL',
+      'ALTER TABLE supply_order_items ADD COLUMN removed INTEGER DEFAULT 0',
+      'ALTER TABLE supply_order_items ADD COLUMN added_by_admin INTEGER DEFAULT 0',
+      'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
+      'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
+    ];
+    for (const sql of alters) {
+      try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
+    }
+
     // Solo gli ordini dell'utente loggato: i due dipendenti non vedono quelli dell'altro
     const orders = await env.DB.prepare(
-      'SELECT id, notes, status, created_at, fulfilled_at FROM supply_orders WHERE staff_user_id = ? ORDER BY created_at DESC LIMIT 100'
+      'SELECT id, notes, status, created_at, fulfilled_at, modified, modified_at FROM supply_orders WHERE staff_user_id = ? ORDER BY created_at DESC LIMIT 100'
     ).bind(session.id).all();
 
     const ids = orders.results.map(o => o.id);
@@ -89,7 +101,9 @@ export async function onRequestGet(context) {
     if (ids.length > 0) {
       const placeholders = ids.map(() => '?').join(',');
       const items = await env.DB.prepare(
-        `SELECT i.supply_order_id, i.quantity, i.unit_price, m.name, m.department, m.supplier
+        `SELECT i.supply_order_id, i.quantity, i.unit_price,
+                i.original_quantity, i.removed, i.added_by_admin,
+                m.name, m.department, m.supplier
          FROM supply_order_items i
          JOIN raw_materials m ON m.id = i.raw_material_id
          WHERE i.supply_order_id IN (${placeholders})

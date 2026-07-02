@@ -125,6 +125,17 @@
     .order-total { margin-top: 8px; text-align: right; font-size: .78rem; color: var(--muted); }
     .order-total b { color: var(--gold-l); }
 
+    /* RETTIFICHE ADMIN */
+    .order-card.modified { border-color: rgba(230,81,0,.45); }
+    .order-badge.rettifica { background: rgba(230,81,0,.18); color: #ffb74d; }
+    .rettifica-note { background: rgba(230,81,0,.08); border: 1px dashed rgba(230,81,0,.35); border-radius: 10px; padding: 8px 12px; font-size: .72rem; color: #ffb74d; margin-bottom: 8px; }
+    .rtag { font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 7px; border-radius: 999px; white-space: nowrap; }
+    .rtag.rem { background: rgba(211,47,47,.18); color: #ef9a9a; }
+    .rtag.add { background: rgba(46,125,50,.2); color: #81c784; }
+    .rtag.mod { background: rgba(230,81,0,.18); color: #ffb74d; }
+    .oi-removed .oi-name, .oi-removed .oi-qty { text-decoration: line-through; opacity: .55; }
+    .oi-orig { color: var(--muted); text-decoration: line-through; margin-right: 4px; font-weight: 600; }
+
     .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 999; background: var(--success); color: #fff; padding: 12px 22px; border-radius: 12px; font-size: .82rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.5); display: none; }
     .toast.error { background: var(--red); }
   </style>
@@ -445,19 +456,30 @@ async function loadHistory() {
     box.innerHTML = orders.map(o => {
       let total = 0, priced = false;
       const itemsHtml = o.items.map(it => {
+        const isRem = !!it.removed;
+        const isAdd = !!it.added_by_admin;
+        const isMod = !isRem && !isAdd && it.original_quantity != null;
         let priceStr = '';
-        if (it.unit_price != null) {
+        if (!isRem && it.unit_price != null) {
           priced = true;
           total += it.unit_price * it.quantity;
           priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
         }
-        return `<li><span class="oi-qty">×${it.quantity}</span> ${esc(it.name)} <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span><span class="oi-price">${priceStr}</span></li>`;
+        let qtyHtml = `<span class="oi-qty">×${it.quantity}</span>`;
+        if (isMod) qtyHtml = `<span class="oi-orig">×${it.original_quantity}</span><span class="oi-qty">×${it.quantity}</span>`;
+        let tag = '';
+        if (isRem) tag = ' <span class="rtag rem">non ordinato</span>';
+        else if (isAdd) tag = ' <span class="rtag add">aggiunto dall\'admin</span>';
+        else if (isMod) tag = ` <span class="rtag mod">${it.quantity > it.original_quantity ? 'aumentato' : 'ridotto'}</span>`;
+        return `<li class="${isRem ? 'oi-removed' : ''}">${qtyHtml} <span class="oi-name">${esc(it.name)}</span> <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span>${tag}<span class="oi-price">${priceStr}</span></li>`;
       }).join('');
-      return `<div class="order-card">
+      return `<div class="order-card ${o.modified ? 'modified' : ''}">
         <div class="order-head">
           <div class="order-date"><i class="fa-regular fa-calendar"></i> ${esc(o.created_at)}</div>
+          ${o.modified ? '<div class="order-badge rettifica">✏️ Rettificato</div>' : ''}
           <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Inviato'}</div>
         </div>
+        ${o.modified ? `<div class="rettifica-note">✏️ L'admin ha rettificato questo ordine${o.modified_at ? ' il ' + esc(o.modified_at) : ''}: controlla le quantità evidenziate.</div>` : ''}
         <ul class="order-items">${itemsHtml}</ul>
         ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
         ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}

@@ -68,7 +68,12 @@
     /* GRUPPI/CARD ORDINE */
     .group-title { font-family: 'Montserrat', sans-serif; font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; }
     .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
-    .order-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .order-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; cursor: pointer; user-select: none; }
+    .order-chev { color: var(--muted); font-size: .75rem; width: 14px; flex-shrink: 0; transition: transform .2s; }
+    .order-head.open .order-chev { transform: rotate(180deg); }
+    .order-summary { font-size: .72rem; color: var(--muted); }
+    .order-summary b { color: var(--gold-l); }
+    .order-body { margin-top: 8px; }
     .order-user { font-size: .82rem; font-weight: 700; }
     .order-user i { color: var(--gold-l); }
     .order-when { font-size: .72rem; color: var(--muted); }
@@ -123,6 +128,50 @@
     /* Quando la pagina è incorporata nella dashboard admin (iframe) la topbar è ridondante */
     .embedded .topbar { display: none; }
 
+    /* RETTIFICHE ORDINE */
+    .tag { font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .tag.rem { background: rgba(211,47,47,.18); color: #ef9a9a; }
+    .tag.add { background: rgba(46,125,50,.2); color: #81c784; }
+    .tag.mod { background: rgba(230,81,0,.18); color: #ffb74d; }
+    .oi-removed .oi-name, .oi-removed .oi-qty { text-decoration: line-through; opacity: .55; }
+    .oi-orig { color: var(--muted); text-decoration: line-through; margin-right: 4px; font-weight: 600; }
+    .order-badge.rettifica { background: rgba(230,81,0,.18); color: #ffb74d; }
+
+    /* MODAL (rettifica ordine / invio a tutti) */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.65); align-items: center; justify-content: center; padding: 14px; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 18px; width: 100%; max-width: 640px; max-height: 90vh; display: flex; flex-direction: column; }
+    .modal-head { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+    .modal-head h3 { font-family: 'Montserrat', sans-serif; font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
+    .modal-head button { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 1.2rem; }
+    .modal-body { padding: 12px 18px; overflow-y: auto; flex: 1; }
+    .modal-foot { padding: 12px 18px; border-top: 1px solid var(--border); }
+    .save-btn { width: 100%; padding: 13px; background: var(--gold); border: none; border-radius: 12px; color: #000; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .edit-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px dashed var(--border); flex-wrap: wrap; }
+    .edit-info { flex: 1; min-width: 140px; }
+    .edit-name { font-size: .8rem; font-weight: 600; }
+    .edit-meta { font-size: .65rem; color: var(--muted); }
+    .edit-row input { padding: 8px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: .8rem; outline: none; text-align: right; }
+    .edit-row input:focus { border-color: var(--gold); }
+    .edit-qty { width: 64px; }
+    .edit-price { width: 80px; }
+    .edit-del { background: none; border: none; color: var(--red); font-size: .9rem; padding: 6px; }
+    .edit-row.is-removed .edit-name { text-decoration: line-through; opacity: .5; }
+    .edit-row.is-removed input { opacity: .4; pointer-events: none; }
+    .edit-hint { font-size: .68rem; color: var(--muted); margin: 10px 0 4px; line-height: 1.5; }
+    .add-area { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .add-area .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-area input[list] { flex: 2; min-width: 170px; text-align: left; padding: 9px 10px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: .8rem; outline: none; }
+    .add-area .edit-qty, .add-area .edit-price { padding: 9px 8px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: .8rem; text-align: right; }
+    .add-btn { padding: 9px 14px; border-radius: 8px; border: 1px solid rgba(46,125,50,.4); background: rgba(46,125,50,.15); color: #81c784; font-size: .75rem; font-weight: 800; }
+
+    /* INVIO A TUTTI */
+    .sendall-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px dashed var(--border); }
+    .sendall-row:last-child { border-bottom: none; }
+    .sendall-name { flex: 1; font-size: .82rem; font-weight: 700; }
+    .sendall-count { font-size: .68rem; color: var(--muted); }
+    .sendall-done { color: #81c784; font-size: .8rem; font-weight: 800; }
+
     .setup-box { background: var(--card); border: 1px solid rgba(184,134,11,.4); border-radius: 14px; padding: 24px; text-align: center; margin: 30px auto; max-width: 480px; display: none; }
     .setup-box p { font-size: .82rem; color: var(--muted); margin-bottom: 16px; }
 
@@ -172,6 +221,7 @@
     <div class="tab" data-tab="history" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> Storico</div>
     <div class="tab" data-tab="costs" onclick="switchTab('costs')"><i class="fa-solid fa-euro-sign"></i> Contabilità</div>
     <div class="tab" data-tab="anagrafica" onclick="switchTab('anagrafica')"><i class="fa-brands fa-whatsapp"></i> Fornitori</div>
+    <div class="tab" data-tab="prodotti" onclick="switchTab('prodotti')"><i class="fa-solid fa-box-open"></i> Prodotti</div>
   </div>
 
   <div class="content">
@@ -196,7 +246,8 @@
     </div>
 
     <div class="toolbar">
-      <button class="tool-btn gold" onclick="loadOrders()"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
+      <button class="tool-btn gold" onclick="openCreate()"><i class="fa-solid fa-plus"></i> Nuovo ordine</button>
+      <button class="tool-btn" onclick="loadOrders()"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
       <button class="tool-btn" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Esporta CSV</button>
       <button class="tool-btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> Stampa / PDF</button>
     </div>
@@ -206,6 +257,52 @@
     <div id="view-history" style="display:none"></div>
     <div id="view-costs" style="display:none"></div>
     <div id="view-anagrafica" style="display:none"></div>
+    <div id="view-prodotti" style="display:none"></div>
+  </div>
+</div>
+
+<!-- MODAL RETTIFICA ORDINE -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="edit-title">Rettifica ordine</h3>
+      <button onclick="closeEdit()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="edit-hint">Modifica quantità e prezzi, annulla righe col cestino (lo staff vedrà la differenza rispetto a quanto richiesto) o aggiungi prodotti mancanti.</div>
+      <div id="edit-list"></div>
+      <div class="add-area">
+        <div class="edit-hint" style="margin-top:0" id="add-area-hint"><b style="color:var(--gold-l)">+ Aggiungi prodotto</b> non richiesto dallo staff:</div>
+        <div class="row">
+          <input list="materials-dl" id="add-mat" placeholder="Cerca materia prima...">
+          <datalist id="materials-dl"></datalist>
+          <input type="number" inputmode="decimal" min="0" step="any" class="edit-qty" id="add-qty" placeholder="Qtà">
+          <input type="number" inputmode="decimal" min="0" step="any" class="edit-price" id="add-price" placeholder="€/pz">
+          <button class="add-btn" onclick="addEditItem()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
+        </div>
+      </div>
+      <div id="edit-notes-wrap" style="display:none;margin-top:12px">
+        <div class="edit-hint" style="margin-top:0"><b style="color:var(--gold-l)">Note</b> (opzionale):</div>
+        <textarea id="edit-notes" style="width:100%;min-height:60px;padding:10px 12px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:.82rem;outline:none;resize:vertical"></textarea>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="save-btn" id="edit-save-btn" onclick="saveEdit()"><i class="fa-solid fa-floppy-disk"></i> Salva rettifica</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INVIO A TUTTI I FORNITORI -->
+<div class="modal-overlay" id="sendall-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Invia ordini WhatsApp</h3>
+      <button onclick="document.getElementById('sendall-modal').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="edit-hint">Tocca il bottone di ogni fornitore: si apre WhatsApp col messaggio d'ordine già scritto. Invia e torna qui per il successivo.</div>
+      <div id="sendall-list"></div>
+    </div>
   </div>
 </div>
 
@@ -279,6 +376,19 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 function showApp() {
   document.getElementById('app').style.display = 'block';
   loadOrders();
+  loadMaterialsCatalog();
+}
+
+// Catalogo materie prime per la rettifica (aggiunta prodotti)
+let materialsCatalog = [];
+async function loadMaterialsCatalog() {
+  try {
+    const res = await fetch('/staff/materials');
+    const data = await res.json();
+    materialsCatalog = data.materials || [];
+    document.getElementById('materials-dl').innerHTML = materialsCatalog
+      .map(m => `<option value="${escAttr(`${m.name} — ${m.department} (${m.supplier})`)}"></option>`).join('');
+  } catch (e) {}
 }
 
 // ── DATI ──
@@ -370,7 +480,7 @@ function applyFilters() { render(); }
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  ['pending', 'suppliers', 'history', 'costs', 'anagrafica'].forEach(v => {
+  ['pending', 'suppliers', 'history', 'costs', 'anagrafica', 'prodotti'].forEach(v => {
     document.getElementById('view-' + v).style.display = v === tab ? 'block' : 'none';
   });
   render();
@@ -383,6 +493,7 @@ function render() {
   if (currentTab === 'history') renderHistory();
   if (currentTab === 'costs') renderCosts();
   if (currentTab === 'anagrafica') renderAnagrafica();
+  if (currentTab === 'prodotti') renderProdotti();
 }
 
 function updatePendingCount() {
@@ -393,50 +504,244 @@ function updatePendingCount() {
   document.title = (n > 0 ? `(${n}) ` : '') + "Magazzino – Admin N'Farinati";
 }
 
-function orderCard(o, showActions) {
+function itemLine(it) {
+  const isRem = !!it.removed;
+  const isAdd = !!it.added_by_admin;
+  const isMod = !isRem && !isAdd && it.original_quantity != null;
+  let qtyHtml = `<span class="oi-qty">×${it.quantity}</span>`;
+  if (isMod) qtyHtml = `<span class="oi-orig">×${it.original_quantity}</span><span class="oi-qty">×${it.quantity}</span>`;
+  let tag = '';
+  if (isRem) tag = ' <span class="tag rem">annullato</span>';
+  else if (isAdd) tag = ' <span class="tag add">aggiunto admin</span>';
+  else if (isMod) tag = ` <span class="tag mod">${it.quantity > it.original_quantity ? 'aumentato' : 'ridotto'}</span>`;
+  let priceStr = '';
+  if (!isRem && it.unit_price != null) priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
+  return `<li class="${isRem ? 'oi-removed' : ''}">${qtyHtml} <span class="oi-name">${esc(it.name)}</span> <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span>${tag}<span class="oi-price">${priceStr}</span></li>`;
+}
+
+function orderTotal(items) {
   let total = 0, priced = false;
-  const itemsHtml = o.items.map(it => {
-    let priceStr = '';
-    if (it.unit_price != null) {
-      priced = true;
-      total += it.unit_price * it.quantity;
-      priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
-    }
-    return `<li><span class="oi-qty">×${it.quantity}</span> ${esc(it.name)} <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span><span class="oi-price">${priceStr}</span></li>`;
-  }).join('');
+  for (const it of items) {
+    if (it.removed || it.unit_price == null) continue;
+    priced = true;
+    total += it.unit_price * it.quantity;
+  }
+  return { total, priced };
+}
+
+// Schede comprimibili: si espandono al tocco, lo stato resta durante la sessione
+let expandedOrders = new Set();
+
+function toggleOrder(id, ev) {
+  if (ev && ev.target.closest('.order-actions')) return; // i bottoni non fanno collassare
+  const body = document.getElementById('obody-' + id);
+  const head = document.getElementById('ohead-' + id);
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if (head) head.classList.toggle('open', !isOpen);
+  if (isOpen) expandedOrders.delete(id); else expandedOrders.add(id);
+}
+
+function orderCard(o, showActions) {
+  const { total, priced } = orderTotal(o.items);
+  const itemsHtml = o.items.map(itemLine).join('');
+  const activeCount = o.items.filter(it => !it.removed).length;
+  const open = expandedOrders.has(o.id);
   const actions = showActions ? `<div class="order-actions">
+      <button class="act-btn" onclick="openEdit(${o.id})" title="Rettifica quantità, prezzi e prodotti"><i class="fa-solid fa-pen"></i> Modifica</button>
       ${o.status === 'inviato'
         ? `<button class="act-btn evadi" onclick="setStatus(${o.id}, 'evaso')"><i class="fa-solid fa-check"></i> Evaso</button>`
         : `<button class="act-btn" onclick="setStatus(${o.id}, 'inviato')"><i class="fa-solid fa-rotate-left"></i> Riapri</button>`}
       <button class="act-btn del" onclick="deleteOrder(${o.id})"><i class="fa-solid fa-trash"></i></button>
     </div>` : '';
   return `<div class="order-card">
-    <div class="order-head">
+    <div class="order-head ${open ? 'open' : ''}" id="ohead-${o.id}" onclick="toggleOrder(${o.id}, event)">
+      <i class="fa-solid fa-chevron-down order-chev"></i>
       <div class="order-user"><i class="fa-solid fa-user"></i> ${esc(o.display_name)}</div>
       <div class="order-when">${esc(o.created_at)}</div>
+      <div class="order-summary"><b>${activeCount}</b> prodotti${priced ? ` · <b>€ ${total.toFixed(2)}</b>` : ''}</div>
+      ${o.modified ? '<div class="order-badge rettifica">✏️ Rettificato</div>' : ''}
       <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Da evadere'}</div>
       ${actions}
     </div>
-    <ul class="order-items">${itemsHtml}</ul>
-    ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
-    ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+    <div class="order-body" id="obody-${o.id}" style="display:${open ? 'block' : 'none'}">
+      <ul class="order-items">${itemsHtml}</ul>
+      ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
+      ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+    </div>
   </div>`;
 }
 
-// Vista "Da evadere": ordini status=inviato raggruppati per data → persona
-function renderPending() {
-  const orders = getFiltered().filter(o => o.status === 'inviato');
-  const box = document.getElementById('view-pending');
-  if (orders.length === 0) { box.innerHTML = '<div class="empty-note">🎉 Nessun ordine da evadere</div>'; return; }
+// ── RETTIFICA ORDINE ──
+let editState = null; // { orderId, items: [...], newItems: [...] }
+
+function openEdit(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  editState = {
+    orderId,
+    items: o.items.map(it => ({ ...it, removed: !!it.removed })),
+    newItems: [],
+  };
+  document.getElementById('edit-title').textContent = `Rettifica ordine di ${o.display_name}`;
+  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> non richiesto dallo staff:';
+  document.getElementById('edit-notes-wrap').style.display = 'none';
+  document.getElementById('edit-save-btn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Salva rettifica';
+  document.getElementById('add-mat').value = '';
+  document.getElementById('add-qty').value = '';
+  document.getElementById('add-price').value = '';
+  renderEditList();
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+// Nuovo ordine creato dall'admin (stesso modal, in modalità creazione)
+function openCreate() {
+  editState = { orderId: null, items: [], newItems: [] };
+  document.getElementById('edit-title').textContent = 'Nuovo ordine (Admin)';
+  document.getElementById('add-area-hint').innerHTML = '<b style="color:var(--gold-l)">+ Aggiungi prodotto</b> all\'ordine:';
+  document.getElementById('edit-notes-wrap').style.display = 'block';
+  document.getElementById('edit-notes').value = '';
+  document.getElementById('edit-save-btn').innerHTML = '<i class="fa-solid fa-paper-plane"></i> Crea ordine';
+  document.getElementById('add-mat').value = '';
+  document.getElementById('add-qty').value = '';
+  document.getElementById('add-price').value = '';
+  renderEditList();
+  document.getElementById('edit-modal').classList.add('open');
+}
+
+function closeEdit() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editState = null;
+}
+
+function renderEditList() {
+  const box = document.getElementById('edit-list');
+  const rows = [];
+  editState.items.forEach((it, i) => {
+    rows.push(`<div class="edit-row ${it.removed ? 'is-removed' : ''}">
+      <div class="edit-info">
+        <div class="edit-name">${esc(it.name)} ${it.added_by_admin ? '<span class="tag add">aggiunto</span>' : ''}</div>
+        <div class="edit-meta">${esc(it.department)} · ${esc(it.supplier)}${it.original_quantity != null ? ` · staff chiedeva ×${it.original_quantity}` : ''}</div>
+      </div>
+      <input type="number" inputmode="decimal" min="0" step="any" class="edit-qty" value="${it.quantity}" onchange="editState.items[${i}].quantity = parseFloat(this.value) || ${it.quantity}" title="Quantità">
+      <input type="number" inputmode="decimal" min="0" step="any" class="edit-price" value="${it.unit_price ?? ''}" placeholder="€/pz" onchange="editState.items[${i}].unit_price = this.value" title="Prezzo unitario">
+      <button class="edit-del" onclick="toggleRemove(${i})" title="${it.removed ? 'Ripristina riga' : 'Annulla riga'}"><i class="fa-solid ${it.removed ? 'fa-rotate-left' : 'fa-trash'}"></i></button>
+    </div>`);
+  });
+  editState.newItems.forEach((it, i) => {
+    rows.push(`<div class="edit-row">
+      <div class="edit-info">
+        <div class="edit-name">${esc(it.name)} <span class="tag add">nuovo</span></div>
+        <div class="edit-meta">${esc(it.department)} · ${esc(it.supplier)}</div>
+      </div>
+      <input type="number" inputmode="decimal" min="0" step="any" class="edit-qty" value="${it.quantity}" onchange="editState.newItems[${i}].quantity = parseFloat(this.value) || ${it.quantity}">
+      <input type="number" inputmode="decimal" min="0" step="any" class="edit-price" value="${it.unit_price ?? ''}" placeholder="€/pz" onchange="editState.newItems[${i}].unit_price = this.value">
+      <button class="edit-del" onclick="editState.newItems.splice(${i},1); renderEditList()"><i class="fa-solid fa-trash"></i></button>
+    </div>`);
+  });
+  box.innerHTML = rows.join('') || '<div class="empty-note">Nessuna riga</div>';
+}
+
+function toggleRemove(i) {
+  editState.items[i].removed = !editState.items[i].removed;
+  renderEditList();
+}
+
+function addEditItem() {
+  const label = document.getElementById('add-mat').value.trim();
+  const qty = parseFloat(document.getElementById('add-qty').value);
+  const price = document.getElementById('add-price').value;
+  const m = materialsCatalog.find(x => `${x.name} — ${x.department} (${x.supplier})` === label);
+  if (!m) { showToast('Scegli una materia prima dall\'elenco', true); return; }
+  if (!(qty > 0)) { showToast('Inserisci la quantità', true); return; }
+  editState.newItems.push({ material_id: m.id, name: m.name, department: m.department, supplier: m.supplier, quantity: qty, unit_price: price });
+  document.getElementById('add-mat').value = '';
+  document.getElementById('add-qty').value = '';
+  document.getElementById('add-price').value = '';
+  renderEditList();
+}
+
+async function saveEdit() {
+  if (!editState) return;
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true;
+  try {
+    // Modalità creazione: nuovo ordine attribuito all'Admin
+    if (!editState.orderId) {
+      if (editState.newItems.length === 0) throw new Error('Aggiungi almeno un prodotto');
+      const res = await fetch('/admin/supply-orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: editState.newItems.map(it => ({
+            material_id: it.material_id,
+            quantity: it.quantity,
+            unit_price: it.unit_price === '' || it.unit_price === undefined ? null : it.unit_price,
+          })),
+          notes: document.getElementById('edit-notes').value,
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Errore creazione ordine');
+      closeEdit();
+      showToast('✅ Ordine creato');
+      loadOrders();
+      return;
+    }
+
+    const items = [
+      ...editState.items.map(it => ({
+        item_id: it.item_id,
+        quantity: it.quantity,
+        unit_price: it.unit_price === '' || it.unit_price === undefined ? null : it.unit_price,
+        removed: it.removed ? 1 : 0,
+      })),
+      ...editState.newItems.map(it => ({
+        material_id: it.material_id,
+        quantity: it.quantity,
+        unit_price: it.unit_price === '' || it.unit_price === undefined ? null : it.unit_price,
+      })),
+    ];
+    const res = await fetch('/admin/supply-orders', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'edit', id: editState.orderId, items }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore salvataggio');
+    closeEdit();
+    showToast('✅ Rettifica salvata: lo staff vedrà le modifiche');
+    loadOrders();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Raggruppa gli ordini per giorno, con conteggio nel titolo del gruppo
+function renderGroupedByDay(orders, showActions) {
   const byDate = {};
   for (const o of orders) {
     const d = (o.created_at || '').slice(0, 10);
     (byDate[d] = byDate[d] || []).push(o);
   }
-  box.innerHTML = Object.keys(byDate).sort().reverse().map(d =>
-    `<div class="group-title"><i class="fa-regular fa-calendar"></i> ${formatDate(d)}</div>` +
-    byDate[d].map(o => orderCard(o, true)).join('')
-  ).join('');
+  return Object.keys(byDate).sort().reverse().map(d => {
+    const group = byDate[d];
+    return `<div class="group-title"><i class="fa-regular fa-calendar"></i> ${formatDate(d)}
+        <span style="color:var(--muted);font-size:.68rem;font-weight:600;text-transform:none;letter-spacing:0">· ${group.length} ${group.length === 1 ? 'ordine' : 'ordini'}</span>
+      </div>` +
+      group.map(o => orderCard(o, showActions)).join('');
+  }).join('');
+}
+
+// Vista "Da evadere": ordini status=inviato raggruppati per giorno → persona
+function renderPending() {
+  const orders = getFiltered().filter(o => o.status === 'inviato');
+  const box = document.getElementById('view-pending');
+  if (orders.length === 0) { box.innerHTML = '<div class="empty-note">🎉 Nessun ordine da evadere</div>'; return; }
+  box.innerHTML = renderGroupedByDay(orders, true);
 }
 
 // Vista fornitore: aggrega le righe NON evase per fornitore → "cosa ordinare a chi"
@@ -448,6 +753,7 @@ function renderSuppliers() {
   const bySup = {};
   for (const o of orders) {
     for (const it of o.items) {
+      if (it.removed) continue; // righe annullate dall'admin: non vanno ordinate
       const key = it.supplier || '(senza fornitore)';
       bySup[key] = bySup[key] || {};
       const mk = `${it.name}|${it.department}`;
@@ -459,7 +765,9 @@ function renderSuppliers() {
   const suppliers = Object.keys(bySup).sort((a, b) => a.localeCompare(b, 'it'));
   supplierAgg = {};
   if (suppliers.length === 0) { box.innerHTML = '<div class="empty-note">Nessuna riga da ordinare ai fornitori</div>'; return; }
-  box.innerHTML = suppliers.map(s => {
+  box.innerHTML = `<div style="margin-bottom:12px;text-align:right">
+    <button class="wa-btn" style="padding:11px 18px;font-size:.8rem" onclick="openSendAll()"><i class="fa-brands fa-whatsapp"></i> Invia a tutti i fornitori (${suppliers.length})</button>
+  </div>` + suppliers.map(s => {
     const rows = Object.values(bySup[s]).sort((a, b) => a.name.localeCompare(b.name, 'it'));
     supplierAgg[s] = rows;
     const sup = allSuppliers.find(x => x.name === s);
@@ -518,6 +826,39 @@ async function sendWhatsApp(supplierName) {
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
+// Invio in sequenza a tutti i fornitori con righe da ordinare
+function openSendAll() {
+  const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
+  const box = document.getElementById('sendall-list');
+  box.innerHTML = suppliers.map(s => {
+    const sup = allSuppliers.find(x => x.name === s);
+    const hasWa = sup && sup.whatsapp;
+    const n = (supplierAgg[s] || []).length;
+    return `<div class="sendall-row" id="sendall-${cssId(s)}">
+      <div>
+        <div class="sendall-name">${esc(s)}</div>
+        <div class="sendall-count">${n} ${n === 1 ? 'prodotto' : 'prodotti'} da ordinare</div>
+      </div>
+      <span class="sendall-done" style="display:none">✓ Inviato</span>
+      <button class="wa-btn ${hasWa ? '' : 'muted'}" onclick="sendAllOne('${escJs(s)}')">
+        <i class="fa-brands fa-whatsapp"></i> ${hasWa ? 'Invia' : 'Numero?'}
+      </button>
+    </div>`;
+  }).join('');
+  document.getElementById('sendall-modal').classList.add('open');
+}
+
+async function sendAllOne(supplierName) {
+  await sendWhatsApp(supplierName);
+  const row = document.getElementById('sendall-' + cssId(supplierName));
+  if (row) {
+    const done = row.querySelector('.sendall-done');
+    if (done) done.style.display = '';
+  }
+}
+
+function cssId(s) { return String(s).replace(/[^a-zA-Z0-9]/g, '_'); }
+
 async function copySupplierText(supplierName) {
   const msg = buildSupplierMessage(supplierName).replace(/\*/g, '');
   try {
@@ -555,7 +896,12 @@ function renderAnagrafica() {
     return;
   }
   box.innerHTML = `<div class="wa-hint">📱 Inserisci il numero WhatsApp di ogni fornitore (es. <b>3331234567</b> o <b>+39 333 1234567</b>).
-    Dalla vista "Per fornitore" potrai inviare l'ordine con un click: il messaggio arriva già scritto con tutte le quantità.</div>` +
+    Dalla vista "Per fornitore" potrai inviare l'ordine con un click: il messaggio arriva già scritto con tutte le quantità.</div>
+    <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
+      <input type="text" id="new-sup-name" placeholder="Nome nuovo fornitore" style="min-width:130px">
+      <input type="tel" id="new-sup-wa" placeholder="WhatsApp (opzionale)">
+      <button class="supplier-save" onclick="addSupplier()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
+    </div>` +
     allSuppliers.map(s => `<div class="supplier-row">
       <div class="supplier-name"><i class="fa-solid fa-truck" style="color:var(--gold-l)"></i> ${esc(s.name)}</div>
       <input type="tel" id="wa-${s.id}" value="${escAttr(s.whatsapp || '')}" placeholder="Numero WhatsApp (es. 3331234567)">
@@ -563,12 +909,146 @@ function renderAnagrafica() {
     </div>`).join('');
 }
 
-// Storico completo
+// ── GESTIONE PRODOTTI (anagrafica materie prime, solo admin) ──
+let adminMaterials = [];
+let prodottiQuery = '';
+
+async function renderProdotti() {
+  const box = document.getElementById('view-prodotti');
+  if (adminMaterials.length === 0) {
+    box.innerHTML = '<div class="empty-note">Caricamento...</div>';
+    try {
+      const res = await fetch('/admin/materials');
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      adminMaterials = data.materials || [];
+    } catch (e) {
+      box.innerHTML = '<div class="empty-note">Errore nel caricamento prodotti</div>';
+      return;
+    }
+  }
+  drawProdotti();
+}
+
+function drawProdotti() {
+  const box = document.getElementById('view-prodotti');
+  const q = prodottiQuery.toLowerCase();
+  const list = adminMaterials.filter(m =>
+    !q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q) || m.department.toLowerCase().includes(q)
+  );
+  const supplierNames = allSuppliers.map(s => s.name);
+  const supDatalist = `<datalist id="suppliers-dl">${supplierNames.map(s => `<option value="${escAttr(s)}"></option>`).join('')}</datalist>`;
+  const depSelect = (id, val) => `<select id="${id}" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">
+      <option value="Pizzeria" ${val === 'Pizzeria' ? 'selected' : ''}>🍕 Pizzeria</option>
+      <option value="Cucina" ${val === 'Cucina' ? 'selected' : ''}>🍳 Cucina</option>
+    </select>`;
+  box.innerHTML = supDatalist + `
+    <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto o fornitore, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Ricorda: la coppia nome + reparto è unica.</div>
+    <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
+      <input type="text" id="new-mat-name" placeholder="Nome nuovo prodotto" style="min-width:140px;text-transform:uppercase">
+      ${depSelect('new-mat-dep', 'Pizzeria')}
+      <input type="text" id="new-mat-sup" list="suppliers-dl" placeholder="Fornitore" style="min-width:110px">
+      <button class="supplier-save" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
+    </div>
+    <div class="search-box" style="position:relative;margin-bottom:10px">
+      <input type="text" value="${escAttr(prodottiQuery)}" placeholder="Cerca prodotto, reparto o fornitore..." oninput="prodottiQuery=this.value; drawProdotti()"
+        style="width:100%;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:.85rem;outline:none">
+    </div>
+    <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">${list.length} prodotti</div>` +
+    list.map(m => `<div class="supplier-row">
+      <input type="text" id="mn-${m.id}" value="${escAttr(m.name)}" style="min-width:140px;flex:2;text-transform:uppercase">
+      ${depSelect('md-' + m.id, m.department)}
+      <input type="text" id="ms-${m.id}" list="suppliers-dl" value="${escAttr(m.supplier)}" style="min-width:100px;flex:1">
+      <button class="supplier-save" onclick="saveMaterial(${m.id})"><i class="fa-solid fa-floppy-disk"></i></button>
+      <button class="edit-del" onclick="deactivateMaterial(${m.id}, '${escJs(m.name)}')" title="Disattiva prodotto"><i class="fa-solid fa-trash"></i></button>
+    </div>`).join('');
+}
+
+async function addMaterial() {
+  const name = document.getElementById('new-mat-name').value.trim();
+  const department = document.getElementById('new-mat-dep').value;
+  const supplier = document.getElementById('new-mat-sup').value.trim();
+  if (!name) { showToast('Inserisci il nome del prodotto', true); return; }
+  try {
+    const res = await fetch('/admin/materials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, department, supplier }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    showToast('✅ Prodotto aggiunto');
+    adminMaterials = [];
+    await renderProdotti();
+    loadMaterialsCatalog();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function saveMaterial(id) {
+  const name = document.getElementById('mn-' + id).value.trim();
+  const department = document.getElementById('md-' + id).value;
+  const supplier = document.getElementById('ms-' + id).value.trim();
+  if (!name) { showToast('Il nome non può essere vuoto', true); return; }
+  try {
+    const res = await fetch('/admin/materials', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, department, supplier }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    const m = adminMaterials.find(x => x.id === id);
+    if (m) { m.name = name.toUpperCase(); m.department = department; m.supplier = supplier; }
+    showToast('✅ Prodotto aggiornato');
+    loadMaterialsCatalog();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function deactivateMaterial(id, name) {
+  if (!confirm(`Disattivare "${name}"? Non sarà più ordinabile (lo storico resta).`)) return;
+  try {
+    const res = await fetch(`/admin/materials?id=${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    adminMaterials = adminMaterials.filter(x => x.id !== id);
+    drawProdotti();
+    showToast('Prodotto disattivato');
+    loadMaterialsCatalog();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function addSupplier() {
+  const name = document.getElementById('new-sup-name').value.trim();
+  const whatsapp = document.getElementById('new-sup-wa').value;
+  if (!name) { showToast('Inserisci il nome del fornitore', true); return; }
+  try {
+    const res = await fetch('/admin/suppliers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, whatsapp }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    showToast('✅ Fornitore aggiunto');
+    await loadSuppliers();
+    renderAnagrafica();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+// Storico completo, raggruppato per giorno
 function renderHistory() {
   const orders = getFiltered();
   const box = document.getElementById('view-history');
   if (orders.length === 0) { box.innerHTML = '<div class="empty-note">Nessun ordine trovato con questi filtri</div>'; return; }
-  box.innerHTML = orders.map(o => orderCard(o, true)).join('');
+  box.innerHTML = renderGroupedByDay(orders, true);
 }
 
 // Contabilità: totali periodo + andamento costi
@@ -582,6 +1062,7 @@ function renderCosts() {
   for (const o of orders) {
     const d = (o.created_at || '').slice(0, 10);
     for (const it of o.items) {
+      if (it.removed) continue; // righe annullate: fuori dalla contabilità
       totalLines++;
       if (it.unit_price == null) continue;
       pricedLines++;
@@ -679,15 +1160,20 @@ async function deleteOrder(id) {
 // ── EXPORT CSV ──
 function exportCSV() {
   const orders = getFiltered();
-  const rows = [['Data', 'Dipendente', 'Stato', 'Materia prima', 'Reparto', 'Fornitore', 'Quantità', 'Prezzo unitario', 'Totale riga', 'Note ordine']];
+  const rows = [['Data', 'Dipendente', 'Stato', 'Materia prima', 'Reparto', 'Fornitore', 'Quantità', 'Prezzo unitario', 'Totale riga', 'Rettifica', 'Note ordine']];
   for (const o of orders) {
     for (const it of o.items) {
+      let rettifica = '';
+      if (it.removed) rettifica = 'annullato dall\'admin';
+      else if (it.added_by_admin) rettifica = 'aggiunto dall\'admin';
+      else if (it.original_quantity != null) rettifica = `quantità: ${it.original_quantity} → ${it.quantity}`;
       rows.push([
         o.created_at, o.display_name, o.status,
         it.name, it.department, it.supplier,
         String(it.quantity).replace('.', ','),
-        it.unit_price != null ? String(it.unit_price).replace('.', ',') : '',
-        it.unit_price != null ? String((it.unit_price * it.quantity).toFixed(2)).replace('.', ',') : '',
+        !it.removed && it.unit_price != null ? String(it.unit_price).replace('.', ',') : '',
+        !it.removed && it.unit_price != null ? String((it.unit_price * it.quantity).toFixed(2)).replace('.', ',') : '',
+        rettifica,
         o.notes || '',
       ]);
     }

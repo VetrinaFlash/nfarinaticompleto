@@ -1,4 +1,4 @@
-// Anagrafica fornitori magazzino — GET lista (auto-crea/sincronizza da raw_materials), PUT aggiorna WhatsApp
+// Gestione anagrafica materie prime (solo admin): lista, aggiunta, modifica, disattivazione
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 const STAFF_COOKIE = 'nfarinati_staff_session';
 
@@ -39,18 +39,7 @@ async function isAdminAuthorized(request, secret) {
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
-// Crea la tabella se manca e importa i fornitori presenti in raw_materials (idempotente)
-async function ensureSuppliers(env) {
-  await env.DB.prepare(`CREATE TABLE IF NOT EXISTS suppliers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    whatsapp TEXT DEFAULT '',
-    active INTEGER DEFAULT 1
-  )`).run();
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO suppliers (name) SELECT DISTINCT supplier FROM raw_materials WHERE supplier != ''"
-  ).run();
-}
+function validDepartment(d) { return d === 'Pizzeria' || d === 'Cucina'; }
 
 export async function onRequestGet(context) {
   const { env, request } = context;
@@ -58,35 +47,11 @@ export async function onRequestGet(context) {
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
-
   try {
-    await ensureSuppliers(env);
     const rows = await env.DB.prepare(
-      'SELECT id, name, whatsapp FROM suppliers WHERE active = 1 ORDER BY name'
+      'SELECT id, name, department, supplier, active FROM raw_materials WHERE active = 1 ORDER BY name, department'
     ).all();
-    return new Response(JSON.stringify({ suppliers: rows.results }), { status: 200, headers: cors });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
-  }
-}
-
-export async function onRequestPut(context) {
-  const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  if (!(await isAdminAuthorized(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
-  }
-
-  try {
-    const { name, whatsapp } = await request.json();
-    if (!name) {
-      return new Response(JSON.stringify({ error: 'Nome fornitore mancante' }), { status: 400, headers: cors });
-    }
-    // Salva solo cifre e + per il numero WhatsApp
-    const clean = (whatsapp || '').toString().replace(/[^\d+]/g, '').slice(0, 20);
-    await ensureSuppliers(env);
-    await env.DB.prepare('UPDATE suppliers SET whatsapp = ? WHERE name = ?').bind(clean, name).run();
-    return new Response(JSON.stringify({ ok: true, whatsapp: clean }), { status: 200, headers: cors });
+    return new Response(JSON.stringify({ materials: rows.results }), { status: 200, headers: cors });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
   }
@@ -98,18 +63,64 @@ export async function onRequestPost(context) {
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
-
   try {
-    const { name, whatsapp } = await request.json();
-    const cleanName = (name || '').toString().trim().slice(0, 60);
-    if (!cleanName) {
-      return new Response(JSON.stringify({ error: 'Nome fornitore mancante' }), { status: 400, headers: cors });
+    const { name, department, supplier } = await request.json();
+    const cleanName = (name || '').toString().trim().toUpperCase().slice(0, 60);
+    const cleanSupplier = (supplier || '').toString().trim().slice(0, 60);
+    if (!cleanName || !validDepartment(department)) {
+      return new Response(JSON.stringify({ error: 'Nome o reparto non validi' }), { status: 400, headers: cors });
     }
-    const cleanWa = (whatsapp || '').toString().replace(/[^\d+]/g, '').slice(0, 20);
-    await ensureSuppliers(env);
+    // Se esiste già (anche disattivata) la riattiva aggiornando il fornitore
     await env.DB.prepare(
-      'INSERT INTO suppliers (name, whatsapp, active) VALUES (?, ?, 1) ON CONFLICT(name) DO UPDATE SET active = 1, whatsapp = CASE WHEN excluded.whatsapp != \'\' THEN excluded.whatsapp ELSE whatsapp END'
-    ).bind(cleanName, cleanWa).run();
+      'INSERT INTO raw_materials (name, department, supplier, active) VALUES (?, ?, ?, 1) ' +
+      'ON CONFLICT(name, department) DO UPDATE SET active = 1, supplier = excluded.supplier'
+    ).bind(cleanName, department, cleanSupplier).run();
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+  }
+}
+
+export async function onRequestPut(context) {
+  const { env, request } = context;
+  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  if (!(await isAdminAuthorized(request, secret))) {
+    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  }
+  try {
+    const { id, name, department, supplier } = await request.json();
+    const matId = parseInt(id);
+    const cleanName = (name || '').toString().trim().toUpperCase().slice(0, 60);
+    const cleanSupplier = (supplier || '').toString().trim().slice(0, 60);
+    if (!matId || !cleanName || !validDepartment(department)) {
+      return new Response(JSON.stringify({ error: 'Dati non validi' }), { status: 400, headers: cors });
+    }
+    await env.DB.prepare(
+      'UPDATE raw_materials SET name = ?, department = ?, supplier = ? WHERE id = ?'
+    ).bind(cleanName, department, cleanSupplier, matId).run();
+    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+  } catch (err) {
+    const msg = /UNIQUE/i.test(err.message)
+      ? 'Esiste già una materia prima con questo nome e reparto'
+      : err.message;
+    return new Response(JSON.stringify({ error: msg }), { status: 500, headers: cors });
+  }
+}
+
+// Disattivazione (soft-delete): lo storico ordini resta intatto
+export async function onRequestDelete(context) {
+  const { env, request } = context;
+  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  if (!(await isAdminAuthorized(request, secret))) {
+    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  }
+  try {
+    const url = new URL(request.url);
+    const id = parseInt(url.searchParams.get('id') || '0');
+    if (!id) {
+      return new Response(JSON.stringify({ error: 'ID mancante' }), { status: 400, headers: cors });
+    }
+    await env.DB.prepare('UPDATE raw_materials SET active = 0 WHERE id = ?').bind(id).run();
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
@@ -121,7 +132,7 @@ export async function onRequestOptions() {
     status: 204,
     headers: {
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
   });

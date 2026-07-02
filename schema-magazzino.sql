@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS raw_materials (
 );
 
 -- Ordini materie prime (separati dalla tabella "orders" dei clienti)
+-- modified/modified_at: l'admin ha rettificato l'ordine
 CREATE TABLE IF NOT EXISTS supply_orders (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   staff_user_id INTEGER NOT NULL,
@@ -34,16 +35,23 @@ CREATE TABLE IF NOT EXISTS supply_orders (
   status TEXT NOT NULL DEFAULT 'inviato' CHECK(status IN ('inviato','evaso')),
   created_at TEXT DEFAULT (datetime('now','localtime')),
   fulfilled_at TEXT,
+  modified INTEGER DEFAULT 0,
+  modified_at TEXT,
   FOREIGN KEY (staff_user_id) REFERENCES staff_users(id)
 );
 
--- Righe ordine: materia + quantità + prezzo unitario opzionale
+-- Righe ordine: materia + quantità + prezzo unitario opzionale.
+-- original_quantity: quantità chiesta dallo staff se l'admin l'ha cambiata;
+-- removed: riga annullata dall'admin; added_by_admin: riga aggiunta dall'admin.
 CREATE TABLE IF NOT EXISTS supply_order_items (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   supply_order_id INTEGER NOT NULL,
   raw_material_id INTEGER NOT NULL,
   quantity REAL NOT NULL,
   unit_price REAL,
+  original_quantity REAL,
+  removed INTEGER DEFAULT 0,
+  added_by_admin INTEGER DEFAULT 0,
   FOREIGN KEY (supply_order_id) REFERENCES supply_orders(id),
   FOREIGN KEY (raw_material_id) REFERENCES raw_materials(id)
 );

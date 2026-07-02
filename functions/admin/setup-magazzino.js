@@ -130,6 +130,8 @@ export async function onRequestPost(context) {
         status TEXT NOT NULL DEFAULT 'inviato' CHECK(status IN ('inviato','evaso')),
         created_at TEXT DEFAULT (datetime('now','localtime')),
         fulfilled_at TEXT,
+        modified INTEGER DEFAULT 0,
+        modified_at TEXT,
         FOREIGN KEY (staff_user_id) REFERENCES staff_users(id)
       )`),
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS supply_order_items (
@@ -138,6 +140,9 @@ export async function onRequestPost(context) {
         raw_material_id INTEGER NOT NULL,
         quantity REAL NOT NULL,
         unit_price REAL,
+        original_quantity REAL,
+        removed INTEGER DEFAULT 0,
+        added_by_admin INTEGER DEFAULT 0,
         FOREIGN KEY (supply_order_id) REFERENCES supply_orders(id),
         FOREIGN KEY (raw_material_id) REFERENCES raw_materials(id)
       )`),
@@ -152,6 +157,18 @@ export async function onRequestPost(context) {
         active INTEGER DEFAULT 1
       )`),
     ]);
+
+    // Migrazione per DB già inizializzati con lo schema precedente
+    const alters = [
+      'ALTER TABLE supply_order_items ADD COLUMN original_quantity REAL',
+      'ALTER TABLE supply_order_items ADD COLUMN removed INTEGER DEFAULT 0',
+      'ALTER TABLE supply_order_items ADD COLUMN added_by_admin INTEGER DEFAULT 0',
+      'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
+      'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
+    ];
+    for (const sql of alters) {
+      try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
+    }
 
     const userStmt = env.DB.prepare(
       'INSERT OR IGNORE INTO staff_users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)'
