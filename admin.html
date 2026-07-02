@@ -411,10 +411,10 @@
       <div class="nav-item" data-section="settings" onclick="goTo('settings')">
         <i class="fa-solid fa-sliders"></i> Impostazioni
       </div>
-      <a class="nav-item" href="admin-magazzino.html">
+      <div class="nav-item" data-section="magazzino" onclick="goTo('magazzino'); loadMagazzinoFrame()">
         <i class="fa-solid fa-boxes-stacked"></i> Magazzino
         <span class="badge" id="magazzino-badge" style="display:none">0</span>
-      </a>
+      </div>
     </nav>
     <div class="sidebar-footer">
       <button onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -615,6 +615,12 @@
 
         <button class="btn btn-gold" onclick="saveAllSettings()"><i class="fa-solid fa-floppy-disk"></i> Salva Impostazioni</button>
       </div>
+    </section>
+
+    <!-- MAGAZZINO (modulo ordini materie prime, pagina incorporata) -->
+    <section id="section-magazzino" class="section">
+      <iframe id="magazzino-frame" title="Ordini Magazzino"
+        style="width:100%;height:calc(100vh - 48px);border:none;border-radius:14px;background:var(--bg);display:block;"></iframe>
     </section>
 
   </main>
@@ -1475,8 +1481,13 @@ function gotoCustomersPage(p) { customersPage = p; loadCustomers(); }
 })();
 </script>
 <script>
-/* Modulo Magazzino: badge notifica ordini materie prime da evadere.
+/* Modulo Magazzino: badge notifica ordini materie prime da evadere
+   e caricamento lazy della sezione incorporata.
    Script autonomo: non interagisce con la logica esistente della pagina. */
+function loadMagazzinoFrame() {
+  const frame = document.getElementById('magazzino-frame');
+  if (frame && !frame.src) frame.src = 'admin-magazzino.html';
+}
 (function () {
   async function updateMagazzinoBadge() {
     try {
@@ -1495,6 +1506,14 @@ function gotoCustomersPage(p) { customersPage = p; loadCustomers(); }
   }
   updateMagazzinoBadge();
   setInterval(updateMagazzinoBadge, 60000);
+  // Aggiorna subito dopo il login (quando #app diventa visibile) e a ogni cambio sezione
+  const appEl = document.getElementById('app');
+  if (appEl) {
+    new MutationObserver(() => {
+      if (appEl.style.display !== 'none' && appEl.style.display !== '') updateMagazzinoBadge();
+    }).observe(appEl, { attributes: true, attributeFilter: ['style'] });
+  }
+  document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => setTimeout(updateMagazzinoBadge, 400)));
 })();
 </script>
 </body>

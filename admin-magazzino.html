@@ -120,6 +120,9 @@
     .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 999; background: var(--success); color: #fff; padding: 12px 22px; border-radius: 12px; font-size: .82rem; font-weight: 600; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
     .toast.error { background: var(--red); }
 
+    /* Quando la pagina è incorporata nella dashboard admin (iframe) la topbar è ridondante */
+    .embedded .topbar { display: none; }
+
     .setup-box { background: var(--card); border: 1px solid rgba(184,134,11,.4); border-radius: 14px; padding: 24px; text-align: center; margin: 30px auto; max-width: 480px; display: none; }
     .setup-box p { font-size: .82rem; color: var(--muted); margin-bottom: 16px; }
 
@@ -151,6 +154,7 @@
       <button type="submit" class="login-btn">Entra</button>
       <div class="login-err" id="login-err"></div>
     </form>
+    <a href="staff.html" style="display:block;margin-top:14px;font-size:.75rem;color:var(--muted);text-decoration:underline;">Sei un dipendente? Vai alla pagina ordini staff →</a>
   </div>
 </div>
 
@@ -208,6 +212,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// Dentro l'iframe della dashboard admin: nascondi la topbar propria
+if (window.self !== window.top) document.documentElement.classList.add('embedded');
+
 let allOrders = [];
 let allUsers = [];
 let allSuppliers = []; // [{id, name, whatsapp}]
@@ -229,19 +236,41 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = document.getElementById('login-err');
   err.textContent = '';
+  const creds = {
+    username: document.getElementById('login-username').value,
+    password: document.getElementById('login-password').value,
+  };
   try {
     const res = await fetch('/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: document.getElementById('login-username').value,
-        password: document.getElementById('login-password').value,
-      }),
+      body: JSON.stringify(creds),
     });
     const data = await res.json();
-    if (!data.ok) { err.textContent = data.error || 'Credenziali errate'; return; }
-    document.getElementById('login-screen').style.display = 'none';
-    showApp();
+    if (data.ok) {
+      document.getElementById('login-screen').style.display = 'none';
+      showApp();
+      return;
+    }
+    // Non sono credenziali admin: forse sono di un dipendente → prova il login staff
+    const resStaff = await fetch('/staff/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(creds),
+    });
+    const dataStaff = await resStaff.json();
+    if (dataStaff.ok) {
+      if (dataStaff.user.role === 'admin') {
+        document.getElementById('login-screen').style.display = 'none';
+        showApp();
+      } else {
+        // Account dipendente: portalo alla sua pagina ordini
+        err.textContent = 'Account dipendente: ti porto alla pagina ordini...';
+        setTimeout(() => { location.href = 'staff.html'; }, 900);
+      }
+      return;
+    }
+    err.textContent = data.error || 'Credenziali errate';
   } catch (e2) {
     err.textContent = 'Errore di rete, riprova';
   }
