@@ -1,4 +1,4 @@
-const USERNAME = 'T0R13';
+const USERNAME = 'NF4R1N4T1';
 const PASSWORD = 'T0R13';
 const COOKIE_NAME = 'nfarinati_admin_session';
 const COOKIE_MAX_AGE = 86400 * 7; // 7 giorni
