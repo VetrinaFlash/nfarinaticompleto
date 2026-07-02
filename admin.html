@@ -399,6 +399,10 @@
         <i class="fa-solid fa-receipt"></i> Ordini
         <span class="badge" id="new-orders-badge" style="display:none">0</span>
       </div>
+      <div class="nav-item" data-section="cucina" onclick="goTo('cucina'); cucinaLoad()">
+        <i class="fa-solid fa-fire-burner"></i> Cucina
+        <span class="badge" id="cucina-badge" style="display:none">0</span>
+      </div>
       <div class="nav-item" data-section="menu" onclick="goTo('menu')">
         <i class="fa-solid fa-utensils"></i> Menù
       </div>
@@ -615,6 +619,19 @@
 
         <button class="btn btn-gold" onclick="saveAllSettings()"><i class="fa-solid fa-floppy-disk"></i> Salva Impostazioni</button>
       </div>
+    </section>
+
+    <!-- CUCINA: vista servizio per gli ordini del menu in arrivo -->
+    <section id="section-cucina" class="section">
+      <div class="page-title">Cucina</div>
+      <div class="page-sub">Ordini del menu in arrivo — tocca il bottone per farli avanzare</div>
+      <div class="cucina-chips">
+        <div class="cucina-chip active" data-f="attivi" onclick="cucinaFilter(this)">🔥 Da fare</div>
+        <div class="cucina-chip" data-f="pronto" onclick="cucinaFilter(this)">✅ Pronti</div>
+        <div class="cucina-chip" data-f="oggi" onclick="cucinaFilter(this)">📋 Tutti (oggi)</div>
+        <button class="cucina-refresh" onclick="cucinaLoad(true)"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
+      </div>
+      <div class="cucina-grid" id="cucina-grid"><div class="cucina-empty">Caricamento...</div></div>
     </section>
 
     <!-- MAGAZZINO (modulo ordini materie prime, pagina incorporata) -->
@@ -1478,6 +1495,186 @@ function gotoCustomersPage(p) { customersPage = p; loadCustomers(); }
     document.getElementById('app').style.display = 'block';
     startApp();
   }
+})();
+</script>
+<style>
+/* ── SEZIONE CUCINA (vista servizio) ── */
+.cucina-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+.cucina-chip { padding: 9px 16px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .8rem; font-weight: 700; cursor: pointer; }
+.cucina-chip.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.5); color: var(--gold); }
+.cucina-refresh { margin-left: auto; padding: 9px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: .75rem; font-weight: 700; }
+.cucina-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+.cucina-card { background: var(--card); border: 1px solid var(--border); border-left: 5px solid var(--muted); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; }
+.cucina-card.st-nuovo { border-left-color: #42a5f5; }
+.cucina-card.st-preparazione { border-left-color: #ff9800; }
+.cucina-card.st-pronto { border-left-color: #4caf50; }
+.cucina-card.st-consegnato { border-left-color: var(--border); opacity: .55; }
+.cucina-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.cucina-time { font-family: 'Montserrat', sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--gold-l); }
+.cucina-status { margin-left: auto; font-size: .62rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+.cucina-status.nuovo { background: rgba(66,165,245,.15); color: #64b5f6; }
+.cucina-status.preparazione { background: rgba(255,152,0,.15); color: #ffb74d; }
+.cucina-status.pronto { background: rgba(76,175,80,.15); color: #81c784; }
+.cucina-status.consegnato { background: rgba(255,255,255,.06); color: var(--muted); }
+.cucina-cust { font-size: .92rem; font-weight: 700; margin-bottom: 2px; }
+.cucina-meta { font-size: .72rem; color: var(--muted); margin-bottom: 10px; }
+.cucina-meta .tipo { font-weight: 700; color: var(--gold-l); }
+.cucina-items { flex: 1; margin-bottom: 10px; }
+.cucina-items li { list-style: none; padding: 7px 0; border-bottom: 1px dashed var(--border); font-size: .95rem; line-height: 1.35; }
+.cucina-items li:last-child { border-bottom: none; }
+.cucina-items .cqty { display: inline-block; min-width: 34px; font-family: 'Montserrat', sans-serif; font-weight: 800; color: var(--gold-l); font-size: 1.05rem; }
+.cucina-items .cextra { display: block; margin-left: 34px; font-size: .74rem; color: var(--muted); }
+.cucina-note { background: rgba(255,213,79,.08); border: 1px dashed rgba(255,213,79,.4); border-radius: 10px; padding: 8px 12px; font-size: .8rem; color: #ffd54f; margin-bottom: 10px; }
+.cucina-foot { display: flex; align-items: center; gap: 8px; }
+.cucina-tot { font-size: .8rem; color: var(--muted); }
+.cucina-tot b { color: var(--text); }
+.cucina-btn { flex: 1; padding: 13px; border: none; border-radius: 12px; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .82rem; text-transform: uppercase; letter-spacing: .5px; cursor: pointer; }
+.cucina-btn.to-prep { background: rgba(255,152,0,.9); color: #000; }
+.cucina-btn.to-pronto { background: rgba(76,175,80,.9); color: #000; }
+.cucina-btn.to-cons { background: rgba(255,255,255,.12); color: var(--text); border: 1px solid var(--border); }
+.cucina-elapsed { font-size: .7rem; color: var(--muted); }
+.cucina-elapsed.late { color: #ef5350; font-weight: 800; }
+.cucina-empty { grid-column: 1 / -1; text-align: center; color: var(--muted); font-size: .85rem; padding: 40px 0; }
+@media (max-width: 640px) { .cucina-grid { grid-template-columns: 1fr; } .cucina-time { font-size: 1.3rem; } }
+</style>
+<script>
+/* Sezione Cucina: vista servizio degli ordini menu (script autonomo,
+   usa solo le API esistenti /admin/orders GET e PUT). */
+let cucinaOrders = [];
+let cucinaCurrentFilter = 'attivi';
+let cucinaTimer = null;
+
+async function cucinaLoad(manual) {
+  try {
+    const res = await fetch('/admin/orders?limit=120');
+    if (!res.ok) return;
+    const data = await res.json();
+    cucinaOrders = data.orders || [];
+    cucinaRender();
+    cucinaUpdateBadge();
+    if (manual) notify('Cucina aggiornata', 'ok', 1500);
+    if (!cucinaTimer) {
+      cucinaTimer = setInterval(() => {
+        // aggiorna in automatico solo quando la sezione è aperta
+        const sec = document.getElementById('section-cucina');
+        if (sec && sec.classList.contains('active') && !document.hidden) cucinaLoad();
+        else cucinaUpdateBadgeSilently();
+      }, 20000);
+    }
+  } catch (e) {}
+}
+
+async function cucinaUpdateBadgeSilently() {
+  try {
+    const res = await fetch('/admin/orders?limit=120');
+    if (!res.ok) return;
+    const data = await res.json();
+    cucinaOrders = data.orders || [];
+    cucinaUpdateBadge();
+  } catch (e) {}
+}
+
+function cucinaToday(o) {
+  const today = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const t = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  return (o.created_at || '').slice(0, 10) === t;
+}
+
+function cucinaUpdateBadge() {
+  const n = cucinaOrders.filter(o => (o.status === 'nuovo' || o.status === 'preparazione') && cucinaToday(o)).length;
+  const b = document.getElementById('cucina-badge');
+  if (!b) return;
+  b.textContent = n;
+  b.style.display = n > 0 ? '' : 'none';
+}
+
+function cucinaFilter(el) {
+  document.querySelectorAll('.cucina-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  cucinaCurrentFilter = el.dataset.f;
+  cucinaRender();
+}
+
+function cucinaElapsed(created) {
+  const start = new Date((created || '').replace(' ', 'T'));
+  if (isNaN(start)) return '';
+  const mins = Math.max(0, Math.round((Date.now() - start.getTime()) / 60000));
+  return mins < 60 ? `${mins} min fa` : `${Math.floor(mins / 60)}h ${mins % 60}m fa`;
+}
+
+function cucinaRender() {
+  const grid = document.getElementById('cucina-grid');
+  if (!grid) return;
+  let list = cucinaOrders.filter(cucinaToday);
+  if (cucinaCurrentFilter === 'attivi') list = list.filter(o => o.status === 'nuovo' || o.status === 'preparazione');
+  if (cucinaCurrentFilter === 'pronto') list = list.filter(o => o.status === 'pronto');
+  // in cucina i più vecchi prima: si preparano in ordine di arrivo
+  list.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="cucina-empty">${cucinaCurrentFilter === 'attivi' ? '🎉 Nessun ordine da preparare' : 'Nessun ordine qui'}</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(o => {
+    let items = [];
+    try { items = JSON.parse(o.items_json || '[]'); } catch (e) {}
+    const itemsHtml = items.map(it =>
+      `<li><span class="cqty">×${it.qty || 1}</span> ${esc(it.name)}${it.extras ? `<span class="cextra">${esc(it.extras)}</span>` : ''}</li>`
+    ).join('');
+    const mins = Math.round((Date.now() - new Date((o.created_at || '').replace(' ', 'T')).getTime()) / 60000);
+    const late = (o.status === 'nuovo' || o.status === 'preparazione') && mins >= 20;
+    let btn = '';
+    if (o.status === 'nuovo') btn = `<button class="cucina-btn to-prep" onclick="cucinaSetStatus('${esc(String(o.id))}', 'preparazione')">🔥 Inizia preparazione</button>`;
+    else if (o.status === 'preparazione') btn = `<button class="cucina-btn to-pronto" onclick="cucinaSetStatus('${esc(String(o.id))}', 'pronto')">✅ Segna pronto</button>`;
+    else if (o.status === 'pronto') btn = `<button class="cucina-btn to-cons" onclick="cucinaSetStatus('${esc(String(o.id))}', 'consegnato')">📦 Consegnato</button>`;
+    return `<div class="cucina-card st-${o.status}">
+      <div class="cucina-head">
+        <div class="cucina-time">${esc(o.pickup_time || '—')}</div>
+        <div class="cucina-elapsed ${late ? 'late' : ''}">${cucinaElapsed(o.created_at)}${late ? ' ⚠️' : ''}</div>
+        <div class="cucina-status ${o.status}">${o.status}</div>
+      </div>
+      <div class="cucina-cust">${esc(o.customer_name)}${o.customer_phone ? ` · <span style="font-weight:400;color:var(--muted)">${esc(o.customer_phone)}</span>` : ''}</div>
+      <div class="cucina-meta"><span class="tipo">${o.order_type === 'domicilio' ? '🛵 Domicilio' : '🥡 Asporto'}</span>${o.delivery_address ? ` — ${esc(o.delivery_address)}` : ''}</div>
+      <ul class="cucina-items">${itemsHtml}</ul>
+      ${o.notes ? `<div class="cucina-note">📝 ${esc(o.notes)}</div>` : ''}
+      <div class="cucina-foot">
+        <div class="cucina-tot">€ <b>${(o.total || 0).toFixed(2)}</b></div>
+        ${btn}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function cucinaSetStatus(id, status) {
+  try {
+    const res = await fetch('/admin/orders', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    const o = cucinaOrders.find(x => String(x.id) === String(id));
+    if (o) o.status = status;
+    try { playBeep(); } catch (e) {}
+    notify(status === 'preparazione' ? '🔥 In preparazione' : status === 'pronto' ? '✅ Ordine pronto!' : '📦 Consegnato', 'ok', 2000);
+    cucinaRender();
+    cucinaUpdateBadge();
+  } catch (e) {
+    notify('Errore: ' + e.message, 'err');
+  }
+}
+
+// Badge cucina attivo appena la dashboard è aperta
+(function () {
+  const appEl = document.getElementById('app');
+  function boot() { cucinaUpdateBadgeSilently(); }
+  if (appEl) {
+    new MutationObserver(() => {
+      if (appEl.style.display !== 'none' && appEl.style.display !== '') boot();
+    }).observe(appEl, { attributes: true, attributeFilter: ['style'] });
+  }
+  boot();
 })();
 </script>
 <script>
