@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Magazzino – Admin N'Farinati</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --card2: #222;
+      --border: rgba(255,255,255,.08);
+      --gold: #b8860b;
+      --gold-l: #d4a017;
+      --red: #d32f2f;
+      --text: #e8e8e8;
+      --muted: rgba(255,255,255,.4);
+      --success: #2e7d32;
+    }
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* LOGIN */
+    #login-screen { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px 30px; width: 100%; max-width: 380px; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.7); }
+    .login-title { font-family: 'Montserrat', sans-serif; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); margin-bottom: 6px; }
+    .login-sub { font-size: .78rem; color: var(--muted); margin-bottom: 26px; }
+    .login-field { margin-bottom: 14px; text-align: left; }
+    .login-field label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .login-field input { width: 100%; padding: 12px 14px; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .95rem; outline: none; }
+    .login-field input:focus { border-color: var(--gold); }
+    .login-btn { width: 100%; padding: 13px; background: var(--gold); border: none; border-radius: 10px; color: #000; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
+    .login-err { color: var(--red); font-size: .8rem; margin-top: 12px; min-height: 18px; }
+
+    /* LAYOUT */
+    #app { display: none; }
+    .topbar { position: sticky; top: 0; z-index: 100; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .topbar img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+    .topbar .title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
+    .topbar .back { margin-left: auto; background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 8px 12px; font-size: .75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+
+    .tabs { display: flex; gap: 8px; padding: 12px 16px 0; max-width: 1100px; margin: 0 auto; overflow-x: auto; }
+    .tab { flex-shrink: 0; padding: 9px 16px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .78rem; font-weight: 700; }
+    .tab.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.4); color: var(--gold); }
+    .content { padding: 14px 16px 40px; max-width: 1100px; margin: 0 auto; }
+
+    /* FILTRI */
+    .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
+    .filters input, .filters select { padding: 10px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .8rem; outline: none; width: 100%; }
+    .filters input:focus, .filters select:focus { border-color: var(--gold); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tool-btn { padding: 9px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); font-size: .75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .tool-btn.gold { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.4); color: var(--gold-l); }
+    .tool-btn.active { background: rgba(184,134,11,.25); border-color: var(--gold); color: var(--gold-l); }
+
+    /* KPI */
+    .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    .kpi-val { font-family: 'Montserrat', sans-serif; font-size: 1.35rem; font-weight: 800; color: var(--gold-l); }
+    .kpi-label { font-size: .7rem; color: var(--muted); margin-top: 4px; }
+
+    /* GRUPPI/CARD ORDINE */
+    .group-title { font-family: 'Montserrat', sans-serif; font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; }
+    .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    .order-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .order-user { font-size: .82rem; font-weight: 700; }
+    .order-user i { color: var(--gold-l); }
+    .order-when { font-size: .72rem; color: var(--muted); }
+    .order-badge { font-size: .62rem; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; }
+    .order-badge.inviato { background: rgba(230,81,0,.15); color: #ffb74d; }
+    .order-badge.evaso { background: rgba(46,125,50,.18); color: #81c784; }
+    .order-actions { margin-left: auto; display: flex; gap: 6px; }
+    .act-btn { padding: 7px 12px; border-radius: 9px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: .7rem; font-weight: 700; }
+    .act-btn.evadi { background: rgba(46,125,50,.15); border-color: rgba(46,125,50,.4); color: #81c784; }
+    .act-btn.del { color: var(--red); border-color: rgba(211,47,47,.3); }
+    .order-items { font-size: .78rem; }
+    .order-items li { list-style: none; padding: 4px 0; border-bottom: 1px dashed var(--border); display: flex; gap: 8px; flex-wrap: wrap; }
+    .order-items li:last-child { border-bottom: none; }
+    .oi-qty { color: var(--gold-l); font-weight: 700; white-space: nowrap; }
+    .oi-dep { color: var(--muted); font-size: .68rem; }
+    .oi-price { margin-left: auto; color: var(--muted); white-space: nowrap; }
+    .order-notes { margin-top: 8px; font-size: .74rem; color: var(--muted); font-style: italic; }
+    .order-total { margin-top: 8px; text-align: right; font-size: .76rem; color: var(--muted); }
+    .order-total b { color: var(--gold-l); }
+    .empty-note { text-align: center; color: var(--muted); font-size: .8rem; padding: 30px 0; }
+
+    /* VISTA FORNITORE */
+    .sup-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+    .sup-head { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .9rem; color: var(--gold-l); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .sup-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+    .sup-table th { text-align: left; font-size: .65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    .sup-table td { padding: 7px 8px; border-bottom: 1px dashed var(--border); }
+    .sup-table tr:last-child td { border-bottom: none; }
+    .sup-table .qty { color: var(--gold-l); font-weight: 700; }
+
+    /* CONTABILITÀ */
+    .chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+    .chart-title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .78rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 12px; }
+    .table-wrap { overflow-x: auto; }
+
+    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 999; background: var(--success); color: #fff; padding: 12px 22px; border-radius: 12px; font-size: .82rem; font-weight: 600; display: none; box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+    .toast.error { background: var(--red); }
+
+    .setup-box { background: var(--card); border: 1px solid rgba(184,134,11,.4); border-radius: 14px; padding: 24px; text-align: center; margin: 30px auto; max-width: 480px; display: none; }
+    .setup-box p { font-size: .82rem; color: var(--muted); margin-bottom: 16px; }
+
+    @media print {
+      body { background: #fff; color: #000; }
+      .topbar, .tabs, .toolbar, .filters, .order-actions, .toast { display: none !important; }
+      .order-card, .sup-card, .kpi-card, .chart-card { border: 1px solid #ccc; background: #fff; color: #000; break-inside: avoid; }
+      .kpi-val, .oi-qty, .sup-head, .group-title, .order-total b { color: #000; }
+      .order-when, .oi-dep, .oi-price, .order-notes, .kpi-label, .order-total { color: #444; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN (stessa sessione admin esistente) -->
+<div id="login-screen" style="display:none">
+  <div class="login-box">
+    <div class="login-title">Magazzino – Admin</div>
+    <div class="login-sub">Accedi con le credenziali admin</div>
+    <form id="login-form">
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="login-username" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-btn">Entra</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <img src="images/logo.jpg" alt="Logo" onerror="this.style.display='none'">
+    <div class="title">Ordini Magazzino</div>
+    <a href="admin.html" class="back"><i class="fa-solid fa-arrow-left"></i> Torna all'Admin</a>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="pending" onclick="switchTab('pending')"><i class="fa-solid fa-inbox"></i> Da evadere</div>
+    <div class="tab" data-tab="suppliers" onclick="switchTab('suppliers')"><i class="fa-solid fa-truck"></i> Per fornitore</div>
+    <div class="tab" data-tab="history" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> Storico</div>
+    <div class="tab" data-tab="costs" onclick="switchTab('costs')"><i class="fa-solid fa-euro-sign"></i> Contabilità</div>
+  </div>
+
+  <div class="content">
+    <div class="setup-box" id="setup-box">
+      <div class="chart-title">Primo avvio del modulo</div>
+      <p>Le tabelle del magazzino non sono ancora presenti nel database. Clicca per crearle e caricare l'anagrafica materie prime (180 articoli) e gli account staff.</p>
+      <button class="login-btn" style="max-width:280px" onclick="runSetup()"><i class="fa-solid fa-database"></i> Inizializza database</button>
+    </div>
+
+    <!-- FILTRI COMUNI -->
+    <div class="filters" id="filters">
+      <input type="date" id="f-from" title="Dal giorno" onchange="applyFilters()">
+      <input type="date" id="f-to" title="Al giorno" onchange="applyFilters()">
+      <select id="f-user" onchange="applyFilters()"><option value="">Tutti i dipendenti</option></select>
+      <select id="f-dep" onchange="applyFilters()">
+        <option value="">Tutti i reparti</option>
+        <option value="Pizzeria">🍕 Pizzeria</option>
+        <option value="Cucina">🍳 Cucina</option>
+      </select>
+      <select id="f-supplier" onchange="applyFilters()"><option value="">Tutti i fornitori</option></select>
+      <input type="text" id="f-material" placeholder="Cerca materia prima..." oninput="applyFilters()">
+    </div>
+
+    <div class="toolbar">
+      <button class="tool-btn gold" onclick="loadOrders()"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
+      <button class="tool-btn" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Esporta CSV</button>
+      <button class="tool-btn" onclick="window.print()"><i class="fa-solid fa-file-pdf"></i> Stampa / PDF</button>
+    </div>
+
+    <div id="view-pending"></div>
+    <div id="view-suppliers" style="display:none"></div>
+    <div id="view-history" style="display:none"></div>
+    <div id="view-costs" style="display:none"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let allOrders = [];
+let allUsers = [];
+let currentTab = 'pending';
+let costChart = null;
+let trendChart = null;
+
+// ── AUTH: riusa la sessione admin esistente ──
+async function checkAuth() {
+  try {
+    const res = await fetch('/admin/check');
+    const data = await res.json();
+    if (data.authenticated) { showApp(); return; }
+  } catch (e) {}
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  try {
+    const res = await fetch('/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('login-username').value,
+        password: document.getElementById('login-password').value,
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) { err.textContent = data.error || 'Credenziali errate'; return; }
+    document.getElementById('login-screen').style.display = 'none';
+    showApp();
+  } catch (e2) {
+    err.textContent = 'Errore di rete, riprova';
+  }
+});
+
+function showApp() {
+  document.getElementById('app').style.display = 'block';
+  loadOrders();
+}
+
+// ── DATI ──
+async function loadOrders() {
+  try {
+    const res = await fetch('/admin/supply-orders');
+    const data = await res.json();
+    if (data.error) {
+      if (/no such table/i.test(data.error)) {
+        document.getElementById('setup-box').style.display = 'block';
+        return;
+      }
+      throw new Error(data.error);
+    }
+    document.getElementById('setup-box').style.display = 'none';
+    allOrders = data.orders || [];
+    allUsers = data.users || [];
+
+    const userSel = document.getElementById('f-user');
+    const cur = userSel.value;
+    userSel.innerHTML = '<option value="">Tutti i dipendenti</option>' +
+      allUsers.map(u => `<option value="${u.id}">${esc(u.display_name)}</option>`).join('');
+    userSel.value = cur;
+
+    const suppliers = [...new Set(allOrders.flatMap(o => o.items.map(i => i.supplier)))].sort((a, b) => a.localeCompare(b, 'it'));
+    const supSel = document.getElementById('f-supplier');
+    const curSup = supSel.value;
+    supSel.innerHTML = '<option value="">Tutti i fornitori</option>' +
+      suppliers.map(s => `<option value="${escAttr(s)}">${esc(s)}</option>`).join('');
+    supSel.value = curSup;
+
+    render();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function runSetup() {
+  try {
+    const res = await fetch('/admin/setup-magazzino', { method: 'POST' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Setup fallito');
+    showToast(`✅ Database pronto: ${data.materials} materie prime, ${data.users} utenti staff`);
+    loadOrders();
+  } catch (e) {
+    showToast('Errore setup: ' + e.message, true);
+  }
+}
+
+// ── FILTRI (client-side) ──
+function getFiltered() {
+  const from = document.getElementById('f-from').value;
+  const to = document.getElementById('f-to').value;
+  const userId = document.getElementById('f-user').value;
+  const dep = document.getElementById('f-dep').value;
+  const sup = document.getElementById('f-supplier').value;
+  const matQ = document.getElementById('f-material').value.trim().toLowerCase();
+
+  return allOrders
+    .filter(o => {
+      const d = (o.created_at || '').slice(0, 10);
+      if (from && d < from) return false;
+      if (to && d > to) return false;
+      if (userId && String(o.staff_user_id) !== userId) return false;
+      return true;
+    })
+    .map(o => {
+      const items = o.items.filter(it =>
+        (!dep || it.department === dep) &&
+        (!sup || it.supplier === sup) &&
+        (!matQ || it.name.toLowerCase().includes(matQ))
+      );
+      return { ...o, items };
+    })
+    .filter(o => o.items.length > 0);
+}
+
+function applyFilters() { render(); }
+
+// ── RENDER ──
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  ['pending', 'suppliers', 'history', 'costs'].forEach(v => {
+    document.getElementById('view-' + v).style.display = v === tab ? 'block' : 'none';
+  });
+  render();
+}
+
+function render() {
+  if (currentTab === 'pending') renderPending();
+  if (currentTab === 'suppliers') renderSuppliers();
+  if (currentTab === 'history') renderHistory();
+  if (currentTab === 'costs') renderCosts();
+}
+
+function orderCard(o, showActions) {
+  let total = 0, priced = false;
+  const itemsHtml = o.items.map(it => {
+    let priceStr = '';
+    if (it.unit_price != null) {
+      priced = true;
+      total += it.unit_price * it.quantity;
+      priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
+    }
+    return `<li><span class="oi-qty">×${it.quantity}</span> ${esc(it.name)} <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span><span class="oi-price">${priceStr}</span></li>`;
+  }).join('');
+  const actions = showActions ? `<div class="order-actions">
+      ${o.status === 'inviato'
+        ? `<button class="act-btn evadi" onclick="setStatus(${o.id}, 'evaso')"><i class="fa-solid fa-check"></i> Evaso</button>`
+        : `<button class="act-btn" onclick="setStatus(${o.id}, 'inviato')"><i class="fa-solid fa-rotate-left"></i> Riapri</button>`}
+      <button class="act-btn del" onclick="deleteOrder(${o.id})"><i class="fa-solid fa-trash"></i></button>
+    </div>` : '';
+  return `<div class="order-card">
+    <div class="order-head">
+      <div class="order-user"><i class="fa-solid fa-user"></i> ${esc(o.display_name)}</div>
+      <div class="order-when">${esc(o.created_at)}</div>
+      <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Da evadere'}</div>
+      ${actions}
+    </div>
+    <ul class="order-items">${itemsHtml}</ul>
+    ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
+    ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+  </div>`;
+}
+
+// Vista "Da evadere": ordini status=inviato raggruppati per data → persona
+function renderPending() {
+  const orders = getFiltered().filter(o => o.status === 'inviato');
+  const box = document.getElementById('view-pending');
+  if (orders.length === 0) { box.innerHTML = '<div class="empty-note">🎉 Nessun ordine da evadere</div>'; return; }
+  const byDate = {};
+  for (const o of orders) {
+    const d = (o.created_at || '').slice(0, 10);
+    (byDate[d] = byDate[d] || []).push(o);
+  }
+  box.innerHTML = Object.keys(byDate).sort().reverse().map(d =>
+    `<div class="group-title"><i class="fa-regular fa-calendar"></i> ${formatDate(d)}</div>` +
+    byDate[d].map(o => orderCard(o, true)).join('')
+  ).join('');
+}
+
+// Vista fornitore: aggrega le righe NON evase per fornitore → "cosa ordinare a chi"
+function renderSuppliers() {
+  const orders = getFiltered().filter(o => o.status === 'inviato');
+  const box = document.getElementById('view-suppliers');
+  const bySup = {};
+  for (const o of orders) {
+    for (const it of o.items) {
+      const key = it.supplier || '(senza fornitore)';
+      bySup[key] = bySup[key] || {};
+      const mk = `${it.name}|${it.department}`;
+      if (!bySup[key][mk]) bySup[key][mk] = { name: it.name, department: it.department, qty: 0, who: new Set() };
+      bySup[key][mk].qty += it.quantity;
+      bySup[key][mk].who.add(o.display_name);
+    }
+  }
+  const suppliers = Object.keys(bySup).sort((a, b) => a.localeCompare(b, 'it'));
+  if (suppliers.length === 0) { box.innerHTML = '<div class="empty-note">Nessuna riga da ordinare ai fornitori</div>'; return; }
+  box.innerHTML = suppliers.map(s => {
+    const rows = Object.values(bySup[s]).sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    return `<div class="sup-card">
+      <div class="sup-head"><i class="fa-solid fa-truck"></i> ${esc(s)}</div>
+      <div class="table-wrap"><table class="sup-table">
+        <tr><th>Materia prima</th><th>Reparto</th><th>Qtà totale</th><th>Richiesta da</th></tr>
+        ${rows.map(r => `<tr><td>${esc(r.name)}</td><td>${esc(r.department)}</td><td class="qty">×${r.qty}</td><td>${esc([...r.who].join(', '))}</td></tr>`).join('')}
+      </table></div>
+    </div>`;
+  }).join('');
+}
+
+// Storico completo
+function renderHistory() {
+  const orders = getFiltered();
+  const box = document.getElementById('view-history');
+  if (orders.length === 0) { box.innerHTML = '<div class="empty-note">Nessun ordine trovato con questi filtri</div>'; return; }
+  box.innerHTML = orders.map(o => orderCard(o, true)).join('');
+}
+
+// Contabilità: totali periodo + andamento costi
+function renderCosts() {
+  const orders = getFiltered();
+  const box = document.getElementById('view-costs');
+
+  let totalSpend = 0, pricedLines = 0, totalLines = 0;
+  const byMaterial = {};
+  const byDay = {};
+  for (const o of orders) {
+    const d = (o.created_at || '').slice(0, 10);
+    for (const it of o.items) {
+      totalLines++;
+      if (it.unit_price == null) continue;
+      pricedLines++;
+      const cost = it.unit_price * it.quantity;
+      totalSpend += cost;
+      const mk = `${it.name} — ${it.department}`;
+      byMaterial[mk] = byMaterial[mk] || { cost: 0, qty: 0, supplier: it.supplier };
+      byMaterial[mk].cost += cost;
+      byMaterial[mk].qty += it.quantity;
+      byDay[d] = (byDay[d] || 0) + cost;
+    }
+  }
+
+  const matRows = Object.entries(byMaterial).sort((a, b) => b[1].cost - a[1].cost);
+  const days = Object.keys(byDay).sort();
+
+  box.innerHTML = `
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-val">€ ${totalSpend.toFixed(2)}</div><div class="kpi-label">Spesa totale (periodo filtrato)</div></div>
+      <div class="kpi-card"><div class="kpi-val">${orders.length}</div><div class="kpi-label">Ordini nel periodo</div></div>
+      <div class="kpi-card"><div class="kpi-val">${pricedLines}/${totalLines}</div><div class="kpi-label">Righe con prezzo inserito</div></div>
+    </div>
+    ${pricedLines === 0 ? '<div class="empty-note">Nessun prezzo inserito nel periodo: la contabilità si popola quando lo staff indica i prezzi.</div>' : `
+    <div class="chart-card"><div class="chart-title">Andamento spesa per giorno</div><canvas id="trend-chart" height="110"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Top materie prime per spesa</div><canvas id="cost-chart" height="140"></canvas></div>
+    <div class="chart-card">
+      <div class="chart-title">Dettaglio costi per materia prima</div>
+      <div class="table-wrap"><table class="sup-table">
+        <tr><th>Materia prima — Reparto</th><th>Fornitore</th><th>Qtà</th><th>Spesa</th></tr>
+        ${matRows.map(([mk, v]) => `<tr><td>${esc(mk)}</td><td>${esc(v.supplier)}</td><td class="qty">×${v.qty}</td><td>€ ${v.cost.toFixed(2)}</td></tr>`).join('')}
+      </table></div>
+    </div>`}
+  `;
+
+  if (pricedLines > 0) {
+    if (trendChart) trendChart.destroy();
+    trendChart = new Chart(document.getElementById('trend-chart'), {
+      type: 'line',
+      data: { labels: days.map(formatDate), datasets: [{ label: '€ / giorno', data: days.map(d => byDay[d]), borderColor: '#d4a017', backgroundColor: 'rgba(212,160,23,.15)', fill: true, tension: .3 }] },
+      options: chartOpts(),
+    });
+    if (costChart) costChart.destroy();
+    const top = matRows.slice(0, 12);
+    costChart = new Chart(document.getElementById('cost-chart'), {
+      type: 'bar',
+      data: { labels: top.map(([mk]) => mk), datasets: [{ label: 'Spesa €', data: top.map(([, v]) => v.cost), backgroundColor: 'rgba(184,134,11,.6)', borderColor: '#d4a017', borderWidth: 1 }] },
+      options: { ...chartOpts(), indexAxis: 'y' },
+    });
+  }
+}
+
+function chartOpts() {
+  return {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: 'rgba(255,255,255,.5)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: 'rgba(255,255,255,.5)', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+    },
+  };
+}
+
+// ── AZIONI ──
+async function setStatus(id, status) {
+  try {
+    const res = await fetch('/admin/supply-orders', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    const o = allOrders.find(x => x.id === id);
+    if (o) o.status = status;
+    showToast(status === 'evaso' ? '✅ Ordine evaso' : 'Ordine riaperto');
+    render();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+async function deleteOrder(id) {
+  if (!confirm('Eliminare definitivamente questo ordine?')) return;
+  try {
+    const res = await fetch(`/admin/supply-orders?id=${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore');
+    allOrders = allOrders.filter(x => x.id !== id);
+    showToast('Ordine eliminato');
+    render();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  const orders = getFiltered();
+  const rows = [['Data', 'Dipendente', 'Stato', 'Materia prima', 'Reparto', 'Fornitore', 'Quantità', 'Prezzo unitario', 'Totale riga', 'Note ordine']];
+  for (const o of orders) {
+    for (const it of o.items) {
+      rows.push([
+        o.created_at, o.display_name, o.status,
+        it.name, it.department, it.supplier,
+        String(it.quantity).replace('.', ','),
+        it.unit_price != null ? String(it.unit_price).replace('.', ',') : '',
+        it.unit_price != null ? String((it.unit_price * it.quantity).toFixed(2)).replace('.', ',') : '',
+        o.notes || '',
+      ]);
+    }
+  }
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ordini-magazzino-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ── UTIL ──
+function formatDate(d) {
+  if (!d) return '';
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+
+checkAuth();
+</script>
+</body>
+</html>

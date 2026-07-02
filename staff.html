@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Ordini Magazzino – N'Farinati</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --card: #1a1a1a;
+      --card2: #222;
+      --border: rgba(255,255,255,.08);
+      --gold: #b8860b;
+      --gold-l: #d4a017;
+      --red: #d32f2f;
+      --text: #e8e8e8;
+      --muted: rgba(255,255,255,.4);
+      --success: #2e7d32;
+      --warning: #e65100;
+    }
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    button { cursor: pointer; font-family: inherit; }
+    input, select, textarea { font-family: inherit; }
+
+    /* LOGIN */
+    #login-screen { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .login-box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px 30px; width: 100%; max-width: 380px; box-shadow: 0 30px 80px rgba(0,0,0,.7); text-align: center; }
+    .login-logo { width: 80px; height: 80px; border-radius: 14px; margin: 0 auto 20px; display: block; object-fit: cover; }
+    .login-title { font-family: 'Montserrat', sans-serif; font-size: 1.05rem; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; color: var(--gold); margin-bottom: 6px; }
+    .login-sub { font-size: .78rem; color: var(--muted); margin-bottom: 26px; }
+    .login-field { margin-bottom: 14px; text-align: left; }
+    .login-field label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+    .login-field input { width: 100%; padding: 12px 14px; background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: .95rem; outline: none; transition: border-color .2s; }
+    .login-field input:focus { border-color: var(--gold); }
+    .login-btn { width: 100%; padding: 13px; background: var(--gold); border: none; border-radius: 10px; color: #000; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; transition: background .2s; }
+    .login-btn:hover { background: var(--gold-l); }
+    .login-err { color: var(--red); font-size: .8rem; margin-top: 12px; min-height: 18px; }
+
+    /* APP */
+    #app { display: none; padding-bottom: 90px; }
+    .topbar { position: sticky; top: 0; z-index: 100; background: var(--card); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+    .topbar img { width: 34px; height: 34px; border-radius: 8px; object-fit: cover; }
+    .topbar .title { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); line-height: 1.2; }
+    .topbar .who { font-size: .68rem; color: var(--muted); }
+    .topbar button { margin-left: auto; background: rgba(211,47,47,.1); border: 1px solid rgba(211,47,47,.25); color: var(--red); border-radius: 10px; padding: 8px 12px; font-size: .75rem; font-weight: 700; }
+
+    .tabs { display: flex; gap: 8px; padding: 12px 16px 0; }
+    .tab { flex: 1; text-align: center; padding: 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .8rem; font-weight: 700; }
+    .tab.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.4); color: var(--gold); }
+
+    .content { padding: 14px 16px; max-width: 720px; margin: 0 auto; }
+
+    /* FILTRI */
+    .search-box { position: relative; margin-bottom: 10px; }
+    .search-box i { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: .85rem; }
+    .search-box input { width: 100%; padding: 12px 14px 12px 36px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .9rem; outline: none; }
+    .search-box input:focus { border-color: var(--gold); }
+    .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 8px; }
+    .chip { flex-shrink: 0; padding: 7px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--border); color: var(--muted); font-size: .75rem; font-weight: 600; }
+    .chip.active { background: rgba(184,134,11,.14); border-color: rgba(184,134,11,.5); color: var(--gold); }
+    .supplier-select { width: 100%; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .85rem; outline: none; margin-bottom: 12px; }
+
+    /* LISTA MATERIE */
+    .mat-row { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .mat-row.selected { border-color: rgba(184,134,11,.55); background: rgba(184,134,11,.07); }
+    .mat-info { flex: 1; min-width: 0; }
+    .mat-name { font-size: .85rem; font-weight: 600; }
+    .mat-meta { font-size: .68rem; color: var(--muted); margin-top: 2px; }
+    .mat-meta .dep { font-weight: 700; }
+    .mat-meta .dep.pizzeria { color: var(--gold-l); }
+    .mat-meta .dep.cucina { color: #64b5f6; }
+    .stepper { display: flex; align-items: center; gap: 6px; }
+    .stepper button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-size: 1rem; font-weight: 700; }
+    .stepper button.plus { background: rgba(184,134,11,.18); border-color: rgba(184,134,11,.45); color: var(--gold-l); }
+    .stepper input { width: 52px; height: 34px; text-align: center; background: var(--card2); border: 1px solid var(--border); border-radius: 9px; color: var(--text); font-size: .9rem; font-weight: 700; outline: none; }
+    .empty-note { text-align: center; color: var(--muted); font-size: .8rem; padding: 26px 0; }
+
+    /* BARRA INVIO */
+    .cart-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 150; background: var(--card); border-top: 1px solid var(--border); padding: 12px 16px; display: none; }
+    .cart-bar.visible { display: block; }
+    .cart-bar-inner { max-width: 720px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+    .cart-count { font-size: .8rem; color: var(--muted); }
+    .cart-count b { color: var(--gold-l); font-size: 1rem; }
+    .send-btn { flex: 1; padding: 13px; background: var(--gold); border: none; border-radius: 12px; color: #000; font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: .85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .send-btn:active { background: var(--gold-l); }
+
+    /* MODAL RIEPILOGO */
+    .modal-overlay { display: none; position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.65); align-items: flex-end; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px 20px 0 0; width: 100%; max-width: 720px; max-height: 88vh; display: flex; flex-direction: column; }
+    .modal-head { padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+    .modal-head h3 { font-family: 'Montserrat', sans-serif; font-size: .9rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); }
+    .modal-head button { margin-left: auto; background: none; border: none; color: var(--muted); font-size: 1.2rem; }
+    .modal-body { padding: 14px 18px; overflow-y: auto; flex: 1; }
+    .rev-row { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .rev-info { flex: 1; min-width: 0; }
+    .rev-name { font-size: .8rem; font-weight: 600; }
+    .rev-meta { font-size: .65rem; color: var(--muted); }
+    .rev-qty { font-size: .85rem; font-weight: 800; color: var(--gold-l); white-space: nowrap; }
+    .rev-price { width: 86px; padding: 8px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: .8rem; outline: none; text-align: right; }
+    .rev-remove { background: none; border: none; color: var(--red); font-size: .9rem; padding: 6px; }
+    .notes-label { font-size: .72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 6px; }
+    .notes-input { width: 100%; min-height: 70px; padding: 11px 13px; background: var(--card2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: .85rem; outline: none; resize: vertical; }
+    .modal-foot { padding: 14px 18px; border-top: 1px solid var(--border); }
+    .modal-total { font-size: .78rem; color: var(--muted); margin-bottom: 10px; text-align: right; }
+    .modal-total b { color: var(--gold-l); }
+
+    /* STORICO */
+    .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; }
+    .order-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .order-date { font-size: .8rem; font-weight: 700; }
+    .order-badge { margin-left: auto; font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; padding: 4px 10px; border-radius: 999px; }
+    .order-badge.inviato { background: rgba(230,81,0,.15); color: #ffb74d; }
+    .order-badge.evaso { background: rgba(46,125,50,.18); color: #81c784; }
+    .order-items { font-size: .78rem; color: var(--text); }
+    .order-items li { list-style: none; padding: 4px 0; border-bottom: 1px dashed var(--border); display: flex; gap: 8px; }
+    .order-items li:last-child { border-bottom: none; }
+    .oi-qty { color: var(--gold-l); font-weight: 700; white-space: nowrap; }
+    .oi-dep { color: var(--muted); font-size: .68rem; }
+    .oi-price { margin-left: auto; color: var(--muted); white-space: nowrap; }
+    .order-notes { margin-top: 8px; font-size: .74rem; color: var(--muted); font-style: italic; }
+    .order-total { margin-top: 8px; text-align: right; font-size: .78rem; color: var(--muted); }
+    .order-total b { color: var(--gold-l); }
+
+    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 999; background: var(--success); color: #fff; padding: 12px 22px; border-radius: 12px; font-size: .82rem; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.5); display: none; }
+    .toast.error { background: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <img src="images/logo.jpg" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+    <div class="login-title">Ordini Magazzino</div>
+    <div class="login-sub">Accesso riservato allo staff N'Farinati</div>
+    <form id="login-form">
+      <div class="login-field">
+        <label>Username</label>
+        <input type="text" id="login-username" autocomplete="username" autocapitalize="characters" required>
+      </div>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="login-btn">Entra</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="topbar">
+    <img src="images/logo.jpg" alt="Logo" onerror="this.style.display='none'">
+    <div>
+      <div class="title">Ordini Magazzino</div>
+      <div class="who" id="who">—</div>
+    </div>
+    <button onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Esci</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-new" onclick="switchTab('new')"><i class="fa-solid fa-cart-plus"></i> Nuovo Ordine</div>
+    <div class="tab" id="tab-history" onclick="switchTab('history')"><i class="fa-solid fa-clock-rotate-left"></i> I miei ordini</div>
+  </div>
+
+  <!-- NUOVO ORDINE -->
+  <div class="content" id="view-new">
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="search" placeholder="Cerca materia prima..." oninput="renderMaterials()">
+    </div>
+    <div class="chips" id="dep-chips">
+      <div class="chip active" data-dep="" onclick="setDep(this)">Tutti i reparti</div>
+      <div class="chip" data-dep="Pizzeria" onclick="setDep(this)">🍕 Pizzeria</div>
+      <div class="chip" data-dep="Cucina" onclick="setDep(this)">🍳 Cucina</div>
+    </div>
+    <select class="supplier-select" id="supplier-filter" onchange="renderMaterials()">
+      <option value="">Tutti i fornitori</option>
+    </select>
+    <div id="materials-list"></div>
+  </div>
+
+  <!-- STORICO -->
+  <div class="content" id="view-history" style="display:none">
+    <div id="history-list"><div class="empty-note">Caricamento...</div></div>
+  </div>
+</div>
+
+<!-- BARRA INVIO -->
+<div class="cart-bar" id="cart-bar">
+  <div class="cart-bar-inner">
+    <div class="cart-count"><b id="cart-count">0</b> articoli</div>
+    <button class="send-btn" onclick="openReview()"><i class="fa-solid fa-paper-plane"></i> Rivedi e invia</button>
+  </div>
+</div>
+
+<!-- MODAL RIEPILOGO -->
+<div class="modal-overlay" id="review-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Riepilogo ordine</h3>
+      <button onclick="closeReview()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="review-list"></div>
+      <div class="notes-label">Note (opzionale)</div>
+      <textarea class="notes-input" id="order-notes" placeholder="Es. urgente per domani sera, marca specifica..."></textarea>
+      <div class="notes-label" style="margin-top:10px">💡 Il prezzo unitario è opzionale: compilalo solo se lo conosci, serve per la contabilità.</div>
+    </div>
+    <div class="modal-foot">
+      <div class="modal-total" id="review-total"></div>
+      <button class="send-btn" id="confirm-send-btn" onclick="sendOrder()" style="width:100%"><i class="fa-solid fa-paper-plane"></i> Invia ordine</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentUser = null;
+let materials = [];
+let cart = {}; // material_id -> { quantity, unit_price }
+let depFilter = '';
+
+// ── AUTH ──
+async function checkAuth() {
+  try {
+    const res = await fetch('/staff/check');
+    const data = await res.json();
+    if (data.authenticated) {
+      currentUser = data.user;
+      showApp();
+    }
+  } catch (e) {}
+}
+
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = document.getElementById('login-err');
+  err.textContent = '';
+  try {
+    const res = await fetch('/staff/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('login-username').value,
+        password: document.getElementById('login-password').value,
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) { err.textContent = data.error || 'Errore di accesso'; return; }
+    currentUser = data.user;
+    showApp();
+  } catch (e2) {
+    err.textContent = 'Errore di rete, riprova';
+  }
+});
+
+async function doLogout() {
+  await fetch('/staff/logout', { method: 'POST' });
+  location.reload();
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('who').textContent = `Ciao, ${currentUser.display_name}`;
+  loadMaterials();
+  loadHistory();
+}
+
+// ── MATERIE PRIME ──
+async function loadMaterials() {
+  try {
+    const res = await fetch('/staff/materials');
+    const data = await res.json();
+    materials = data.materials || [];
+    const suppliers = [...new Set(materials.map(m => m.supplier))].sort((a, b) => a.localeCompare(b, 'it'));
+    const sel = document.getElementById('supplier-filter');
+    sel.innerHTML = '<option value="">Tutti i fornitori</option>' +
+      suppliers.map(s => `<option value="${escAttr(s)}">${esc(s)}</option>`).join('');
+    renderMaterials();
+  } catch (e) {
+    document.getElementById('materials-list').innerHTML = '<div class="empty-note">Errore nel caricamento del catalogo</div>';
+  }
+}
+
+function setDep(el) {
+  document.querySelectorAll('#dep-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  depFilter = el.dataset.dep;
+  renderMaterials();
+}
+
+function renderMaterials() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const sup = document.getElementById('supplier-filter').value;
+  const list = materials.filter(m =>
+    (!depFilter || m.department === depFilter) &&
+    (!sup || m.supplier === sup) &&
+    (!q || m.name.toLowerCase().includes(q) || m.supplier.toLowerCase().includes(q))
+  );
+  const box = document.getElementById('materials-list');
+  if (list.length === 0) { box.innerHTML = '<div class="empty-note">Nessuna materia prima trovata</div>'; return; }
+  box.innerHTML = list.map(m => {
+    const inCart = cart[m.id];
+    const qty = inCart ? inCart.quantity : 0;
+    return `<div class="mat-row ${qty > 0 ? 'selected' : ''}" id="mat-${m.id}">
+      <div class="mat-info">
+        <div class="mat-name">${esc(m.name)}</div>
+        <div class="mat-meta"><span class="dep ${m.department.toLowerCase()}">${m.department === 'Pizzeria' ? '🍕' : '🍳'} ${esc(m.department)}</span> · ${esc(m.supplier)}</div>
+      </div>
+      <div class="stepper">
+        <button onclick="changeQty(${m.id}, -1)"><i class="fa-solid fa-minus"></i></button>
+        <input type="number" inputmode="decimal" min="0" step="any" value="${qty || ''}" placeholder="0" onchange="setQty(${m.id}, this.value)">
+        <button class="plus" onclick="changeQty(${m.id}, 1)"><i class="fa-solid fa-plus"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeQty(id, delta) {
+  const cur = cart[id] ? cart[id].quantity : 0;
+  setQty(id, Math.max(0, cur + delta));
+}
+
+function setQty(id, value) {
+  const qty = parseFloat(value) || 0;
+  if (qty <= 0) {
+    delete cart[id];
+  } else {
+    cart[id] = cart[id] || { unit_price: '' };
+    cart[id].quantity = qty;
+  }
+  const row = document.getElementById(`mat-${id}`);
+  if (row) {
+    row.classList.toggle('selected', qty > 0);
+    const input = row.querySelector('.stepper input');
+    if (input) input.value = qty || '';
+  }
+  updateCartBar();
+}
+
+function updateCartBar() {
+  const n = Object.keys(cart).length;
+  document.getElementById('cart-count').textContent = n;
+  document.getElementById('cart-bar').classList.toggle('visible', n > 0);
+}
+
+// ── RIEPILOGO E INVIO ──
+function openReview() {
+  const ids = Object.keys(cart);
+  if (ids.length === 0) return;
+  const box = document.getElementById('review-list');
+  box.innerHTML = ids.map(id => {
+    const m = materials.find(x => x.id == id);
+    if (!m) return '';
+    const c = cart[id];
+    return `<div class="rev-row">
+      <div class="rev-info">
+        <div class="rev-name">${esc(m.name)} <span class="oi-dep">— ${esc(m.department)}</span></div>
+        <div class="rev-meta">${esc(m.supplier)}</div>
+      </div>
+      <div class="rev-qty">×${c.quantity}</div>
+      <input type="number" inputmode="decimal" min="0" step="any" class="rev-price" placeholder="€/pz" value="${c.unit_price}" onchange="setPrice(${id}, this.value)">
+      <button class="rev-remove" onclick="removeFromCart(${id})"><i class="fa-solid fa-trash"></i></button>
+    </div>`;
+  }).join('');
+  updateReviewTotal();
+  document.getElementById('review-modal').classList.add('open');
+}
+
+function closeReview() {
+  document.getElementById('review-modal').classList.remove('open');
+}
+
+function setPrice(id, value) {
+  if (cart[id]) cart[id].unit_price = value;
+  updateReviewTotal();
+}
+
+function removeFromCart(id) {
+  delete cart[id];
+  updateCartBar();
+  renderMaterials();
+  if (Object.keys(cart).length === 0) closeReview(); else openReview();
+}
+
+function updateReviewTotal() {
+  let total = 0, priced = 0;
+  for (const id of Object.keys(cart)) {
+    const c = cart[id];
+    const p = parseFloat(c.unit_price);
+    if (!isNaN(p)) { total += p * c.quantity; priced++; }
+  }
+  document.getElementById('review-total').innerHTML = priced > 0
+    ? `Totale stimato (${priced} righe con prezzo): <b>€ ${total.toFixed(2)}</b>`
+    : 'Nessun prezzo inserito (opzionale)';
+}
+
+async function sendOrder() {
+  const btn = document.getElementById('confirm-send-btn');
+  btn.disabled = true;
+  try {
+    const items = Object.keys(cart).map(id => ({
+      material_id: parseInt(id),
+      quantity: cart[id].quantity,
+      unit_price: cart[id].unit_price === '' ? null : parseFloat(cart[id].unit_price),
+    }));
+    const res = await fetch('/staff/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, notes: document.getElementById('order-notes').value }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore invio ordine');
+    cart = {};
+    document.getElementById('order-notes').value = '';
+    closeReview();
+    updateCartBar();
+    renderMaterials();
+    showToast('✅ Ordine inviato!');
+    loadHistory();
+  } catch (e) {
+    showToast(e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── STORICO ──
+async function loadHistory() {
+  try {
+    const res = await fetch('/staff/orders');
+    const data = await res.json();
+    const orders = data.orders || [];
+    const box = document.getElementById('history-list');
+    if (orders.length === 0) { box.innerHTML = '<div class="empty-note">Non hai ancora inviato ordini</div>'; return; }
+    box.innerHTML = orders.map(o => {
+      let total = 0, priced = false;
+      const itemsHtml = o.items.map(it => {
+        let priceStr = '';
+        if (it.unit_price != null) {
+          priced = true;
+          total += it.unit_price * it.quantity;
+          priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
+        }
+        return `<li><span class="oi-qty">×${it.quantity}</span> ${esc(it.name)} <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span><span class="oi-price">${priceStr}</span></li>`;
+      }).join('');
+      return `<div class="order-card">
+        <div class="order-head">
+          <div class="order-date"><i class="fa-regular fa-calendar"></i> ${esc(o.created_at)}</div>
+          <div class="order-badge ${o.status}">${o.status === 'evaso' ? '✔ Evaso' : 'Inviato'}</div>
+        </div>
+        <ul class="order-items">${itemsHtml}</ul>
+        ${o.notes ? `<div class="order-notes">📝 ${esc(o.notes)}</div>` : ''}
+        ${priced ? `<div class="order-total">Totale con prezzi: <b>€ ${total.toFixed(2)}</b></div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    document.getElementById('history-list').innerHTML = '<div class="empty-note">Errore nel caricamento dello storico</div>';
+  }
+}
+
+// ── TABS / UTIL ──
+function switchTab(tab) {
+  document.getElementById('tab-new').classList.toggle('active', tab === 'new');
+  document.getElementById('tab-history').classList.toggle('active', tab === 'history');
+  document.getElementById('view-new').style.display = tab === 'new' ? 'block' : 'none';
+  document.getElementById('view-history').style.display = tab === 'history' ? 'block' : 'none';
+  if (tab === 'history') loadHistory();
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
+function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
+
+checkAuth();
+</script>
+</body>
+</html>
