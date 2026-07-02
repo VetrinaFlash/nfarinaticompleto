@@ -1232,7 +1232,7 @@ async function saveSupplierWhatsapp(name, whatsapp, silent) {
   }
 }
 
-// Anagrafica fornitori: gestione numeri WhatsApp
+// Anagrafica fornitori: gestione nome e numero WhatsApp
 function renderAnagrafica() {
   const box = document.getElementById('view-anagrafica');
   if (allSuppliers.length === 0) {
@@ -1240,7 +1240,7 @@ function renderAnagrafica() {
     return;
   }
   buildSupplierAgg(false);
-  box.innerHTML = `<div class="wa-hint">📱 Inserisci il numero WhatsApp di ogni fornitore (es. <b>3331234567</b> o <b>+39 333 1234567</b>).
+  box.innerHTML = `<div class="wa-hint">📱 Modifica nome e numero WhatsApp di ogni fornitore (es. <b>3331234567</b> o <b>+39 333 1234567</b>). Se rinomini un fornitore, viene aggiornato automaticamente su tutti i prodotti collegati.
     Col numero salvato, il bottone verde invia l'ordine su WhatsApp già scritto (dalla vista "Per fornitore" o da qui).</div>
     <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
       <input type="text" id="new-sup-name" placeholder="Nome nuovo fornitore" style="min-width:130px">
@@ -1255,13 +1255,38 @@ function renderAnagrafica() {
           </button>`
         : '';
       return `<div class="supplier-row">
-        <div class="supplier-name"><i class="fa-solid fa-truck" style="color:var(--gold-l)"></i> ${esc(s.name)}</div>
+        <i class="fa-solid fa-truck" style="color:var(--gold-l)"></i>
+        <input type="text" id="sn-${s.id}" value="${escAttr(s.name)}" style="min-width:120px;font-weight:700">
         <input type="tel" id="wa-${s.id}" value="${escAttr(s.whatsapp || '')}" placeholder="Numero WhatsApp (es. 3331234567)">
-        <button class="supplier-save" onclick="saveSupplierWhatsapp('${escJs(s.name)}', document.getElementById('wa-${s.id}').value).then(ok => { if (ok) renderAnagrafica(); })"><i class="fa-solid fa-floppy-disk"></i> Salva</button>
+        <button class="supplier-save" onclick="saveSupplier(${s.id})"><i class="fa-solid fa-floppy-disk"></i> Salva</button>
         ${waBtn}
         <button class="edit-del" onclick="deleteSupplier(${s.id}, '${escJs(s.name)}')" title="Elimina fornitore"><i class="fa-solid fa-trash"></i></button>
       </div>`;
     }).join('');
+}
+
+// Salva nome (se cambiato) e numero WhatsApp di un fornitore dall'anagrafica
+async function saveSupplier(id) {
+  const nameInput = document.getElementById('sn-' + id);
+  const waInput = document.getElementById('wa-' + id);
+  const name = nameInput.value.trim();
+  if (!name) { showToast('Il nome del fornitore non può essere vuoto', true); return; }
+  try {
+    const res = await fetch('/admin/suppliers', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, name, whatsapp: waInput.value }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Errore salvataggio');
+    showToast('✅ Fornitore aggiornato');
+    // Il nome può essere cambiato ed è usato ovunque (prodotti, catalogo, ordini): ricarica tutto
+    adminMaterials = [];
+    await loadMaterialsCatalog();
+    await loadOrders();
+  } catch (e) {
+    showToast('Errore: ' + e.message, true);
+  }
 }
 
 // Elimina un fornitore dall'anagrafica (bloccato lato server se ancora usato da prodotti attivi)

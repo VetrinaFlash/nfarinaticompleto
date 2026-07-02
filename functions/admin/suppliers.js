@@ -70,6 +70,11 @@ export async function onRequestGet(context) {
   }
 }
 
+// Aggiorna un fornitore per id: numero WhatsApp e, se cambiato, anche il nome.
+// Il nome di un fornitore non è collegato ai prodotti con una vera relazione
+// (raw_materials.supplier è testo libero), quindi rinominandolo aggiorniamo
+// in un colpo solo anche tutte le materie prime che lo usano, altrimenti
+// resterebbero agganciate al nome vecchio.
 export async function onRequestPut(context) {
   const { env, request } = context;
   const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
@@ -78,15 +83,47 @@ export async function onRequestPut(context) {
   }
 
   try {
-    const { name, whatsapp } = await request.json();
-    if (!name) {
-      return new Response(JSON.stringify({ error: 'Nome fornitore mancante' }), { status: 400, headers: cors });
-    }
-    // Salva solo cifre e + per il numero WhatsApp
-    const clean = (whatsapp || '').toString().replace(/[^\d+]/g, '').slice(0, 20);
+    const body = await request.json();
+    const whatsapp = (body.whatsapp || '').toString().replace(/[^\d+]/g, '').slice(0, 20);
     await ensureSuppliers(env);
-    await env.DB.prepare('UPDATE suppliers SET whatsapp = ? WHERE name = ?').bind(clean, name).run();
-    return new Response(JSON.stringify({ ok: true, whatsapp: clean }), { status: 200, headers: cors });
+
+    // Retrocompatibilità: se non arriva un id, si aggiorna solo il WhatsApp cercando per nome
+    if (!body.id) {
+      const name = (body.name || '').toString().trim();
+      if (!name) {
+        return new Response(JSON.stringify({ error: 'Nome fornitore mancante' }), { status: 400, headers: cors });
+      }
+      await env.DB.prepare('UPDATE suppliers SET whatsapp = ? WHERE name = ?').bind(whatsapp, name).run();
+      return new Response(JSON.stringify({ ok: true, whatsapp }), { status: 200, headers: cors });
+    }
+
+    const id = parseInt(body.id);
+    const newName = (body.name || '').toString().trim().slice(0, 60);
+    if (!newName) {
+      return new Response(JSON.stringify({ error: 'Il nome del fornitore non può essere vuoto' }), { status: 400, headers: cors });
+    }
+
+    const current = await env.DB.prepare('SELECT name FROM suppliers WHERE id = ?').bind(id).first();
+    if (!current) {
+      return new Response(JSON.stringify({ error: 'Fornitore non trovato' }), { status: 404, headers: cors });
+    }
+
+    if (newName === current.name) {
+      await env.DB.prepare('UPDATE suppliers SET whatsapp = ? WHERE id = ?').bind(whatsapp, id).run();
+      return new Response(JSON.stringify({ ok: true, whatsapp, name: newName }), { status: 200, headers: cors });
+    }
+
+    const clash = await env.DB.prepare('SELECT id FROM suppliers WHERE name = ? AND id != ?').bind(newName, id).first();
+    if (clash) {
+      return new Response(JSON.stringify({ error: `Esiste già un fornitore chiamato "${newName}"` }), { status: 400, headers: cors });
+    }
+
+    await env.DB.batch([
+      env.DB.prepare('UPDATE suppliers SET name = ?, whatsapp = ? WHERE id = ?').bind(newName, whatsapp, id),
+      env.DB.prepare('UPDATE raw_materials SET supplier = ? WHERE supplier = ?').bind(newName, current.name),
+    ]);
+
+    return new Response(JSON.stringify({ ok: true, whatsapp, name: newName }), { status: 200, headers: cors });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
   }
