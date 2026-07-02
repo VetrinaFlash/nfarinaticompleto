@@ -1,0 +1,8 @@
+name = "nfarinati-modern-pizza"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nfarinati-db"
+database_id = "adb8fc57-6c98-4e1b-862e-fe82269614b4"
