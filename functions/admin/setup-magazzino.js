@@ -145,6 +145,12 @@ export async function onRequestPost(context) {
       env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_supply_orders_status ON supply_orders(status)'),
       env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_supply_order_items_order ON supply_order_items(supply_order_id)'),
       env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_supply_order_items_material ON supply_order_items(raw_material_id)'),
+      env.DB.prepare(`CREATE TABLE IF NOT EXISTS suppliers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        whatsapp TEXT DEFAULT '',
+        active INTEGER DEFAULT 1
+      )`),
     ]);
 
     const userStmt = env.DB.prepare(
@@ -162,11 +168,15 @@ export async function onRequestPost(context) {
     );
     await env.DB.batch(MATERIALS.map(m => matStmt.bind(m[0], m[1], m[2])));
 
+    await env.DB.prepare(
+      "INSERT OR IGNORE INTO suppliers (name) SELECT DISTINCT supplier FROM raw_materials WHERE supplier != ''"
+    ).run();
+
     const counts = await env.DB.prepare(
-      'SELECT (SELECT COUNT(*) FROM staff_users) AS users, (SELECT COUNT(*) FROM raw_materials) AS materials'
+      'SELECT (SELECT COUNT(*) FROM staff_users) AS users, (SELECT COUNT(*) FROM raw_materials) AS materials, (SELECT COUNT(*) FROM suppliers) AS suppliers'
     ).first();
 
-    return new Response(JSON.stringify({ ok: true, users: counts.users, materials: counts.materials }), { status: 200, headers: cors });
+    return new Response(JSON.stringify({ ok: true, users: counts.users, materials: counts.materials, suppliers: counts.suppliers }), { status: 200, headers: cors });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
   }

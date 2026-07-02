@@ -413,6 +413,7 @@
       </div>
       <a class="nav-item" href="admin-magazzino.html">
         <i class="fa-solid fa-boxes-stacked"></i> Magazzino
+        <span class="badge" id="magazzino-badge" style="display:none">0</span>
       </a>
     </nav>
     <div class="sidebar-footer">
@@ -1471,6 +1472,29 @@ function gotoCustomersPage(p) { customersPage = p; loadCustomers(); }
     document.getElementById('app').style.display = 'block';
     startApp();
   }
+})();
+</script>
+<script>
+/* Modulo Magazzino: badge notifica ordini materie prime da evadere.
+   Script autonomo: non interagisce con la logica esistente della pagina. */
+(function () {
+  async function updateMagazzinoBadge() {
+    try {
+      const res = await fetch('/admin/supply-orders?count=1');
+      if (!res.ok) return;
+      const data = await res.json();
+      const badge = document.getElementById('magazzino-badge');
+      if (!badge) return;
+      if (data.pending > 0) {
+        badge.textContent = data.pending;
+        badge.style.display = '';
+      } else {
+        badge.style.display = 'none';
+      }
+    } catch (e) { /* non loggato o modulo non inizializzato: badge nascosto */ }
+  }
+  updateMagazzinoBadge();
+  setInterval(updateMagazzinoBadge, 60000);
 })();
 </script>
 </body>

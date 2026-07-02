@@ -53,6 +53,14 @@ CREATE INDEX IF NOT EXISTS idx_supply_orders_status ON supply_orders(status);
 CREATE INDEX IF NOT EXISTS idx_supply_order_items_order ON supply_order_items(supply_order_id);
 CREATE INDEX IF NOT EXISTS idx_supply_order_items_material ON supply_order_items(raw_material_id);
 
+-- Anagrafica fornitori (numero WhatsApp per l'invio ordini con messaggio precompilato)
+CREATE TABLE IF NOT EXISTS suppliers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE NOT NULL,
+  whatsapp TEXT DEFAULT '',
+  active INTEGER DEFAULT 1
+);
+
 -- ============================================================
 -- SEED: UTENTI STAFF
 -- hash = SHA-256("nfarinati-staff:<USERNAME>:<PASSWORD>")
@@ -250,3 +258,10 @@ INSERT OR IGNORE INTO raw_materials (name, department, supplier) VALUES
 ('POLLO','Cucina','Mineo'),
 ('TORTILLAS DA 30','Cucina','Blu Ocean'),
 ('FRY N DIP CONCAVE','Cucina','Blu Ocean');
+
+-- ============================================================
+-- SEED: FORNITORI (dai fornitori presenti in anagrafica; il numero
+-- WhatsApp si inserisce dalla dashboard admin, tab Fornitori)
+-- ============================================================
+INSERT OR IGNORE INTO suppliers (name)
+SELECT DISTINCT supplier FROM raw_materials WHERE supplier != '';

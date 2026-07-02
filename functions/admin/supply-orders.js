@@ -48,6 +48,20 @@ export async function onRequestGet(context) {
   }
 
   const url = new URL(request.url);
+
+  // Modalità leggera per il badge di notifica nel portale admin
+  if (url.searchParams.get('count') === '1') {
+    try {
+      const row = await env.DB.prepare(
+        "SELECT COUNT(*) AS pending FROM supply_orders WHERE status = 'inviato'"
+      ).first();
+      return new Response(JSON.stringify({ pending: row.pending }), { status: 200, headers: cors });
+    } catch (err) {
+      // Tabelle non ancora create: nessun ordine in attesa
+      return new Response(JSON.stringify({ pending: 0 }), { status: 200, headers: cors });
+    }
+  }
+
   const status = url.searchParams.get('status') || '';
   const from = url.searchParams.get('from') || '';
   const to = url.searchParams.get('to') || '';
