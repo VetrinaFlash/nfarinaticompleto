@@ -318,7 +318,7 @@
       <input type="text" id="f-material" placeholder="Cerca materia prima..." oninput="applyFilters()">
     </div>
 
-    <div class="toolbar">
+    <div class="toolbar" id="order-toolbar">
       <button class="tool-btn gold" onclick="openCreate()"><i class="fa-solid fa-plus"></i> Nuovo ordine</button>
       <button class="tool-btn" onclick="loadOrders()"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
       <button class="tool-btn" onclick="exportCSV()"><i class="fa-solid fa-file-csv"></i> Esporta CSV</button>
@@ -631,6 +631,12 @@ function switchTab(tab) {
   ['pending', 'suppliers', 'history', 'costs', 'anagrafica', 'prodotti'].forEach(v => {
     document.getElementById('view-' + v).style.display = v === tab ? 'block' : 'none';
   });
+  // Filtri e toolbar ordini (date, dipendente, fornitore, "Nuovo ordine", export...)
+  // servono solo alle viste che lavorano sugli ordini: su Fornitori e Prodotti,
+  // che hanno una propria ricerca dedicata, andavano a sovrapporsi creando confusione.
+  const showOrderTools = tab !== 'anagrafica' && tab !== 'prodotti';
+  document.getElementById('filters').style.display = showOrderTools ? '' : 'none';
+  document.getElementById('order-toolbar').style.display = showOrderTools ? '' : 'none';
   render();
 }
 
