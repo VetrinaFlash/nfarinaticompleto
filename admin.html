@@ -497,7 +497,8 @@
     <section id="section-menu" class="section">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:6px;">
         <div class="page-title">Gestione Menù</div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="repairMenuOptions()" title="Ripristina formati/scelte obbligatorie persi per errore su prodotti modificati di recente"><i class="fa-solid fa-wrench"></i> Ripristina scelte obbligatorie</button>
           <button class="btn btn-ghost btn-sm" onclick="openCatModal()"><i class="fa-solid fa-plus"></i> Categoria</button>
           <button class="btn btn-gold btn-sm" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Prodotto</button>
         </div>
@@ -1187,7 +1188,7 @@ async function saveProduct() {
   const body = {
     action: id ? 'update_product' : 'create_product',
     id: id ? parseInt(id) : undefined,
-    category_id: parseInt(document.getElementById('pm-cat').value),
+    category_id: document.getElementById('pm-cat').value, // id testuale (es. "pizze-americane"), non numerico
     name: document.getElementById('pm-name').value.trim(),
     description: document.getElementById('pm-desc').value.trim(),
     price: parseFloat(document.getElementById('pm-price').value) || 0,
@@ -1676,6 +1677,35 @@ async function cucinaSetStatus(id, status) {
   }
   boot();
 })();
+</script>
+<script>
+/* Ripristino una tantum di formato/scelte obbligatorie perse per un bug nel
+   salvataggio prodotto (risolto): confronta ogni prodotto coi dati originali
+   del menu e ripristina solo quelli che risultano azzerati per errore. */
+async function repairMenuOptions() {
+  try {
+    const res = await fetch('/admin/repair-menu-options');
+    const data = await res.json();
+    if (data.error) { notify(data.error, 'err'); return; }
+    if (data.count === 0) {
+      notify('✅ Tutto a posto: nessun prodotto con categoria o formato/scelte mancanti', 'ok');
+      return;
+    }
+    const lines = data.products.map(p => `${p.name} (${p.problema})`).join('\n • ');
+    const ok = confirm(
+      `Trovati ${data.count} prodotti danneggiati da errori ora corretti nel sistema:\n\n • ${lines}\n\n` +
+      `Ripristino categoria/formato/scelte obbligatorie ai valori originali del menu (nome, descrizione, foto, prezzo base restano quelli attuali, invariati). Procedere?`
+    );
+    if (!ok) return;
+    const res2 = await fetch('/admin/repair-menu-options', { method: 'POST' });
+    const data2 = await res2.json();
+    if (!data2.ok) { notify(data2.error || 'Errore ripristino', 'err'); return; }
+    notify(`✅ Ripristinati ${data2.restored_count} prodotti`, 'ok');
+    loadMenu();
+  } catch (e) {
+    notify('Errore di rete: ' + e.message, 'err');
+  }
+}
 </script>
 <script>
 /* Modulo Magazzino: badge + notifica (toast e suono, come per gli ordini

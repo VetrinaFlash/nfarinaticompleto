@@ -59,8 +59,21 @@ export async function onRequestPost(context) {
 
     if (action === 'update_category') {
       const { id, name, icon, sort_order, active } = body;
+      // Il form categoria invia solo nome e ordine: icona e stato attivo, quando
+      // non arrivano nella richiesta, vanno mantenuti com'erano (altrimenti ogni
+      // rinomina resetterebbe l'icona a quella generica).
+      const current = await env.DB.prepare('SELECT icon, active FROM categories WHERE id = ?').bind(id).first();
+      if (!current) {
+        return new Response(JSON.stringify({ error: 'Categoria non trovata' }), { status: 404, headers: cors });
+      }
       await env.DB.prepare('UPDATE categories SET name=?, icon=?, sort_order=?, active=? WHERE id=?')
-        .bind(name, icon || '🍴', sort_order || 0, active !== undefined ? active : 1, id).run();
+        .bind(
+          name,
+          icon !== undefined ? icon : current.icon,
+          sort_order || 0,
+          active !== undefined ? active : current.active,
+          id
+        ).run();
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
     }
 
@@ -89,18 +102,30 @@ export async function onRequestPost(context) {
 
     if (action === 'update_product') {
       const { id, category_id, name, description, price, image_url, mandatory_choice, active, sort_order, prezzi_json, options_json, multi_options_json } = body;
+      // Il form semplice dell'admin invia solo nome/descrizione/prezzo/foto/categoria/attivo:
+      // le varianti di formato e le scelte obbligatorie, quando non arrivano nella richiesta,
+      // vanno mantenute com'erano — altrimenti ogni modifica le azzererebbe silenziosamente.
+      const current = await env.DB.prepare(
+        'SELECT category_id, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json FROM products WHERE id = ?'
+      ).bind(id).first();
+      if (!current) {
+        return new Response(JSON.stringify({ error: 'Prodotto non trovato' }), { status: 404, headers: cors });
+      }
+      // category_id è un id testuale (es. "pizze-americane"): se arriva vuoto/mancante
+      // si tiene quello attuale, per non "orfanizzare" il prodotto (spariva dal menu).
+      const safeCategoryId = (category_id && String(category_id).trim()) ? category_id : current.category_id;
       await env.DB.prepare(`
         UPDATE products SET category_id=?, name=?, description=?, price=?, image_url=?,
           mandatory_choice=?, active=?, sort_order=?, prezzi_json=?, options_json=?, multi_options_json=?
         WHERE id=?
       `).bind(
-        category_id, name, description || '', price, image_url || '',
-        mandatory_choice ? 1 : 0,
+        safeCategoryId, name, description || '', price, image_url || '',
+        mandatory_choice !== undefined ? (mandatory_choice ? 1 : 0) : current.mandatory_choice,
         active !== undefined ? active : 1,
-        sort_order || 0,
-        prezzi_json || JSON.stringify([{ prezzo: price }]),
-        options_json || '{}',
-        multi_options_json || '{}',
+        sort_order !== undefined ? sort_order : current.sort_order,
+        prezzi_json !== undefined ? prezzi_json : current.prezzi_json,
+        options_json !== undefined ? options_json : current.options_json,
+        multi_options_json !== undefined ? multi_options_json : current.multi_options_json,
         id
       ).run();
       return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
