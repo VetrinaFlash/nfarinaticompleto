@@ -30,6 +30,7 @@ async function migrateSchema(env) {
     'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
     'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
     'ALTER TABLE supply_orders ADD COLUMN is_draft INTEGER DEFAULT 0',
+    'ALTER TABLE raw_materials ADD COLUMN default_price REAL',
   ];
   for (const sql of alters) {
     try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
@@ -200,7 +201,7 @@ export async function onRequestGet(context) {
         `SELECT i.supply_order_id, i.quantity, i.unit_price,
                 i.original_quantity, i.removed, i.added_by_admin,
                 i.raw_material_id AS material_id,
-                m.name, m.department, m.supplier
+                m.name, m.department, m.supplier, m.default_price
          FROM supply_order_items i
          JOIN raw_materials m ON m.id = i.raw_material_id
          WHERE i.supply_order_id IN (${placeholders})

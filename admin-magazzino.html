@@ -422,6 +422,9 @@ let allSuppliers = []; // [{id, name, whatsapp}]
 let currentTab = 'pending';
 let costChart = null;
 let trendChart = null;
+let supplierChart = null;
+let weekChart = null;
+let monthChart = null;
 
 // ── AUTH: riusa la sessione admin esistente ──
 async function checkAuth() {
@@ -650,6 +653,16 @@ function updatePendingCount() {
   document.title = (n > 0 ? `(${n}) ` : '') + "Magazzino – Admin N'Farinati";
 }
 
+// Prezzo effettivo di una riga: quello esplicito se c'è, altrimenti il
+// prezzo di riferimento del prodotto come stima. isEstimated distingue i due
+// casi per mostrare "≈" dove il prezzo non è stato inserito manualmente.
+function effectivePrice(it) {
+  return it.unit_price != null ? it.unit_price : (it.default_price ?? null);
+}
+function isEstimatedPrice(it) {
+  return it.unit_price == null && it.default_price != null;
+}
+
 function itemLine(it) {
   const isRem = !!it.removed;
   const isAdd = !!it.added_by_admin;
@@ -661,16 +674,18 @@ function itemLine(it) {
   else if (isAdd) tag = ' <span class="tag add">aggiunto admin</span>';
   else if (isMod) tag = ` <span class="tag mod">${it.quantity > it.original_quantity ? 'aumentato' : 'ridotto'}</span>`;
   let priceStr = '';
-  if (!isRem && it.unit_price != null) priceStr = `€ ${(it.unit_price * it.quantity).toFixed(2)}`;
+  const price = effectivePrice(it);
+  if (!isRem && price != null) priceStr = `${isEstimatedPrice(it) ? '≈ ' : ''}€ ${(price * it.quantity).toFixed(2)}`;
   return `<li class="${isRem ? 'oi-removed' : ''}">${qtyHtml} <span class="oi-name">${esc(it.name)}</span> <span class="oi-dep">— ${esc(it.department)} · ${esc(it.supplier)}</span>${tag}<span class="oi-price">${priceStr}</span></li>`;
 }
 
 function orderTotal(items) {
   let total = 0, priced = false;
   for (const it of items) {
-    if (it.removed || it.unit_price == null) continue;
+    const price = effectivePrice(it);
+    if (it.removed || price == null) continue;
     priced = true;
-    total += it.unit_price * it.quantity;
+    total += price * it.quantity;
   }
   return { total, priced };
 }
@@ -774,7 +789,14 @@ function openEdit(orderId) {
   if (!o) return;
   editState = {
     orderId,
-    items: o.items.map(it => ({ ...it, removed: !!it.removed })),
+    // Righe senza prezzo esplicito: pre-compilate col prezzo di riferimento del
+    // prodotto (se impostato in Prodotti), così restando invariate e salvando
+    // la rettifica il prezzo viene registrato automaticamente.
+    items: o.items.map(it => ({
+      ...it,
+      removed: !!it.removed,
+      unit_price: it.unit_price != null ? it.unit_price : (it.default_price ?? null),
+    })),
     newItems: [],
   };
   document.getElementById('edit-title').textContent = `Rettifica ordine di ${o.display_name}`;
@@ -884,7 +906,9 @@ function updatePickerBar() {
 function pickerNext() {
   const newItems = Object.keys(pickerCart).map(id => {
     const m = materialsCatalog.find(x => x.id == id);
-    return m ? { material_id: m.id, name: m.name, department: m.department, supplier: m.supplier, quantity: pickerCart[id], unit_price: '' } : null;
+    // Se il prodotto ha un prezzo di riferimento salvato, pre-compila il prezzo
+    // (resta modificabile prima di salvare, se quel giorno cambia).
+    return m ? { material_id: m.id, name: m.name, department: m.department, supplier: m.supplier, quantity: pickerCart[id], unit_price: m.default_price ?? '' } : null;
   }).filter(Boolean);
   if (newItems.length === 0) { showToast('Seleziona almeno un prodotto', true); return; }
   closePicker();
@@ -1133,22 +1157,14 @@ async function sendWhatsApp(supplierName) {
 }
 
 // Invio a tutti i fornitori con righe da ordinare
+// Nota: i browser permettono di aprire una sola finestra/scheda per tocco
+// reale dell'utente — un bottone "apri tutte le chat insieme" viene quindi
+// bloccato dal browser dopo la prima. Si procede quindi una chat alla volta,
+// ognuna con un tocco esplicito (affidabile su tutti i browser/telefoni).
 function openSendAll() {
   const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
   const box = document.getElementById('sendall-list');
-  const withWa = suppliers.filter(s => {
-    const sup = allSuppliers.find(x => x.name === s);
-    return sup && sup.whatsapp;
-  });
-  const missing = suppliers.length - withWa.length;
-  const openAllBtn = withWa.length > 1 ? `
-    <div style="margin-bottom:12px">
-      <button class="wa-btn" style="width:100%;justify-content:center;padding:13px;font-size:.85rem" onclick="sendAllAtOnce()">
-        <i class="fa-solid fa-bolt"></i> Apri tutti con un click (${withWa.length} chat)
-      </button>
-      <div class="edit-hint" style="text-align:center">${missing > 0 ? `⚠️ ${missing} fornitor${missing === 1 ? 'e è senza' : 'i sono senza'} numero: aggiungilo dalla tab Fornitori. ` : ''}Se il browser blocca le finestre extra, consenti i popup per questo sito oppure usa i bottoni singoli qui sotto.</div>
-    </div>` : '';
-  box.innerHTML = openAllBtn + suppliers.map(s => {
+  box.innerHTML = suppliers.map(s => {
     const sup = allSuppliers.find(x => x.name === s);
     const hasWa = sup && sup.whatsapp;
     const n = (supplierAgg[s] || []).length;
@@ -1164,32 +1180,6 @@ function openSendAll() {
     </div>`;
   }).join('');
   document.getElementById('sendall-modal').classList.add('open');
-}
-
-// Un click solo: apre una chat WhatsApp per ogni fornitore (richiede popup consentiti)
-function sendAllAtOnce() {
-  const suppliers = Object.keys(supplierAgg).sort((a, b) => a.localeCompare(b, 'it'));
-  let opened = 0, blocked = 0;
-  for (const s of suppliers) {
-    const sup = allSuppliers.find(x => x.name === s);
-    if (!sup || !sup.whatsapp) continue;
-    const number = normalizeWaNumber(sup.whatsapp);
-    if (!number) continue;
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(buildSupplierMessage(s))}`;
-    const w = window.open(url, 'wa_' + cssId(s));
-    if (w) {
-      opened++;
-      const row = document.getElementById('sendall-' + cssId(s));
-      if (row) { const d = row.querySelector('.sendall-done'); if (d) d.style.display = ''; }
-    } else {
-      blocked++;
-    }
-  }
-  if (blocked > 0) {
-    showToast(`${opened} chat aperte, ${blocked} bloccate dal browser: usa i bottoni singoli o consenti i popup`, true);
-  } else if (opened > 0) {
-    showToast(`✅ ${opened} chat WhatsApp aperte`);
-  }
 }
 
 async function sendAllOne(supplierName) {
@@ -1369,6 +1359,12 @@ function depSelectHtml(id, val) {
     </select>`;
 }
 
+// Prezzo di riferimento: impostato una volta sul prodotto, pre-compila il
+// prezzo negli ordini futuri e viene usato come stima nella contabilità.
+function priceInputHtml(id, val) {
+  return `<input type="number" inputmode="decimal" min="0" step="any" id="${id}" value="${val ?? ''}" placeholder="€/pz rif." style="width:82px;padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none;text-align:right">`;
+}
+
 // Parte fissa della tab Prodotti (avviso, modulo "nuovo prodotto", casella di
 // ricerca): si ricostruisce solo quando serve davvero (apertura tab, dopo un
 // salvataggio). MAI a ogni carattere digitato nella ricerca — altrimenti il
@@ -1377,11 +1373,12 @@ function depSelectHtml(id, val) {
 function renderProdottiShell() {
   const box = document.getElementById('view-prodotti');
   box.innerHTML = `
-    <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto o fornitore, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Il fornitore si sceglie da quelli già in anagrafica (tab Fornitori), per non creare doppioni. Ricorda: la coppia nome + reparto è unica.</div>
+    <div class="wa-hint">📦 Anagrafica materie prime: modifica nome, reparto, fornitore o prezzo di riferimento, disattiva prodotti che non usate più (lo storico resta) o aggiungine di nuovi. Il fornitore si sceglie da quelli già in anagrafica (tab Fornitori), per non creare doppioni. Il <b>prezzo di riferimento</b> si inserisce una volta sola e da quel momento pre-compila automaticamente il prezzo a ogni ordine (resta modificabile se quel giorno cambia). Ricorda: la coppia nome + reparto è unica.</div>
     <div class="supplier-row" style="border-style:dashed;border-color:rgba(184,134,11,.4)">
       <input type="text" id="new-mat-name" placeholder="Nome nuovo prodotto" style="min-width:140px;text-transform:uppercase">
       ${depSelectHtml('new-mat-dep', 'Pizzeria')}
       ${supplierSelectHtml('new-mat-sup', '')}
+      ${priceInputHtml('new-mat-price', '')}
       <button class="supplier-save" onclick="addMaterial()"><i class="fa-solid fa-plus"></i> Aggiungi</button>
     </div>
     <div class="search-box" style="position:relative;margin-bottom:10px">
@@ -1404,6 +1401,7 @@ function drawProdottiList() {
       <input type="text" id="mn-${m.id}" value="${escAttr(m.name)}" style="min-width:140px;flex:2;text-transform:uppercase">
       ${depSelectHtml('md-' + m.id, m.department)}
       ${supplierSelectHtml('ms-' + m.id, m.supplier)}
+      ${priceInputHtml('mp-' + m.id, m.default_price)}
       <button class="supplier-save" onclick="saveMaterial(${m.id})"><i class="fa-solid fa-floppy-disk"></i></button>
       <button class="edit-del" onclick="deactivateMaterial(${m.id}, '${escJs(m.name)}')" title="Disattiva prodotto"><i class="fa-solid fa-trash"></i></button>
     </div>`).join('') || '<div class="empty-note">Nessun prodotto trovato</div>';
@@ -1413,12 +1411,13 @@ async function addMaterial() {
   const name = document.getElementById('new-mat-name').value.trim();
   const department = document.getElementById('new-mat-dep').value;
   const supplier = getSupplierValue('new-mat-sup');
+  const default_price = document.getElementById('new-mat-price').value;
   if (!name) { showToast('Inserisci il nome del prodotto', true); return; }
   try {
     const res = await fetch('/admin/materials', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, department, supplier }),
+      body: JSON.stringify({ name, department, supplier, default_price }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Errore');
@@ -1436,17 +1435,18 @@ async function saveMaterial(id) {
   const name = document.getElementById('mn-' + id).value.trim();
   const department = document.getElementById('md-' + id).value;
   const supplier = getSupplierValue('ms-' + id);
+  const default_price = document.getElementById('mp-' + id).value;
   if (!name) { showToast('Il nome non può essere vuoto', true); return; }
   try {
     const res = await fetch('/admin/materials', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, name, department, supplier }),
+      body: JSON.stringify({ id, name, department, supplier, default_price }),
     });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || 'Errore');
     const m = adminMaterials.find(x => x.id === id);
-    if (m) { m.name = name.toUpperCase(); m.department = department; m.supplier = supplier; }
+    if (m) { m.name = name.toUpperCase(); m.department = department; m.supplier = supplier; m.default_price = default_price === '' ? null : parseFloat(default_price); }
     showToast('✅ Prodotto aggiornato');
     await loadSuppliers(); // se è stato digitato un fornitore nuovo, ora compare nell'elenco
     renderProdottiShell();
@@ -1501,6 +1501,28 @@ function renderHistory() {
 }
 
 // Contabilità: totali periodo + andamento costi
+// Aggregazioni temporali per la contabilità (settimana lunedì-domenica, mese)
+function weekKeyOf(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay(); // 0=Dom..6=Sab
+  const diff = day === 0 ? -6 : 1 - day; // giorni da sottrarre per arrivare al lunedì
+  d.setDate(d.getDate() + diff);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+function weekLabelOf(mondayKey) {
+  const start = new Date(mondayKey + 'T00:00:00');
+  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const fmt = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${fmt(start)}–${fmt(end)}`;
+}
+function monthKeyOf(dateStr) { return dateStr.slice(0, 7); }
+function monthLabelOf(key) {
+  const [y, m] = key.split('-');
+  const names = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+  return `${names[parseInt(m, 10) - 1]} ${y}`;
+}
+
 function renderCosts() {
   const orders = getFiltered();
   const box = document.getElementById('view-costs');
@@ -1508,40 +1530,79 @@ function renderCosts() {
   let totalSpend = 0, pricedLines = 0, totalLines = 0;
   const byMaterial = {};
   const byDay = {};
+  const bySupplier = {};
+  const byOrder = [];
+
   for (const o of orders) {
     const d = (o.created_at || '').slice(0, 10);
+    const { total: orderCost, priced: orderPriced } = orderTotal(o.items);
+    const activeCount = o.items.filter(it => !it.removed).length;
+    if (activeCount > 0) {
+      byOrder.push({ id: o.id, date: o.created_at, display_name: o.display_name, count: activeCount, total: orderCost, priced: orderPriced });
+    }
     for (const it of o.items) {
       if (it.removed) continue; // righe annullate: fuori dalla contabilità
       totalLines++;
-      if (it.unit_price == null) continue;
+      const price = effectivePrice(it);
+      if (price == null) continue;
       pricedLines++;
-      const cost = it.unit_price * it.quantity;
+      const cost = price * it.quantity;
       totalSpend += cost;
       const mk = `${it.name} — ${it.department}`;
       byMaterial[mk] = byMaterial[mk] || { cost: 0, qty: 0, supplier: it.supplier };
       byMaterial[mk].cost += cost;
       byMaterial[mk].qty += it.quantity;
       byDay[d] = (byDay[d] || 0) + cost;
+      const supKey = it.supplier || '(senza fornitore)';
+      bySupplier[supKey] = (bySupplier[supKey] || 0) + cost;
     }
   }
 
   const matRows = Object.entries(byMaterial).sort((a, b) => b[1].cost - a[1].cost);
+  const supRows = Object.entries(bySupplier).sort((a, b) => b[1] - a[1]);
   const days = Object.keys(byDay).sort();
+
+  const byWeek = {};
+  for (const d of days) { const wk = weekKeyOf(d); byWeek[wk] = (byWeek[wk] || 0) + byDay[d]; }
+  const weeks = Object.keys(byWeek).sort();
+
+  const byMonth = {};
+  for (const d of days) { const mk = monthKeyOf(d); byMonth[mk] = (byMonth[mk] || 0) + byDay[d]; }
+  const months = Object.keys(byMonth).sort();
+
+  byOrder.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   box.innerHTML = `
     <div class="kpi-grid">
       <div class="kpi-card"><div class="kpi-val">€ ${totalSpend.toFixed(2)}</div><div class="kpi-label">Spesa totale (periodo filtrato)</div></div>
       <div class="kpi-card"><div class="kpi-val">${orders.length}</div><div class="kpi-label">Ordini nel periodo</div></div>
-      <div class="kpi-card"><div class="kpi-val">${pricedLines}/${totalLines}</div><div class="kpi-label">Righe con prezzo inserito</div></div>
+      <div class="kpi-card"><div class="kpi-val">${pricedLines}/${totalLines}</div><div class="kpi-label">Righe con prezzo (inserito o di riferimento)</div></div>
     </div>
-    ${pricedLines === 0 ? '<div class="empty-note">Nessun prezzo inserito nel periodo: la contabilità si popola quando lo staff indica i prezzi.</div>' : `
+    ${pricedLines === 0 ? '<div class="empty-note">Nessun prezzo disponibile nel periodo: inserisci i prezzi negli ordini oppure imposta un prezzo di riferimento sui prodotti (tab Prodotti) — da quel momento la contabilità si popola da sola.</div>' : `
     <div class="chart-card"><div class="chart-title">Andamento spesa per giorno</div><canvas id="trend-chart" height="110"></canvas></div>
+    <div class="chart-card"><div class="chart-title">📅 Spesa per settimana</div><canvas id="week-chart" height="110"></canvas></div>
+    <div class="chart-card"><div class="chart-title">📆 Spesa per mese</div><canvas id="month-chart" height="110"></canvas></div>
+    <div class="chart-card">
+      <div class="chart-title">🚚 Spesa per fornitore</div>
+      <canvas id="supplier-chart" height="140"></canvas>
+      <div class="table-wrap" style="margin-top:14px"><table class="sup-table">
+        <tr><th>Fornitore</th><th>Spesa</th><th>% sul totale</th></tr>
+        ${supRows.map(([s, cost]) => `<tr><td>${esc(s)}</td><td>€ ${cost.toFixed(2)}</td><td>${totalSpend > 0 ? ((cost / totalSpend) * 100).toFixed(0) : 0}%</td></tr>`).join('')}
+      </table></div>
+    </div>
     <div class="chart-card"><div class="chart-title">Top materie prime per spesa</div><canvas id="cost-chart" height="140"></canvas></div>
     <div class="chart-card">
       <div class="chart-title">Dettaglio costi per materia prima</div>
       <div class="table-wrap"><table class="sup-table">
         <tr><th>Materia prima — Reparto</th><th>Fornitore</th><th>Qtà</th><th>Spesa</th></tr>
         ${matRows.map(([mk, v]) => `<tr><td>${esc(mk)}</td><td>${esc(v.supplier)}</td><td class="qty">×${v.qty}</td><td>€ ${v.cost.toFixed(2)}</td></tr>`).join('')}
+      </table></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🧾 Spesa per ordine</div>
+      <div class="table-wrap"><table class="sup-table">
+        <tr><th>Data</th><th>Dipendente</th><th>Prodotti</th><th>Spesa</th></tr>
+        ${byOrder.map(o => `<tr><td>${esc(o.date)}</td><td>${esc(o.display_name)}</td><td class="qty">${o.count}</td><td>${o.priced ? '€ ' + o.total.toFixed(2) : '—'}</td></tr>`).join('')}
       </table></div>
     </div>`}
   `;
@@ -1553,6 +1614,29 @@ function renderCosts() {
       data: { labels: days.map(formatDate), datasets: [{ label: '€ / giorno', data: days.map(d => byDay[d]), borderColor: '#d4a017', backgroundColor: 'rgba(212,160,23,.15)', fill: true, tension: .3 }] },
       options: chartOpts(),
     });
+
+    if (weekChart) weekChart.destroy();
+    weekChart = new Chart(document.getElementById('week-chart'), {
+      type: 'bar',
+      data: { labels: weeks.map(weekLabelOf), datasets: [{ label: '€ / settimana', data: weeks.map(w => byWeek[w]), backgroundColor: 'rgba(66,165,245,.55)', borderColor: '#42a5f5', borderWidth: 1 }] },
+      options: chartOpts(),
+    });
+
+    if (monthChart) monthChart.destroy();
+    monthChart = new Chart(document.getElementById('month-chart'), {
+      type: 'bar',
+      data: { labels: months.map(monthLabelOf), datasets: [{ label: '€ / mese', data: months.map(m => byMonth[m]), backgroundColor: 'rgba(129,199,132,.55)', borderColor: '#4caf50', borderWidth: 1 }] },
+      options: chartOpts(),
+    });
+
+    if (supplierChart) supplierChart.destroy();
+    const topSup = supRows.slice(0, 12);
+    supplierChart = new Chart(document.getElementById('supplier-chart'), {
+      type: 'bar',
+      data: { labels: topSup.map(([s]) => s), datasets: [{ label: 'Spesa €', data: topSup.map(([, c]) => c), backgroundColor: 'rgba(184,134,11,.6)', borderColor: '#d4a017', borderWidth: 1 }] },
+      options: { ...chartOpts(), indexAxis: 'y' },
+    });
+
     if (costChart) costChart.destroy();
     const top = matRows.slice(0, 12);
     costChart = new Chart(document.getElementById('cost-chart'), {
@@ -1610,19 +1694,21 @@ async function deleteOrder(id) {
 // ── EXPORT CSV ──
 function exportCSV() {
   const orders = getFiltered();
-  const rows = [['Data', 'Dipendente', 'Stato', 'Materia prima', 'Reparto', 'Fornitore', 'Quantità', 'Prezzo unitario', 'Totale riga', 'Rettifica', 'Note ordine']];
+  const rows = [['Data', 'Dipendente', 'Stato', 'Materia prima', 'Reparto', 'Fornitore', 'Quantità', 'Prezzo unitario', 'Stimato', 'Totale riga', 'Rettifica', 'Note ordine']];
   for (const o of orders) {
     for (const it of o.items) {
       let rettifica = '';
       if (it.removed) rettifica = 'annullato dall\'admin';
       else if (it.added_by_admin) rettifica = 'aggiunto dall\'admin';
       else if (it.original_quantity != null) rettifica = `quantità: ${it.original_quantity} → ${it.quantity}`;
+      const price = effectivePrice(it);
       rows.push([
         o.created_at, o.display_name, o.status,
         it.name, it.department, it.supplier,
         String(it.quantity).replace('.', ','),
-        !it.removed && it.unit_price != null ? String(it.unit_price).replace('.', ',') : '',
-        !it.removed && it.unit_price != null ? String((it.unit_price * it.quantity).toFixed(2)).replace('.', ',') : '',
+        !it.removed && price != null ? String(price).replace('.', ',') : '',
+        !it.removed && isEstimatedPrice(it) ? 'sì (prezzo di riferimento)' : '',
+        !it.removed && price != null ? String((price * it.quantity).toFixed(2)).replace('.', ',') : '',
         rettifica,
         o.notes || '',
       ]);

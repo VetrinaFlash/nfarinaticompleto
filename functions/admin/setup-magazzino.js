@@ -120,6 +120,7 @@ export async function onRequestPost(context) {
         name TEXT NOT NULL,
         department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina')),
         supplier TEXT NOT NULL DEFAULT '',
+        default_price REAL,
         active INTEGER DEFAULT 1,
         UNIQUE(name, department)
       )`),
@@ -167,6 +168,7 @@ export async function onRequestPost(context) {
       'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
       'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
       'ALTER TABLE supply_orders ADD COLUMN is_draft INTEGER DEFAULT 0',
+      'ALTER TABLE raw_materials ADD COLUMN default_price REAL',
     ];
     for (const sql of alters) {
       try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }

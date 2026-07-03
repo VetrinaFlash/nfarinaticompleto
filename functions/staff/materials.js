@@ -44,8 +44,12 @@ export async function onRequestGet(context) {
   }
 
   try {
+    try {
+      // Colonna aggiunta dopo il primo rilascio: migrata in corsa sui DB già inizializzati (idempotente)
+      await env.DB.prepare('ALTER TABLE raw_materials ADD COLUMN default_price REAL').run();
+    } catch (e) { /* colonna già presente */ }
     const rows = await env.DB.prepare(
-      'SELECT id, name, department, supplier FROM raw_materials WHERE active = 1 ORDER BY name, department'
+      'SELECT id, name, department, supplier, default_price FROM raw_materials WHERE active = 1 ORDER BY name, department'
     ).all();
     return new Response(JSON.stringify({ materials: rows.results }), { status: 200, headers: cors });
   } catch (err) {

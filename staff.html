@@ -467,7 +467,12 @@ function setQty(id, value) {
   if (qty <= 0) {
     delete cart[id];
   } else {
-    cart[id] = cart[id] || { unit_price: '' };
+    // Se il prodotto ha un prezzo di riferimento salvato dall'admin, lo
+    // propone già compilato (resta modificabile se quel giorno cambia).
+    if (!cart[id]) {
+      const m = materials.find(x => x.id === id);
+      cart[id] = { unit_price: m && m.default_price != null ? m.default_price : '' };
+    }
     cart[id].quantity = qty;
   }
   const row = document.getElementById(`mat-${id}`);

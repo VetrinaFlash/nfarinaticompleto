@@ -17,11 +17,15 @@ CREATE TABLE IF NOT EXISTS staff_users (
 );
 
 -- Anagrafica materie prime: chiave univoca = (nome, reparto)
+-- default_price: prezzo di riferimento impostato una volta dall'admin, usato
+-- per pre-compilare il prezzo negli ordini e come stima nella contabilità
+-- quando una riga non ha un prezzo esplicito.
 CREATE TABLE IF NOT EXISTS raw_materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina')),
   supplier TEXT NOT NULL DEFAULT '',
+  default_price REAL,
   active INTEGER DEFAULT 1,
   UNIQUE(name, department)
 );
