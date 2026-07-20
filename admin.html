@@ -249,6 +249,13 @@
     .closure-day-grid input { accent-color: var(--gold); transform: scale(1.15); }
     .closure-preview { margin-top: 8px; font-size: 0.95rem; color: var(--gold); font-weight: 700; }
 
+    @media (max-width: 720px) {
+      .closure-day-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .closure-day-grid label { padding: 12px 10px; font-size: 0.85rem; }
+      .closure-day-grid input { transform: scale(1.05); }
+      .closure-day-grid span { white-space: normal; }
+    }
+
     /* ── MODALS ── */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
