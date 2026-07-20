@@ -595,6 +595,10 @@
               <label>Testo orari homepage (HTML consentito)</label>
               <textarea id="set-hours" placeholder="es. Mar–Dom 18:30–23:30&lt;br&gt;&lt;span style=&quot;color:var(--red)&quot;&gt;(Lunedì chiusi)&lt;/span&gt;"></textarea>
             </div>
+            <div class="form-group">
+              <label>Giorni di chiusura settimanale</label>
+              <div id="closure-days" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div>
+            </div>
           </div>
         </div>
 
@@ -1402,6 +1406,42 @@ async function deletePromo(id) {
 // ════════════════════════════════════════════════
 //  SETTINGS
 // ════════════════════════════════════════════════
+const WEEKDAY_OPTIONS = [
+  { value: 0, label: 'Domenica' },
+  { value: 1, label: 'Lunedì' },
+  { value: 2, label: 'Martedì' },
+  { value: 3, label: 'Mercoledì' },
+  { value: 4, label: 'Giovedì' },
+  { value: 5, label: 'Venerdì' },
+  { value: 6, label: 'Sabato' }
+];
+
+function parseClosureDays(value) {
+  if (Array.isArray(value)) return value.filter(v => Number.isInteger(v)).map(v => Number(v));
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return parseClosureDays(parsed);
+    } catch {}
+    const parts = value.split(',').map(v => v.trim()).filter(Boolean);
+    return parts.map(v => Number(v)).filter(v => !Number.isNaN(v));
+  }
+  return [];
+}
+
+function renderClosureDayOptions(selectedDays) {
+  const container = document.getElementById('closure-days');
+  if (!container) return;
+  const normalized = Array.isArray(selectedDays) ? selectedDays : [];
+  container.innerHTML = WEEKDAY_OPTIONS.map(day => {
+    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.95rem;color:var(--text);"><input type="checkbox" name="closure-day" value="${day.value}" ${normalized.includes(day.value) ? 'checked' : ''}> ${day.label}</label>`;
+  }).join('');
+}
+
+function getSelectedClosureDays() {
+  return Array.from(document.querySelectorAll('input[name="closure-day"]:checked')).map(cb => Number(cb.value));
+}
+
 async function loadSettings() {
   try {
     const res = await fetch('/admin/settings');
@@ -1411,6 +1451,8 @@ async function loadSettings() {
     document.getElementById('set-hours').value = s.homepage_hours || '';
     document.getElementById('set-whatsapp').value = s.whatsapp_number || '';
     document.getElementById('set-locale-aperto').checked = s.locale_chiuso !== '1' && s.locale_chiuso !== 'true';
+    const closureDays = parseClosureDays(s.weekly_closure_days).length ? parseClosureDays(s.weekly_closure_days) : [1];
+    renderClosureDayOptions(closureDays);
     if (s.homepage_buttons) {
       try {
         const btn = typeof s.homepage_buttons === 'string' ? s.homepage_buttons : JSON.stringify(s.homepage_buttons, null, 2);
@@ -1426,6 +1468,7 @@ async function saveAllSettings() {
     homepage_hours: document.getElementById('set-hours').value,
     whatsapp_number: document.getElementById('set-whatsapp').value,
     locale_chiuso: document.getElementById('set-locale-aperto').checked ? '0' : '1',
+    weekly_closure_days: getSelectedClosureDays(),
   };
   const btnVal = document.getElementById('set-buttons').value.trim();
   if (btnVal) {

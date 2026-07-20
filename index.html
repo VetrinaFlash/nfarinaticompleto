@@ -518,6 +518,46 @@
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
 
+    function parseClosureDays(value) {
+      if (Array.isArray(value)) return value.filter(v => Number.isInteger(v)).map(v => Number(v));
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) return parseClosureDays(parsed);
+        } catch {}
+        const parts = value.split(',').map(v => v.trim()).filter(Boolean);
+        return parts.map(v => Number(v)).filter(v => !Number.isNaN(v));
+      }
+      return [];
+    }
+
+    function getDayName(dayValue) {
+      const names = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+      return names[dayValue] || 'Giorno';
+    }
+
+    function buildHoursText(settings) {
+      const hoursBase = settings.homepage_hours || 'Mar–Dom 18:30–23:30';
+      const closedDays = parseClosureDays(settings.weekly_closure_days);
+      const isLocaleClosed = settings.locale_chiuso === '1' || settings.locale_chiuso === true || settings.locale_chiuso === 'true';
+      const today = new Date().getDay();
+      let note = '';
+
+      if (isLocaleClosed) {
+        note = 'Locale chiuso';
+      } else if (closedDays.includes(today)) {
+        note = `Oggi siamo chiusi (${getDayName(today)})`;
+      } else if (closedDays.length) {
+        const labels = closedDays.map(getDayName);
+        note = `Chiusi: ${labels.join(', ')}`;
+      }
+
+      const hoursHtml = hoursBase.replace(/<br\s*\/?>/gi, '<br>');
+      const cleanHours = hoursBase.replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
+      const noteHtml = note ? `<br><span style="color:var(--red);font-size:.83rem;font-weight:600;">(${note})</span>` : '';
+      return { hero: `${hoursHtml}${noteHtml}`, footer: `${cleanHours}${note ? ` · ${note}` : ''}` };
+    }
+
     // Carica impostazioni dinamiche dalla API
     (async function loadDynamicSettings() {
       try {
@@ -529,10 +569,9 @@
           document.getElementById('promo-banner-text').textContent = s.promo_bar_text;
         }
 
-        if (s.homepage_hours) {
-          document.getElementById('hero-hours').innerHTML = s.homepage_hours;
-          document.getElementById('footer-hours').innerHTML = s.homepage_hours.replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
-        }
+        const renderedHours = buildHoursText(s);
+        document.getElementById('hero-hours').innerHTML = renderedHours.hero;
+        document.getElementById('footer-hours').textContent = renderedHours.footer;
 
         if (s.homepage_buttons) {
           try {

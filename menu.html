@@ -49,6 +49,23 @@
             box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
         }
 
+        .closure-banner {
+            display: none;
+            background: linear-gradient(90deg, #b71c1c, #d32f2f);
+            color: #ffffff;
+            text-align: center;
+            padding: 12px 16px;
+            margin: 0 15px 12px;
+            border-radius: 12px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            box-shadow: 0 6px 16px rgba(211, 47, 47, 0.2);
+        }
+
+        .closure-banner.visible { display: block; }
+
         header { background: var(--bg-card); text-align: center; padding: 30px 20px 40px; border-bottom: 1px solid var(--border-light); box-shadow: 0 2px 15px rgba(0,0,0,0.03); }
         .logo-img { width: 170px; max-width: 100%; margin-bottom: 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);}
         header h2 { font-family: 'Montserrat', sans-serif; font-size: 1rem; color: var(--text-muted); margin-bottom: 20px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;}
@@ -218,10 +235,12 @@
             <div class="restaurant-info">
                 <div class="info-line"><i class="fa-solid fa-location-dot"></i> Via P. Togliatti 8, Bagheria (PA)</div>
                 <div class="info-line"><i class="fa-solid fa-phone"></i> 091 8432674</div>
-                <div class="info-line"><i class="fa-regular fa-clock"></i> Mar-Dom 18:30 - 23:30 (Lunedì Chiusi)</div>
+                <div class="info-line" id="restaurant-hours-line"><i class="fa-regular fa-clock"></i> Mar-Dom 18:30 - 23:30</div>
             </div>
         </div>
     </header>
+
+    <div id="closure-banner" class="closure-banner"></div>
 
     <!-- SKELETON LOADER -->
     <div id="skeleton-loader">
@@ -2168,6 +2187,55 @@
         let rawItemsList = [];
         let currentModalState = { itemId: null, selections: {}, multi: {}, removals: {} };
         let appliedPromoCode = null; // { valid, code, type, value, discountAmount }
+        let currentPublicSettings = {};
+        let closureDays = [];
+
+        function parseClosureDays(value) {
+            if (Array.isArray(value)) return value.filter(v => Number.isInteger(v)).map(v => Number(v));
+            if (typeof value === 'string') {
+                try {
+                    const parsed = JSON.parse(value);
+                    if (Array.isArray(parsed)) return parseClosureDays(parsed);
+                } catch {}
+                const parts = value.split(',').map(v => v.trim()).filter(Boolean);
+                return parts.map(v => Number(v)).filter(v => !Number.isNaN(v));
+            }
+            return [];
+        }
+
+        function getItalianDayName(dayValue) {
+            const names = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+            return names[dayValue] || 'Giorno';
+        }
+
+        function getClosureSummary(settings, days) {
+            const isLocaleClosed = settings.locale_chiuso === '1' || settings.locale_chiuso === true || settings.locale_chiuso === 'true';
+            if (isLocaleClosed) return 'Locale chiuso';
+            const today = new Date().getDay();
+            if (days.includes(today)) return `Oggi siamo chiusi (${getItalianDayName(today)})`;
+            if (!days.length) return '';
+            const labels = days.map(getItalianDayName);
+            return `Chiusi: ${labels.join(', ')}`;
+        }
+
+        function updateRestaurantHoursText(settings) {
+            const el = document.getElementById('restaurant-hours-line');
+            const banner = document.getElementById('closure-banner');
+            if (!el) return;
+            const days = parseClosureDays(settings.weekly_closure_days);
+            const summary = getClosureSummary(settings, days);
+            const hoursText = (settings.homepage_hours || 'Mar-Dom 18:30 - 23:30').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
+            el.innerHTML = `<i class="fa-regular fa-clock"></i> ${hoursText}${summary ? ` · ${summary}` : ''}`;
+
+            if (banner) {
+                const today = new Date().getDay();
+                const isLocaleClosed = settings.locale_chiuso === '1' || settings.locale_chiuso === true || settings.locale_chiuso === 'true';
+                const isClosedToday = days.includes(today);
+                const message = isLocaleClosed ? 'Locale chiuso oggi' : (isClosedToday ? `Oggi siamo chiusi (${getItalianDayName(today)})` : '');
+                banner.textContent = message;
+                banner.classList.toggle('visible', !!message);
+            }
+        }
 
         function buildMenuData(sourceData) {
             const data = (sourceData && sourceData.length > 0) ? sourceData : rawMenuData;
@@ -2242,16 +2310,19 @@
                 const resp = await fetch('/api/settings');
                 if (!resp.ok) return;
                 const s = await resp.json();
+                currentPublicSettings = s || {};
+                closureDays = parseClosureDays(currentPublicSettings.weekly_closure_days);
                 if (s.promo_bar_text) {
                     const banner = document.getElementById('promo-banner-text');
                     if (banner) banner.textContent = s.promo_bar_text;
                 }
+                updateRestaurantHoursText(currentPublicSettings);
             } catch {}
         }
 
         async function initApp() {
             // Carica impostazioni pubbliche (promo bar, ecc.)
-            loadPublicSettings();
+            await loadPublicSettings();
 
             // Mostra skeleton, nascondi menu
             const skeleton = document.getElementById('skeleton-loader');
@@ -2977,9 +3048,12 @@
             const currentHour = now.getHours();
             const currentMinute = now.getMinutes();
             const minTimeInMinutes = (currentHour * 60) + currentMinute + 20;
+            const isLocaleClosed = currentPublicSettings.locale_chiuso === '1' || currentPublicSettings.locale_chiuso === true || currentPublicSettings.locale_chiuso === 'true';
+            const isClosedToday = closureDays.includes(currentDay);
 
-            if (currentDay === 1) {
-                select.innerHTML = `<option value="">Oggi siamo chiusi (Lunedì)</option>`;
+            if (isLocaleClosed || isClosedToday) {
+                const closedLabel = isLocaleClosed ? 'Locale chiuso' : `Oggi siamo chiusi (${getItalianDayName(currentDay)})`;
+                select.innerHTML = `<option value="">${closedLabel}</option>`;
                 payBtn.disabled = true;
                 payBtn.style.boxShadow = 'none';
                 return;

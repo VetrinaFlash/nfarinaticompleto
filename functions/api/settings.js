@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
 
   try {
     const rows = await env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('promo_bar_text','homepage_buttons','homepage_hours','homepage_hours_note','locale_chiuso')"
+      "SELECT key, value FROM settings WHERE key IN ('promo_bar_text','homepage_buttons','homepage_hours','homepage_hours_note','locale_chiuso','weekly_closure_days')"
     ).all();
 
     const settings = {};
@@ -17,9 +17,12 @@ export async function onRequestGet(context) {
       settings[row.key] = row.value;
     }
 
-    // Parsa homepage_buttons se presente
+    // Parsa homepage_buttons e giorni di chiusura se presenti
     if (settings.homepage_buttons) {
       try { settings.homepage_buttons = JSON.parse(settings.homepage_buttons); } catch {}
+    }
+    if (settings.weekly_closure_days) {
+      try { settings.weekly_closure_days = JSON.parse(settings.weekly_closure_days); } catch {}
     }
 
     return new Response(JSON.stringify(settings), { status: 200, headers: cors });
