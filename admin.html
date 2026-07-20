@@ -360,6 +360,7 @@
     @media(max-width:520px) {
       .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
       .form-row { grid-template-columns: 1fr; }
+      .closure-day-grid { grid-template-columns: 1fr; }
       .modal { padding: 18px; }
     }
 
@@ -1521,22 +1522,6 @@ async function loadSettings() {
       } catch {}
     }
   } catch(e) { console.error(e); }
-}
-
-function buildClosurePreviewText() {
-  const isLocaleClosed = !document.getElementById('set-locale-aperto').checked;
-  const selectedDays = getSelectedClosureDays();
-
-  if (isLocaleClosed) return 'Il locale è impostato chiuso.';
-  if (!selectedDays.length) return 'Nessun giorno di chiusura settimanale impostato.';
-  const labels = selectedDays.sort((a,b) => a-b).map(v => WEEKDAY_OPTIONS.find(d => d.value === v)?.label || v);
-  return `Chiuso: ${labels.join(', ')}`;
-}
-
-function updateClosurePreview() {
-  const preview = document.getElementById('closure-preview');
-  if (!preview) return;
-  preview.textContent = buildClosurePreviewText();
 }
 
 async function saveAllSettings() {
