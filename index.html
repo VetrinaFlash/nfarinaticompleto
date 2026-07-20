@@ -536,24 +536,35 @@
       return names[dayValue] || 'Giorno';
     }
 
+    function inferClosureDaysFromHoursText(value) {
+      if (typeof value !== 'string') return [];
+      const plain = value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').toLowerCase();
+      return ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato']
+        .map((name, idx) => plain.includes(name) ? idx : -1)
+        .filter(idx => idx >= 0);
+    }
+
     function buildHoursText(settings) {
-      const hoursBase = settings.homepage_hours || 'Mar–Dom 18:30–23:30';
+      const rawHours = settings.homepage_hours || 'Mar–Dom 18:30–23:30';
+      const plainHours = rawHours.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '');
+      const hoursBase = plainHours.replace(/\s*\([^)]*\)\s*$/, '').trim();
       const closedDays = parseClosureDays(settings.weekly_closure_days);
+      const inferredDays = closedDays.length ? closedDays : inferClosureDaysFromHoursText(rawHours);
       const isLocaleClosed = settings.locale_chiuso === '1' || settings.locale_chiuso === true || settings.locale_chiuso === 'true';
       const today = new Date().getDay();
       let note = '';
 
       if (isLocaleClosed) {
         note = 'Locale chiuso';
-      } else if (closedDays.includes(today)) {
+      } else if (inferredDays.includes(today)) {
         note = `Oggi siamo chiusi (${getDayName(today)})`;
-      } else if (closedDays.length) {
-        const labels = closedDays.map(getDayName);
+      } else if (inferredDays.length) {
+        const labels = inferredDays.map(getDayName);
         note = `Chiusi: ${labels.join(', ')}`;
       }
 
-      const hoursHtml = hoursBase.replace(/<br\s*\/?>/gi, '<br>');
-      const cleanHours = hoursBase.replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
+      const hoursHtml = hoursBase.replace(/\s+/g, ' ').replace(/ /g, '<br>');
+      const cleanHours = hoursBase.replace(/\s+/g, ' ').trim();
       const noteHtml = note ? `<br><span style="color:var(--red);font-size:.83rem;font-weight:600;">(${note})</span>` : '';
       return { hero: `${hoursHtml}${noteHtml}`, footer: `${cleanHours}${note ? ` · ${note}` : ''}` };
     }

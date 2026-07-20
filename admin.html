@@ -242,6 +242,12 @@
     .form-group select option { background: #222; }
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .closure-day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .closure-day-grid label { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--border); cursor: pointer; font-size: 0.9rem; color: var(--text); transition: background .2s, border-color .2s; }
+    .closure-day-grid label.checked { background: rgba(255,255,255,.2); border-color: var(--gold); }
+    .closure-day-grid span { flex-grow: 1; }
+    .closure-day-grid input { accent-color: var(--gold); transform: scale(1.15); }
+    .closure-preview { margin-top: 8px; font-size: 0.95rem; color: var(--gold); font-weight: 700; }
 
     /* ── MODALS ── */
     .modal-overlay {
@@ -597,7 +603,8 @@
             </div>
             <div class="form-group">
               <label>Giorni di chiusura settimanale</label>
-              <div id="closure-days" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div>
+              <div id="closure-days" class="closure-day-grid"></div>
+              <div id="closure-preview" class="closure-preview"></div>
             </div>
           </div>
         </div>
@@ -1429,17 +1436,56 @@ function parseClosureDays(value) {
   return [];
 }
 
+function inferClosureDaysFromHoursText(value) {
+  if (typeof value !== 'string') return [];
+  const plain = value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').toLowerCase();
+  return WEEKDAY_OPTIONS.filter(day => plain.includes(day.label.toLowerCase())).map(day => day.value);
+}
+
 function renderClosureDayOptions(selectedDays) {
   const container = document.getElementById('closure-days');
   if (!container) return;
   const normalized = Array.isArray(selectedDays) ? selectedDays : [];
   container.innerHTML = WEEKDAY_OPTIONS.map(day => {
-    return `<label style="display:flex;align-items:center;gap:8px;font-size:0.95rem;color:var(--text);"><input type="checkbox" name="closure-day" value="${day.value}" ${normalized.includes(day.value) ? 'checked' : ''}> ${day.label}</label>`;
+    return `<label><input type="checkbox" name="closure-day" value="${day.value}" ${normalized.includes(day.value) ? 'checked' : ''}><span>${day.label}</span></label>`;
   }).join('');
+  Array.from(container.querySelectorAll('input[name="closure-day"]')).forEach(input => {
+    input.addEventListener('change', () => {
+      updateClosurePreview();
+      updateClosureOptionStyles();
+    });
+  });
+  updateClosureOptionStyles();
 }
 
 function getSelectedClosureDays() {
   return Array.from(document.querySelectorAll('input[name="closure-day"]:checked')).map(cb => Number(cb.value));
+}
+
+function updateClosureOptionStyles() {
+  const container = document.getElementById('closure-days');
+  if (!container) return;
+  Array.from(container.querySelectorAll('label')).forEach(label => {
+    const input = label.querySelector('input[name="closure-day"]');
+    if (input && input.checked) label.classList.add('checked');
+    else label.classList.remove('checked');
+  });
+}
+
+function buildClosurePreviewText() {
+  const isLocaleClosed = !document.getElementById('set-locale-aperto').checked;
+  const selectedDays = getSelectedClosureDays();
+  if (isLocaleClosed) return 'Il locale è impostato chiuso.';
+  const inferredDays = selectedDays.length ? selectedDays : inferClosureDaysFromHoursText(document.getElementById('set-hours').value || '');
+  if (!inferredDays.length) return 'Nessun giorno di chiusura settimanale impostato.';
+  const labels = inferredDays.sort((a,b) => a-b).map(v => WEEKDAY_OPTIONS.find(d => d.value === v)?.label || v);
+  return `Chiuso: ${labels.join(', ')}`;
+}
+
+function updateClosurePreview() {
+  const preview = document.getElementById('closure-preview');
+  if (!preview) return;
+  preview.textContent = buildClosurePreviewText();
 }
 
 async function loadSettings() {
@@ -1451,8 +1497,15 @@ async function loadSettings() {
     document.getElementById('set-hours').value = s.homepage_hours || '';
     document.getElementById('set-whatsapp').value = s.whatsapp_number || '';
     document.getElementById('set-locale-aperto').checked = s.locale_chiuso !== '1' && s.locale_chiuso !== 'true';
-    const closureDays = parseClosureDays(s.weekly_closure_days).length ? parseClosureDays(s.weekly_closure_days) : [1];
+    let closureDays = parseClosureDays(s.weekly_closure_days);
+    if (!closureDays.length) {
+      closureDays = inferClosureDaysFromHoursText(s.homepage_hours);
+    }
     renderClosureDayOptions(closureDays);
+    updateClosurePreview();
+    document.getElementById('set-locale-aperto').addEventListener('change', updateClosurePreview);
+    document.getElementById('set-hours').addEventListener('input', updateClosurePreview);
+    document.getElementById('closure-days').addEventListener('change', updateClosurePreview);
     if (s.homepage_buttons) {
       try {
         const btn = typeof s.homepage_buttons === 'string' ? s.homepage_buttons : JSON.stringify(s.homepage_buttons, null, 2);
@@ -1460,6 +1513,22 @@ async function loadSettings() {
       } catch {}
     }
   } catch(e) { console.error(e); }
+}
+
+function buildClosurePreviewText() {
+  const isLocaleClosed = !document.getElementById('set-locale-aperto').checked;
+  const selectedDays = getSelectedClosureDays();
+
+  if (isLocaleClosed) return 'Il locale è impostato chiuso.';
+  if (!selectedDays.length) return 'Nessun giorno di chiusura settimanale impostato.';
+  const labels = selectedDays.sort((a,b) => a-b).map(v => WEEKDAY_OPTIONS.find(d => d.value === v)?.label || v);
+  return `Chiuso: ${labels.join(', ')}`;
+}
+
+function updateClosurePreview() {
+  const preview = document.getElementById('closure-preview');
+  if (!preview) return;
+  preview.textContent = buildClosurePreviewText();
 }
 
 async function saveAllSettings() {

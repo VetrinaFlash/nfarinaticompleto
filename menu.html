@@ -2208,6 +2208,14 @@
             return names[dayValue] || 'Giorno';
         }
 
+        function inferClosureDaysFromHoursText(value) {
+            if (typeof value !== 'string') return [];
+            const plain = value.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').toLowerCase();
+            return ['domenica','lunedì','martedì','mercoledì','giovedì','venerdì','sabato']
+                .map((name, idx) => plain.includes(name) ? idx : -1)
+                .filter(idx => idx >= 0);
+        }
+
         function getClosureSummary(settings, days) {
             const isLocaleClosed = settings.locale_chiuso === '1' || settings.locale_chiuso === true || settings.locale_chiuso === 'true';
             if (isLocaleClosed) return 'Locale chiuso';
@@ -2222,9 +2230,11 @@
             const el = document.getElementById('restaurant-hours-line');
             const banner = document.getElementById('closure-banner');
             if (!el) return;
-            const days = parseClosureDays(settings.weekly_closure_days);
+            const explicitDays = parseClosureDays(settings.weekly_closure_days);
+            const days = explicitDays.length ? explicitDays : inferClosureDaysFromHoursText(settings.homepage_hours);
             const summary = getClosureSummary(settings, days);
-            const hoursText = (settings.homepage_hours || 'Mar-Dom 18:30 - 23:30').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
+            const rawHours = settings.homepage_hours || 'Mar-Dom 18:30 - 23:30';
+            const hoursText = rawHours.replace(/\s*\([^)]*\)\s*$/, '').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
             el.innerHTML = `<i class="fa-regular fa-clock"></i> ${hoursText}${summary ? ` · ${summary}` : ''}`;
 
             if (banner) {
