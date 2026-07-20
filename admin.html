@@ -246,9 +246,8 @@
     .closure-day-grid label {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 8px;
+      justify-content: flex-start;
+      gap: 10px;
       min-width: 0;
       padding: 10px 12px;
       border-radius: 12px;
@@ -260,14 +259,20 @@
       transition: background .2s, border-color .2s;
     }
     .closure-day-grid label.checked { background: rgba(255,255,255,.2); border-color: var(--gold); }
-    .closure-day-grid span { flex: 1 1 auto; min-width: 0; }
-    .closure-day-grid input { accent-color: var(--gold); transform: scale(1.15); flex-shrink: 0; }
+    .closure-day-grid span { flex: 1 1 auto; min-width: 0; white-space: normal; }
+    .closure-day-grid input {
+      accent-color: var(--gold);
+      width: 18px; height: 18px;
+      margin-right: 6px;
+      flex-shrink: 0;
+      transform: scale(1);
+    }
     .closure-preview { margin-top: 8px; font-size: 0.95rem; color: var(--gold); font-weight: 700; }
 
     @media (max-width: 720px) {
       .closure-day-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .closure-day-grid label { padding: 12px 10px; font-size: 0.85rem; }
-      .closure-day-grid input { transform: scale(1.05); }
+      .closure-day-grid input { transform: scale(1); }
       .closure-day-grid span { white-space: normal; }
     }
 
