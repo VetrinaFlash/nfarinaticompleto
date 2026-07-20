@@ -243,10 +243,25 @@
     .form-group textarea { resize: vertical; min-height: 80px; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .closure-day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
-    .closure-day-grid label { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid var(--border); cursor: pointer; font-size: 0.9rem; color: var(--text); transition: background .2s, border-color .2s; }
+    .closure-day-grid label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: var(--text);
+      transition: background .2s, border-color .2s;
+    }
     .closure-day-grid label.checked { background: rgba(255,255,255,.2); border-color: var(--gold); }
-    .closure-day-grid span { flex-grow: 1; }
-    .closure-day-grid input { accent-color: var(--gold); transform: scale(1.15); }
+    .closure-day-grid span { flex: 1 1 auto; min-width: 0; }
+    .closure-day-grid input { accent-color: var(--gold); transform: scale(1.15); flex-shrink: 0; }
     .closure-preview { margin-top: 8px; font-size: 0.95rem; color: var(--gold); font-weight: 700; }
 
     @media (max-width: 720px) {
@@ -254,6 +269,10 @@
       .closure-day-grid label { padding: 12px 10px; font-size: 0.85rem; }
       .closure-day-grid input { transform: scale(1.05); }
       .closure-day-grid span { white-space: normal; }
+    }
+
+    @media (max-width: 520px) {
+      .closure-day-grid { grid-template-columns: 1fr; }
     }
 
     /* ── MODALS ── */
