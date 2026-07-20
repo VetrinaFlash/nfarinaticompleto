@@ -605,8 +605,9 @@
           <div class="settings-section">
             <h3>Orari</h3>
             <div class="form-group">
-              <label>Testo orari homepage (HTML consentito)</label>
-              <textarea id="set-hours" placeholder="es. Mar–Dom 18:30–23:30&lt;br&gt;&lt;span style=&quot;color:var(--red)&quot;&gt;(Lunedì chiusi)&lt;/span&gt;"></textarea>
+              <label>Orari base homepage</label>
+              <textarea id="set-hours" placeholder="es. Mar–Dom 18:30–23:30"></textarea>
+              <div class="form-note">La nota dei giorni chiusi viene aggiunta automaticamente in base ai giorni selezionati.</div>
             </div>
             <div class="form-group">
               <label>Giorni di chiusura settimanale</label>
@@ -1501,7 +1502,7 @@ async function loadSettings() {
     if (!res.ok) return;
     const s = await res.json();
     document.getElementById('set-promo-bar').value = s.promo_bar_text || '';
-    document.getElementById('set-hours').value = s.homepage_hours || '';
+    document.getElementById('set-hours').value = (s.homepage_hours || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
     document.getElementById('set-whatsapp').value = s.whatsapp_number || '';
     document.getElementById('set-locale-aperto').checked = s.locale_chiuso !== '1' && s.locale_chiuso !== 'true';
     let closureDays = parseClosureDays(s.weekly_closure_days);
@@ -1539,9 +1540,10 @@ function updateClosurePreview() {
 }
 
 async function saveAllSettings() {
+  const rawHours = document.getElementById('set-hours').value.replace(/\s*\([^)]*\)\s*$/, '').trim();
   const body = {
     promo_bar_text: document.getElementById('set-promo-bar').value,
-    homepage_hours: document.getElementById('set-hours').value,
+    homepage_hours: rawHours,
     whatsapp_number: document.getElementById('set-whatsapp').value,
     locale_chiuso: document.getElementById('set-locale-aperto').checked ? '0' : '1',
     weekly_closure_days: getSelectedClosureDays(),
