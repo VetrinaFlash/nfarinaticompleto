@@ -283,7 +283,7 @@
     /* ── MODALS ── */
     .modal-overlay {
       display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.7); z-index: 500;
+      background: rgba(0,0,0,.7); z-index: 10000;
       align-items: center; justify-content: center; padding: 20px;
     }
     .modal-overlay.open { display: flex; }
@@ -659,6 +659,10 @@
               <label>Numero WhatsApp (con prefisso +39)</label>
               <input type="text" id="set-whatsapp" placeholder="+390918432674">
             </div>
+            <div class="form-group">
+              <label>R2 Base URL (es. https://<span style="opacity:.8">your-cdn.example.com</span> )</label>
+              <input type="text" id="set-r2-base" placeholder="Lascia vuoto per usare l'origine corrente">
+            </div>
           </div>
         </div>
 
@@ -802,6 +806,31 @@ let dailyChart = null;
 let pollInterval = null;
 let lastNewOrderCount = 0;
 let customersSearchTimer = null;
+
+// Placeholder SVG for missing images (data URI)
+const IMG_PLACEHOLDER = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  "<svg xmlns='http://www.w3.org/2000/svg' width='400' height='120'>"+
+  "<rect width='100%' height='100%' fill='%23f5f5f5'/>"+
+  "<text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23b0b0b0' font-size='14'>No image</text>"+
+  "</svg>"
+);
+
+function normalizeImageUrl(url) {
+  if (!url) return '';
+  const s = url.toString().trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  if (/^\/\//.test(s)) return window.location.protocol + s; // //host/path -> keep protocol
+  // Relative path starting with / (e.g. /r2-images/...) -> prefix origin
+  if (s.startsWith('/')) {
+    try {
+      const r2Base = document.getElementById('set-r2-base')?.value?.toString().trim();
+      if (r2Base) return r2Base.replace(/\/$/, '') + s;
+    } catch {}
+    return window.location.origin + s;
+  }
+  return s; // leave other relative paths as-is
+}
 
 // Audio notification (silent fallback)
 let audioCtx = null;
@@ -1028,7 +1057,7 @@ async function loadOrders() {
             ).join('')}
           </select>
         </td>
-        <td><button class="btn btn-ghost btn-sm" onclick="showOrderDetail(${o.id})"><i class="fa-solid fa-eye"></i></button></td>
+        <td><button type="button" class="btn btn-ghost btn-sm" onclick="showOrderDetail(${o.id})"><i class="fa-solid fa-eye"></i></button></td>
       </tr>`
     ).join('') || '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px;">Nessun ordine</td></tr>';
 
@@ -1083,7 +1112,7 @@ async function showOrderDetail(id) {
       <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-weight:700;">Cambia Status</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${['nuovo','preparazione','pronto','consegnato'].map(s =>
-          `<button class="btn btn-ghost btn-sm" onclick="changeOrderStatus(${o.id},'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
+          `<button type="button" class="btn btn-ghost btn-sm" onclick="changeOrderStatus(${o.id},'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
         ).join('')}
       </div>
     </div>
@@ -1221,8 +1250,17 @@ function editProduct(id) {
   document.getElementById('pm-img').value = p.image_url || '';
   document.getElementById('pm-active').checked = !!p.active;
   const preview = document.getElementById('pm-img-preview');
-  if (p.image_url) { preview.src = p.image_url; preview.classList.add('visible'); }
-  else preview.classList.remove('visible');
+  const imgUrl = (p.image_url || '').toString().trim();
+  if (imgUrl) {
+    const final = normalizeImageUrl(imgUrl);
+    preview.classList.remove('visible');
+    preview.onload = () => preview.classList.add('visible');
+    preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); };
+    preview.src = final;
+  } else {
+    preview.classList.remove('visible');
+    preview.removeAttribute('src');
+  }
   document.getElementById('product-modal-title').textContent = 'Modifica Prodotto';
   openModal('product-modal');
 }
@@ -1291,8 +1329,18 @@ async function saveCat() {
 
 function previewImg(input) {
   const preview = document.getElementById('pm-img-preview');
-  if (input.value) { preview.src = input.value; preview.classList.add('visible'); }
-  else preview.classList.remove('visible');
+  const url = (input.value || '').toString().trim();
+  if (!url) {
+    preview.classList.remove('visible');
+    preview.removeAttribute('src');
+    preview.onload = null; preview.onerror = null;
+    return;
+  }
+  const final = normalizeImageUrl(url);
+  preview.classList.remove('visible');
+  preview.onload = () => preview.classList.add('visible');
+  preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); };
+  preview.src = final;
 }
 
 // ════════════════════════════════════════════════
@@ -1545,6 +1593,7 @@ async function loadSettings() {
         document.getElementById('set-buttons').value = btn;
       } catch {}
     }
+    document.getElementById('set-r2-base').value = s.r2_base_url || '';
   } catch(e) { console.error(e); }
 }
 
@@ -1556,6 +1605,7 @@ async function saveAllSettings() {
     whatsapp_number: document.getElementById('set-whatsapp').value,
     locale_chiuso: document.getElementById('set-locale-aperto').checked ? '0' : '1',
     weekly_closure_days: getSelectedClosureDays(),
+    r2_base_url: document.getElementById('set-r2-base')?.value?.trim() || undefined,
   };
   const btnVal = document.getElementById('set-buttons').value.trim();
   if (btnVal) {

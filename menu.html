@@ -2393,7 +2393,12 @@
                     
                     let displayPrice = (hasVariants || hasMandatory || hasMulti) ? `da ${item.price.toFixed(2).replace('.',',')}€` : `${item.price.toFixed(2).replace('.',',')}€`;
 
-                    const imgHtml = item.image_url ? `<img src="${item.image_url}" alt="${item.name}" class="item-image" loading="lazy" onerror="this.style.display='none'">` : '';
+                    let imgHtml = '';
+                    if (item.image_url) {
+                      let _src = (item.image_url || '').toString().trim();
+                      if (_src.startsWith('/')) _src = window.location.origin + _src;
+                      imgHtml = `<img src="${_src}" alt="${item.name}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
+                    }
                     sectionDiv.innerHTML += `
                         <div class="menu-item">
                             ${imgHtml}
