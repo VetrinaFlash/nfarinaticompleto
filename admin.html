@@ -660,8 +660,8 @@
               <input type="text" id="set-whatsapp" placeholder="+390918432674">
             </div>
             <div class="form-group">
-              <label>R2 Base URL (es. https://<span style="opacity:.8">your-cdn.example.com</span> )</label>
-              <input type="text" id="set-r2-base" placeholder="Lascia vuoto per usare l'origine corrente">
+              <label>R2 Base URL (es. https://your-cdn.example.com )</label>
+              <input type="text" id="set-r2-base" placeholder="Lascia vuoto per usare l'origine corrente" value="https://nfarinatimodernpizza.it">
             </div>
           </div>
         </div>
@@ -829,7 +829,14 @@ function normalizeImageUrl(url) {
   if (s.startsWith('/')) {
     try {
       const r2Base = document.getElementById('set-r2-base')?.value?.toString().trim();
-      if (r2Base) return r2Base.replace(/\/$/, '') + s;
+      if (r2Base) {
+        const baseClean = r2Base.replace(/\/$/, '');
+        // avoid duplicating path fragments like /r2-images when base already contains them
+        if (/\/r2-images$/i.test(baseClean) && /^\/r2-images/i.test(s)) {
+          return baseClean + s.replace(/^\/r2-images/i, '');
+        }
+        return baseClean + s;
+      }
     } catch {}
     return window.location.origin + s;
   }
