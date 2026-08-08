@@ -735,6 +735,10 @@
       <div class="form-group"><label>URL Immagine</label><input type="text" id="pm-img" oninput="previewImg(this)"></div>
     </div>
     <img id="pm-img-preview" class="img-preview" alt="Preview">
+    <div style="margin-top:8px;font-size:.82rem;color:var(--muted);">
+      <div id="pm-img-final" style="word-break:break-all;display:none;margin-bottom:6px;color:var(--text);"></div>
+      <div id="pm-img-error" style="display:none;color:var(--red);font-size:.8rem;"></div>
+    </div>
     <div class="toggle-row" style="padding:8px 0;">
       <div><div class="toggle-label">Prodotto attivo</div></div>
       <label class="toggle"><input type="checkbox" id="pm-active" checked><span class="toggle-slider"></span></label>
@@ -942,6 +946,19 @@ function closeModal(id) { document.getElementById(id).classList.remove('open'); 
 async function startApp() {
   loadDashboard();
   startPolling();
+  // Delegate click handler for order view buttons (reliable on mobile)
+  try {
+    const ordersTbody = document.querySelector('#orders-table tbody');
+    if (ordersTbody && !ordersTbody._hasDelegate) {
+      ordersTbody.addEventListener('click', function(e) {
+        const btn = e.target.closest('.order-show-btn');
+        if (!btn) return;
+        const id = parseInt(btn.getAttribute('data-order-id'));
+        if (id) showOrderDetail(id);
+      });
+      ordersTbody._hasDelegate = true;
+    }
+  } catch (e) { console.error(e); }
 }
 
 // ════════════════════════════════════════════════
@@ -1057,7 +1074,7 @@ async function loadOrders() {
             ).join('')}
           </select>
         </td>
-        <td><button type="button" class="btn btn-ghost btn-sm" onclick="showOrderDetail(${o.id})"><i class="fa-solid fa-eye"></i></button></td>
+        <td><button type="button" class="btn btn-ghost btn-sm order-show-btn" data-order-id="${o.id}"><i class="fa-solid fa-eye"></i></button></td>
       </tr>`
     ).join('') || '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px;">Nessun ordine</td></tr>';
 
@@ -1250,16 +1267,23 @@ function editProduct(id) {
   document.getElementById('pm-img').value = p.image_url || '';
   document.getElementById('pm-active').checked = !!p.active;
   const preview = document.getElementById('pm-img-preview');
+  const finalEl = document.getElementById('pm-img-final');
+  const errEl = document.getElementById('pm-img-error');
   const imgUrl = (p.image_url || '').toString().trim();
   if (imgUrl) {
     const final = normalizeImageUrl(imgUrl);
+    finalEl.style.display = '';
+    finalEl.textContent = final;
+    errEl.style.display = 'none'; errEl.textContent = '';
     preview.classList.remove('visible');
-    preview.onload = () => preview.classList.add('visible');
-    preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); };
+    preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; };
+    preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base)'; };
     preview.src = final;
   } else {
     preview.classList.remove('visible');
     preview.removeAttribute('src');
+    if (finalEl) { finalEl.style.display = 'none'; finalEl.textContent = ''; }
+    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
   }
   document.getElementById('product-modal-title').textContent = 'Modifica Prodotto';
   openModal('product-modal');
@@ -1337,9 +1361,14 @@ function previewImg(input) {
     return;
   }
   const final = normalizeImageUrl(url);
+  const finalEl = document.getElementById('pm-img-final');
+  const errEl = document.getElementById('pm-img-error');
+  finalEl.style.display = '';
+  finalEl.textContent = final;
+  errEl.style.display = 'none'; errEl.textContent = '';
   preview.classList.remove('visible');
-  preview.onload = () => preview.classList.add('visible');
-  preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); };
+  preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; };
+  preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base)'; };
   preview.src = final;
 }
 
