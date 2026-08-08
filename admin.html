@@ -966,6 +966,16 @@ async function startApp() {
       ordersTbody._hasDelegate = true;
     }
   } catch (e) { console.error(e); }
+  // Global delegation as fallback (catches dynamically replaced tbody)
+  if (!window._ordersGlobalDelegate) {
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest && e.target.closest('.order-show-btn');
+      if (!btn) return;
+      const id = parseInt(btn.getAttribute('data-order-id'));
+      if (id) showOrderDetail(id);
+    });
+    window._ordersGlobalDelegate = true;
+  }
 }
 
 // ════════════════════════════════════════════════
