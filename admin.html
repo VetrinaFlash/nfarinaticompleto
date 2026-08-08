@@ -35,33 +35,33 @@
       background: var(--bg);
       display: flex; align-items: center; justify-content: center;
     }
-    .login-box {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 44px 36px;
-      width: 100%; max-width: 380px;
-      box-shadow: 0 30px 80px rgba(0,0,0,.7);
-      text-align: center;
-    }
-    .login-logo {
-      width: 80px; height: 80px; border-radius: 14px;
-      margin: 0 auto 20px; display: block;
-      box-shadow: 0 8px 20px rgba(0,0,0,.4);
-      object-fit: cover;
-    }
-    .login-title {
-      font-family: 'Montserrat', sans-serif;
-      font-size: 1.1rem; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 2px;
-      color: var(--gold); margin-bottom: 6px;
-    }
-    .login-sub { font-size: .78rem; color: var(--muted); margin-bottom: 28px; }
-    .login-field { margin-bottom: 14px; text-align: left; }
-    .login-field label { display: block; font-size: .75rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-    .login-field input {
-      width: 100%; padding: 12px 14px;
-      background: rgba(255,255,255,.05);
+    if (imgUrl) {
+      const final = normalizeImageUrl(imgUrl);
+      finalEl.style.display = '';
+      finalEl.textContent = final;
+      errEl.style.display = 'none'; errEl.textContent = '';
+      preview.classList.remove('visible');
+      preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; };
+      preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base o permessi)'; };
+      // Try HEAD to get an HTTP status (falls back on error if CORS/blocked)
+      (async () => {
+        try {
+          const res = await fetch(final, { method: 'HEAD' });
+          if (res.ok) {
+            preview.src = final;
+          } else {
+            console.warn('Image HEAD returned', res.status, final);
+            errEl.style.display = ''; errEl.textContent = `Impossibile caricare l'immagine: HTTP ${res.status}`;
+            preview.src = IMG_PLACEHOLDER;
+            preview.classList.add('visible');
+          }
+        } catch (err) {
+          console.warn('Image fetch error (possible CORS/permission):', err, final);
+          errEl.style.display = ''; errEl.textContent = "Errore rete/CORS: controlla che l'oggetto sia pubblico o che il dominio sia consentito";
+          preview.src = IMG_PLACEHOLDER; preview.classList.add('visible');
+        }
+      })();
+    } else {
       border: 1px solid var(--border);
       border-radius: 10px; color: var(--text);
       font-size: .9rem; outline: none;
@@ -1115,8 +1115,9 @@ async function changeOrderStatus(id, status) {
 }
 
 async function showOrderDetail(id) {
+  console.log('Request showOrderDetail for id', id, 'ordersData length', ordersData.length);
   const o = ordersData.find(x => x.id === id);
-  if (!o) return;
+  if (!o) { console.warn('Order not found in ordersData:', id); notify('Ordine non trovato (aggiorna la lista)', 'err'); return; }
   let items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch {}
   const itemsHtml = items.map(it =>
@@ -1385,8 +1386,18 @@ function previewImg(input) {
   errEl.style.display = 'none'; errEl.textContent = '';
   preview.classList.remove('visible');
   preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; };
-  preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base)'; };
-  preview.src = final;
+  preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base o permessi)'; };
+  (async () => {
+    try {
+      const res = await fetch(final, { method: 'HEAD' });
+      if (res.ok) preview.src = final;
+      else { console.warn('Image HEAD returned', res.status, final); errEl.style.display = ''; errEl.textContent = `Impossibile caricare l'immagine: HTTP ${res.status}`; preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); }
+    } catch (err) {
+      console.warn('Image fetch error (possible CORS/permission):', err, final);
+      errEl.style.display = ''; errEl.textContent = "Errore rete/CORS: controlla che l'oggetto sia pubblico o che il dominio sia consentito";
+      preview.src = IMG_PLACEHOLDER; preview.classList.add('visible');
+    }
+  })();
 }
 
 // ════════════════════════════════════════════════
