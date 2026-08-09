@@ -944,7 +944,7 @@ async function startApp() {
       ordersTbody.addEventListener('click', function(e) {
         const btn = e.target.closest('.order-show-btn');
         if (!btn) return;
-        const id = parseInt(btn.getAttribute('data-order-id'));
+        const id = btn.getAttribute('data-order-id');
         if (id) showOrderDetail(id);
       });
       ordersTbody._hasDelegate = true;
@@ -955,7 +955,7 @@ async function startApp() {
     document.addEventListener('click', function(e) {
       const btn = e.target.closest && e.target.closest('.order-show-btn');
       if (!btn) return;
-      const id = parseInt(btn.getAttribute('data-order-id'));
+      const id = btn.getAttribute('data-order-id');
       if (id) showOrderDetail(id);
     });
     window._ordersGlobalDelegate = true;
@@ -1069,20 +1069,20 @@ async function loadOrders() {
         <td>€${(o.total||0).toFixed(2)}</td>
         <td>${o.promo_code ? `<span style="color:var(--gold);font-weight:700;">${esc(o.promo_code)}</span>` : '—'}</td>
         <td>
-          <select onchange="changeOrderStatus(${o.id}, this.value)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 6px;font-size:.72rem;">
+          <select onchange="changeOrderStatus(${JSON.stringify(o.id)}, this.value)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 6px;font-size:.72rem;">
             ${['nuovo','preparazione','pronto','consegnato'].map(s =>
               `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`
             ).join('')}
           </select>
         </td>
-        <td><button type="button" class="btn btn-ghost btn-sm order-show-btn" data-order-id="${o.id}" onclick="showOrderDetail(${o.id})"><i class="fa-solid fa-eye"></i></button></td>
+        <td><button type="button" class="btn btn-ghost btn-sm order-show-btn" data-order-id="${esc(o.id)}"><i class="fa-solid fa-eye"></i></button></td>
       </tr>`
     ).join('') || '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px;">Nessun ordine</td></tr>';
 
     tbody.querySelectorAll('.order-show-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.preventDefault();
-        const id = parseInt(this.dataset.orderId, 10);
+        const id = this.dataset.orderId;
         if (id) showOrderDetail(id);
       });
     });
@@ -1108,7 +1108,7 @@ async function changeOrderStatus(id, status) {
 
 async function showOrderDetail(id) {
   console.log('Request showOrderDetail for id', id, 'ordersData length', ordersData.length);
-  const o = ordersData.find(x => x.id === id);
+  const o = ordersData.find(x => String(x.id) === String(id));
   if (!o) { console.warn('Order not found in ordersData:', id); notify('Ordine non trovato (aggiorna la lista)', 'err'); return; }
   let items = [];
   try { items = JSON.parse(o.items_json || '[]'); } catch {}
@@ -1139,7 +1139,7 @@ async function showOrderDetail(id) {
       <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-weight:700;">Cambia Status</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${['nuovo','preparazione','pronto','consegnato'].map(s =>
-          `<button type="button" class="btn btn-ghost btn-sm" onclick="changeOrderStatus(${o.id},'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
+          `<button type="button" class="btn btn-ghost btn-sm" onclick="changeOrderStatus(${JSON.stringify(o.id)},'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
         ).join('')}
       </div>
     </div>
