@@ -9,7 +9,7 @@ export async function onRequestGet(context) {
 
   try {
     const rows = await env.DB.prepare(
-      "SELECT key, value FROM settings WHERE key IN ('promo_bar_text','homepage_buttons','homepage_hours','homepage_hours_note','locale_chiuso','weekly_closure_days')"
+      "SELECT key, value FROM settings WHERE key IN ('promo_bar_text','homepage_buttons','homepage_hours','homepage_hours_note','locale_chiuso','weekly_closure_days','r2_base_url')"
     ).all();
 
     const settings = {};

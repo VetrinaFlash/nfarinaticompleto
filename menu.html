@@ -2396,7 +2396,16 @@
                     let imgHtml = '';
                     if (item.image_url) {
                       let _src = (item.image_url || '').toString().trim();
-                      if (_src.startsWith('/')) _src = window.location.origin + _src;
+                      if (/^https?:\/\//i.test(_src)) {
+                        // keep absolute URL
+                      } else if (/^\/\//.test(_src)) {
+                        _src = window.location.protocol + _src;
+                      } else if (currentPublicSettings.r2_base_url) {
+                        const base = currentPublicSettings.r2_base_url.replace(/\/$/, '');
+                        _src = base + '/' + _src.replace(/^\/+/, '');
+                      } else if (_src.startsWith('/')) {
+                        _src = window.location.origin + _src;
+                      }
                       imgHtml = `<img src="${_src}" alt="${item.name}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
                     }
                     sectionDiv.innerHTML += `

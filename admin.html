@@ -35,38 +35,6 @@
       background: var(--bg);
       display: flex; align-items: center; justify-content: center;
     }
-    if (imgUrl) {
-      const final = normalizeImageUrl(imgUrl);
-      finalEl.style.display = '';
-      finalEl.textContent = final;
-      errEl.style.display = 'none'; errEl.textContent = '';
-      preview.classList.remove('visible');
-        preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; preview.dataset._triedAlt = '0'; };
-        preview.onerror = () => {
-          // try alternate path once (r2-images -> nfarinati-images)
-          if (preview.dataset._triedAlt !== '1') {
-            const alt = final.replace('/r2-images', '/nfarinati-images');
-            if (alt !== final) {
-              console.log('Trying alternate image path', alt);
-              preview.dataset._triedAlt = '1';
-              finalEl.textContent = alt;
-              preview.src = alt;
-              return;
-            }
-          }
-          console.warn('Preview image failed to load:', final);
-          preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base o permessi)';
-        };
-        preview.src = final;
-      // Try HEAD to get an HTTP status (falls back on error if CORS/blocked)
-        // also set src immediately (onerror above will try alternate path)
-        preview.src = final;
-    } else {
-      border: 1px solid var(--border);
-      border-radius: 10px; color: var(--text);
-      font-size: .9rem; outline: none;
-      transition: border-color .2s;
-    }
     .login-field input:focus { border-color: var(--gold); }
     .login-btn {
       width: 100%; padding: 13px;
@@ -663,7 +631,7 @@
               <input type="text" id="set-whatsapp" placeholder="+390918432674">
             </div>
             <div class="form-group">
-              <label>R2 Base URL (es. https://your-cdn.example.com )</label>
+              <label>R2 Base URL (es. https://pub-xxx.r2.dev)</label>
               <input type="text" id="set-r2-base" placeholder="Lascia vuoto per usare l'origine corrente" value="https://nfarinatimodernpizza.it">
             </div>
           </div>
@@ -828,21 +796,18 @@ function normalizeImageUrl(url) {
   if (!s) return '';
   if (/^https?:\/\//i.test(s)) return s;
   if (/^\/\//.test(s)) return window.location.protocol + s; // //host/path -> keep protocol
-  // Relative path starting with / (e.g. /r2-images/...) -> prefix origin
-  if (s.startsWith('/')) {
-    try {
-      const r2Base = document.getElementById('set-r2-base')?.value?.toString().trim();
-      if (r2Base) {
-        const baseClean = r2Base.replace(/\/$/, '');
-        // avoid duplicating path fragments like /r2-images when base already contains them
-        if (/\/r2-images$/i.test(baseClean) && /^\/r2-images/i.test(s)) {
-          return baseClean + s.replace(/^\/r2-images/i, '');
-        }
-        return baseClean + s;
-      }
-    } catch {}
-    return window.location.origin + s;
+
+  const r2Base = document.getElementById('set-r2-base')?.value?.toString().trim();
+  if (r2Base) {
+    const baseClean = r2Base.replace(/\/$/, '');
+    const pathClean = s.replace(/^\/+/, '');
+    if (/\/r2-images$/i.test(baseClean) && /^\/?r2-images/i.test(s)) {
+      return baseClean + '/' + pathClean.replace(/^r2-images\/?/i, '');
+    }
+    return baseClean + '/' + pathClean;
   }
+
+  if (s.startsWith('/')) return window.location.origin + s;
   return s; // leave other relative paths as-is
 }
 
@@ -1319,7 +1284,7 @@ async function saveProduct() {
     name: document.getElementById('pm-name').value.trim(),
     description: document.getElementById('pm-desc').value.trim(),
     price: parseFloat(document.getElementById('pm-price').value) || 0,
-    image_url: document.getElementById('pm-img').value.trim(),
+    image_url: normalizeImageUrl(document.getElementById('pm-img').value.trim()),
     active: document.getElementById('pm-active').checked ? 1 : 0
   };
   if (!body.name) { notify('Nome obbligatorio', 'err'); return; }
