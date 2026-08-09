@@ -1079,6 +1079,14 @@ async function loadOrders() {
       </tr>`
     ).join('') || '<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px;">Nessun ordine</td></tr>';
 
+    tbody.querySelectorAll('.order-show-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const id = parseInt(this.dataset.orderId, 10);
+        if (id) showOrderDetail(id);
+      });
+    });
+
     document.getElementById('orders-last-update').textContent = 'Ultimo aggiornamento: ' + new Date().toLocaleTimeString('it-IT');
 
     // Pagination
