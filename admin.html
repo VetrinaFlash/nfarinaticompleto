@@ -800,9 +800,15 @@ function normalizeImageUrl(url) {
   const r2Base = document.getElementById('set-r2-base')?.value?.toString().trim();
   if (r2Base) {
     const baseClean = r2Base.replace(/\/$/, '');
-    const pathClean = s.replace(/^\/+/, '');
-    if (/\/r2-images$/i.test(baseClean) && /^\/?r2-images/i.test(s)) {
-      return baseClean + '/' + pathClean.replace(/^r2-images\/?/i, '');
+    let pathClean = s.replace(/^\/+/, '');
+    try {
+      const baseUrl = new URL(baseClean);
+      if (/((^|\.)r2\.dev)$/i.test(baseUrl.hostname) && /^r2-images\/?/i.test(pathClean)) {
+        pathClean = pathClean.replace(/^r2-images\/?/i, '');
+      }
+    } catch {}
+    if (/\/r2-images$/i.test(baseClean) && /^r2-images\/?/i.test(pathClean)) {
+      pathClean = pathClean.replace(/^r2-images\/?/i, '');
     }
     return baseClean + '/' + pathClean;
   }
