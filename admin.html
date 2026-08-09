@@ -794,6 +794,16 @@ function normalizeImageUrl(url) {
   if (!url) return '';
   const s = url.toString().trim();
   if (!s) return '';
+
+  const PUB_R2_BASE = 'https://pub-5dac2f4f4f2f48d0b7b44005a4bfe9c5.r2.dev';
+  const normalizeOldR2 = s
+    .replace(/^https?:\/\/nfarinatimodernpizza\.it\/r2-images\//i, PUB_R2_BASE + '/')
+    .replace(/^\/r2-images\//i, PUB_R2_BASE + '/')
+    .replace(/^r2-images\//i, PUB_R2_BASE + '/');
+  if (/^https?:\/\/nfarinatimodernpizza\.it\/r2-images\//i.test(s) || /^\/r2-images\//i.test(s) || /^r2-images\//i.test(s)) {
+    return normalizeOldR2;
+  }
+
   if (/^https?:\/\//i.test(s)) return s;
   if (/^\/\//.test(s)) return window.location.protocol + s; // //host/path -> keep protocol
 

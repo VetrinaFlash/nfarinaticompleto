@@ -2396,13 +2396,25 @@
                     let imgHtml = '';
                     if (item.image_url) {
                       let _src = (item.image_url || '').toString().trim();
-                      if (/^https?:\/\//i.test(_src)) {
+                      const PUB_R2_BASE = 'https://pub-5dac2f4f4f2f48d0b7b44005a4bfe9c5.r2.dev';
+                      if (/^https?:\/\/nfarinatimodernpizza\.it\/r2-images\//i.test(_src)) {
+                        _src = _src.replace(/^https?:\/\/nfarinatimodernpizza\.it\/r2-images\//i, PUB_R2_BASE + '/');
+                      } else if (/^\/r2-images\//i.test(_src)) {
+                        _src = PUB_R2_BASE + '/' + _src.replace(/^\/+/, '').replace(/^r2-images\//i, '');
+                      } else if (/^https?:\/\//i.test(_src)) {
                         // keep absolute URL
                       } else if (/^\/\//.test(_src)) {
                         _src = window.location.protocol + _src;
                       } else if (currentPublicSettings.r2_base_url) {
                         const base = currentPublicSettings.r2_base_url.replace(/\/$/, '');
-                        _src = base + '/' + _src.replace(/^\/+/, '');
+                        let pathClean = _src.replace(/^\/+/, '');
+                        try {
+                          const baseUrl = new URL(base);
+                          if (/((^|\.)r2\.dev)$/i.test(baseUrl.hostname) && /^r2-images\/?/i.test(pathClean)) {
+                            pathClean = pathClean.replace(/^r2-images\/?/i, '');
+                          }
+                        } catch {}
+                        _src = base + '/' + pathClean;
                       } else if (_src.startsWith('/')) {
                         _src = window.location.origin + _src;
                       }
