@@ -32,8 +32,43 @@
     /* ── LOGIN ── */
     #login-screen {
       position: fixed; inset: 0; z-index: 9999;
-      background: var(--bg);
+      background: var(--bg); padding: 20px;
       display: flex; align-items: center; justify-content: center;
+    }
+    .login-box {
+      width: 100%; max-width: 380px;
+      padding: 40px 30px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.7);
+      text-align: center;
+    }
+    .login-logo {
+      width: 80px; height: 80px;
+      display: block; object-fit: cover;
+      margin: 0 auto 20px;
+      border-radius: 14px;
+    }
+    .login-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.05rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 2px;
+      color: var(--gold); margin-bottom: 6px;
+    }
+    .login-sub { font-size: .78rem; color: var(--muted); margin-bottom: 26px; }
+    .login-field { margin-bottom: 14px; text-align: left; }
+    .login-field label {
+      display: block; font-size: .75rem; font-weight: 600;
+      color: var(--muted); margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .login-field input {
+      width: 100%; padding: 12px 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text); font-size: .95rem;
+      outline: none; transition: border-color .2s;
     }
     .login-field input:focus { border-color: var(--gold); }
     .login-btn {
