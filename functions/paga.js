@@ -23,7 +23,7 @@ export async function onRequestPost(context) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        checkout_reference: `PB-${Date.now()}`,
+        checkout_reference: body.orderId,
         amount: totalAmount,
         currency: "EUR",
         pay_to_email: env.SUMUP_EMAIL,

@@ -34,7 +34,7 @@ export async function onRequestPost(context) {
 
     // Salva ordine
     await env.DB.prepare(`
-      INSERT OR IGNORE INTO orders
+      INSERT INTO orders
         (id, customer_name, customer_phone, pickup_time, order_type, delivery_address,
          notes, items_json, subtotal, discount_rate, promo_code, promo_discount,
          delivery_fee, total, status, payment_method, created_at)

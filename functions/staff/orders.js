@@ -196,19 +196,29 @@ export async function onRequestGet(context) {
     const ids = orders.results.map(o => o.id);
     let itemsByOrder = {};
     if (ids.length > 0) {
-      const placeholders = ids.map(() => '?').join(',');
-      const items = await env.DB.prepare(
-        `SELECT i.supply_order_id, i.quantity, i.unit_price,
-                i.original_quantity, i.removed, i.added_by_admin,
-                i.raw_material_id AS material_id,
-                m.name, m.department, m.supplier, m.default_price
-         FROM supply_order_items i
-         JOIN raw_materials m ON m.id = i.raw_material_id
-         WHERE i.supply_order_id IN (${placeholders})
-         ORDER BY m.name`
-      ).bind(...ids).all();
-      for (const it of items.results) {
-        (itemsByOrder[it.supply_order_id] = itemsByOrder[it.supply_order_id] || []).push(it);
+      const CHUNK_SIZE = 50;
+      const chunks = [];
+      for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+        chunks.push(ids.slice(i, i + CHUNK_SIZE));
+      }
+      const chunkQueries = chunks.map(chunk => {
+        const placeholders = chunk.map(() => '?').join(',');
+        return env.DB.prepare(
+          `SELECT i.supply_order_id, i.quantity, i.unit_price,
+                  i.original_quantity, i.removed, i.added_by_admin,
+                  i.raw_material_id AS material_id,
+                  m.name, m.department, m.supplier, m.default_price
+           FROM supply_order_items i
+           JOIN raw_materials m ON m.id = i.raw_material_id
+           WHERE i.supply_order_id IN (${placeholders})
+           ORDER BY m.name`
+        ).bind(...chunk).all();
+      });
+      const results = await Promise.all(chunkQueries);
+      for (const res of results) {
+        for (const it of (res.results || [])) {
+          (itemsByOrder[it.supply_order_id] = itemsByOrder[it.supply_order_id] || []).push(it);
+        }
       }
     }
 
