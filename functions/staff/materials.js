@@ -22,7 +22,7 @@ export async function onRequestGet(context) {
     ).all();
     return new Response(JSON.stringify({ materials: rows.results.filter(m => departments.includes(m.department)), departments }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
