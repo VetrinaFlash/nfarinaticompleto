@@ -1,27 +1,14 @@
+import { adminIdentity } from '../_lib/auth.js';
 // Statistiche dashboard admin
 const COOKIE_NAME = 'nfarinati_admin_session';
 
-async function verifySession(request, secret) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return false;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig;
-}
+async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifySession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -51,15 +38,17 @@ export async function onRequestGet(context) {
 
     // Top 10 prodotti per quantità
     const allOrders = await env.DB.prepare('SELECT items_json FROM orders').all();
-    const productCounts = {};
+    const productCounts = Object.create(null);
     for (const row of allOrders.results) {
       try {
         const items = JSON.parse(row.items_json || '[]');
         for (const item of items) {
           const name = item.name || 'Sconosciuto';
           if (!productCounts[name]) productCounts[name] = { qty: 0, revenue: 0 };
-          productCounts[name].qty += item.qty || 1;
-          productCounts[name].revenue += (item.price || 0) * (item.qty || 1);
+          const quantity = Number(item.qty || 1); if (!Number.isFinite(quantity) || quantity <= 0) continue;
+          productCounts[name].qty += quantity;
+          const price = Number(item.price || 0);
+          if (Number.isFinite(price) && price >= 0) productCounts[name].revenue += price * quantity;
         }
       } catch {}
     }
@@ -82,7 +71,7 @@ export async function onRequestGet(context) {
       byStatus: byStatus.results,
     }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
