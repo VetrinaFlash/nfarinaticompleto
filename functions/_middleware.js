@@ -5,17 +5,29 @@ const securityHeaders = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Strict-Transport-Security": "max-age=31536000",
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://applepay.cdn-apple.com https://pay.google.com https://cdn.jsdelivr.net https://gateway.sumup.com https://*.sumup.com https://*.sumup.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://pay.google.com https://applepay.cdn-apple.com https://*.sumup.com https://*.sumup.io; frame-src https://pay.google.com https://*.sumup.com https://*.sumup.io https://www.google.com https://maps.google.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://applepay.cdn-apple.com https://pay.google.com https://cdn.jsdelivr.net https://sumup.com https://gateway.sumup.com https://*.sumup.com https://*.sumup.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://pay.google.com https://applepay.cdn-apple.com https://*.sumup.com https://*.sumup.io; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'; upgrade-insecure-requests",
 };
 export async function onRequest(context) {
   const { request, env } = context;
   const url = new URL(request.url),
-    path = url.pathname;
+    path = (() => {
+      try {
+        return decodeURIComponent(url.pathname);
+      } catch {
+        return "\0";
+      }
+    })();
   let response;
+  if (url.protocol !== "https:") {
+    url.protocol = "https:";
+    return Response.redirect(url.href, 308);
+  }
   try {
-    if (
+    if (path.includes("\0"))
+      response = json({ error: "Percorso non valido" }, 400);
+    else if (
       /\.(?:sql|md|toml|patch|test\.mjs)$/.test(path) ||
-      /^\/(?:functions|tests|scripts|\.git|\.env)(?:\/|$)/.test(path)
+      /^\/(?:functions|tests|scripts|\.git|\.env)(?:\/|\.|$)/.test(path)
     )
       response = new Response("Not found", { status: 404 });
     else if (
