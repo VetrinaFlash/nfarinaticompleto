@@ -1,0 +1,18 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000
+/admin.html
+  Cache-Control: no-store
+/admin-magazzino.html
+  Cache-Control: no-store
+/staff.html
+  Cache-Control: no-store
+/menu.html
+  Cache-Control: no-cache
+/successo.html
+  Cache-Control: no-store
+
+/checkout-client.js
+  Cache-Control: no-cache

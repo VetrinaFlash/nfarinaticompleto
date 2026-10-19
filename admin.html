@@ -1044,7 +1044,7 @@ async function loadDashboard() {
       `<div class="top-prod-item">
         <div class="top-prod-rank">${i+1}</div>
         <div class="top-prod-name">${esc(p.name)}</div>
-        <div class="top-prod-qty">${p.qty} pz</div>
+        <div class="top-prod-qty">${esc(p.qty)} pz</div>
       </div>`
     ).join('') || '<div style="color:var(--muted);font-size:.8rem;">Nessun dato</div>';
 
@@ -1055,10 +1055,10 @@ async function loadDashboard() {
       const tbody = document.querySelector('#dash-orders-table tbody');
       tbody.innerHTML = (od.orders || []).map(o =>
         `<tr>
-          <td>#${o.id}</td>
+          <td>#${esc(o.id)}</td>
           <td>${esc(o.customer_name)}</td>
           <td>€${(o.total||0).toFixed(2)}</td>
-          <td><span class="badge ${o.status}">${o.status}</span></td>
+          <td><span class="badge ${esc(o.status)}">${esc(o.status)}</span></td>
           <td>${fmtDate(o.created_at)}</td>
         </tr>`
       ).join('') || '<tr><td colspan="5" style="color:var(--muted);text-align:center;">Nessun ordine</td></tr>';
@@ -1097,7 +1097,7 @@ async function loadOrders() {
     const tbody = document.querySelector('#orders-table tbody');
     tbody.innerHTML = ordersData.map(o =>
       `<tr>
-        <td>#${o.id}</td>
+        <td>#${esc(o.id)}</td>
         <td>${esc(o.customer_name)}</td>
         <td>${esc(o.customer_phone || '—')}</td>
         <td><span class="badge ${o.order_type === 'domicilio' ? 'preparazione' : 'nuovo'}">${esc(o.order_type || 'asporto')}</span></td>
@@ -1105,7 +1105,7 @@ async function loadOrders() {
         <td>€${(o.total||0).toFixed(2)}</td>
         <td>${o.promo_code ? `<span style="color:var(--gold);font-weight:700;">${esc(o.promo_code)}</span>` : '—'}</td>
         <td>
-          <select onchange="changeOrderStatus(${JSON.stringify(o.id)}, this.value)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 6px;font-size:.72rem;">
+          <select data-order-id="${esc(o.id)}" onchange="changeOrderStatus(this.dataset.orderId, this.value)" style="background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 6px;font-size:.72rem;">
             ${['nuovo','preparazione','pronto','consegnato'].map(s =>
               `<option value="${s}" ${o.status===s?'selected':''}>${s}</option>`
             ).join('')}
@@ -1150,7 +1150,7 @@ async function showOrderDetail(id) {
   try { items = JSON.parse(o.items_json || '[]'); } catch {}
   const itemsHtml = items.map(it =>
     `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:.8rem;">
-      <span>${esc(it.name)} x${it.qty || 1}${it.extras ? `<br><span style="color:var(--muted);font-size:.72rem;">${esc(it.extras)}</span>` : ''}</span>
+      <span>${esc(it.name)} x${esc(it.qty || 1)}${it.extras ? `<br><span style="color:var(--muted);font-size:.72rem;">${esc(it.extras)}</span>` : ''}</span>
       <span>€${((it.price||0)*(it.qty||1)).toFixed(2)}</span>
     </div>`
   ).join('');
@@ -1175,7 +1175,7 @@ async function showOrderDetail(id) {
       <div style="font-size:.7rem;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-weight:700;">Cambia Status</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         ${['nuovo','preparazione','pronto','consegnato'].map(s =>
-          `<button type="button" class="btn btn-ghost btn-sm" onclick="changeOrderStatus(${JSON.stringify(o.id)},'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
+          `<button type="button" class="btn btn-ghost btn-sm" data-order-id="${esc(o.id)}" onclick="changeOrderStatus(this.dataset.orderId,'${s}');closeModal('order-modal');loadOrders();">${s}</button>`
         ).join('')}
       </div>
     </div>
@@ -1454,17 +1454,9 @@ function previewImg(input) {
     console.warn('Preview image failed to load:', final);
     preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base o permessi)';
   };
-  // set src immediately; HEAD will just provide status feedback
+  // Image load/error events provide feedback without cross-origin HEAD requests.
   preview.src = final;
-  (async () => {
-    try {
-      const res = await fetch(final, { method: 'HEAD' });
-      if (!res.ok) { console.warn('Image HEAD returned', res.status, final); errEl.style.display = ''; errEl.textContent = `Impossibile caricare l'immagine: HTTP ${res.status}`; }
-    } catch (err) {
-      console.warn('Image fetch error (possible CORS/permission):', err, final);
-      errEl.style.display = ''; errEl.textContent = "Errore rete/CORS: controlla che l'oggetto sia pubblico o che il dominio sia consentito";
-    }
-  })();
+
 }
 
 // ════════════════════════════════════════════════
@@ -1517,9 +1509,9 @@ async function showCustomerDetail(id) {
       <div style="font-family:'Montserrat',sans-serif;font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--gold);margin-bottom:10px;">Ultimi ordini</div>
       ${orders.map(o =>
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:.8rem;">
-          <div>#${o.id} — ${esc(o.pickup_time||'')}</div>
+          <div>#${esc(o.id)} — ${esc(o.pickup_time||'')}</div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <span class="badge ${o.status}">${o.status}</span>
+            <span class="badge ${esc(o.status)}">${esc(o.status)}</span>
             <span>€${(o.total||0).toFixed(2)}</span>
           </div>
         </div>`
@@ -1779,7 +1771,12 @@ function renderPagination(containerId, page, total, limit, cbName) {
 }
 
 function downloadCSV(rows, filename) {
-  const csv = rows.map(r => r.join(',')).join('\n');
+  const csv = rows.map(row => row.map(value => {
+    let cell = String(value ?? '');
+    if (cell.startsWith('"') && cell.endsWith('"')) cell = cell.slice(1, -1).replace(/""/g, '"');
+    if (/^[\s]*[=+@-]/.test(cell)) cell = "'" + cell;
+    return '"' + cell.replace(/"/g, '""') + '"';
+  }).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a'); a.href = url; a.download = filename;
@@ -1924,19 +1921,19 @@ function cucinaRender() {
     let items = [];
     try { items = JSON.parse(o.items_json || '[]'); } catch (e) {}
     const itemsHtml = items.map(it =>
-      `<li><span class="cqty">×${it.qty || 1}</span> ${esc(it.name)}${it.extras ? `<span class="cextra">${esc(it.extras)}</span>` : ''}</li>`
+      `<li><span class="cqty">×${esc(it.qty || 1)}</span> ${esc(it.name)}${it.extras ? `<span class="cextra">${esc(it.extras)}</span>` : ''}</li>`
     ).join('');
     const mins = Math.round((Date.now() - new Date((o.created_at || '').replace(' ', 'T')).getTime()) / 60000);
     const late = (o.status === 'nuovo' || o.status === 'preparazione') && mins >= 20;
     let btn = '';
-    if (o.status === 'nuovo') btn = `<button class="cucina-btn to-prep" onclick="cucinaSetStatus('${esc(String(o.id))}', 'preparazione')">🔥 Inizia preparazione</button>`;
-    else if (o.status === 'preparazione') btn = `<button class="cucina-btn to-pronto" onclick="cucinaSetStatus('${esc(String(o.id))}', 'pronto')">✅ Segna pronto</button>`;
-    else if (o.status === 'pronto') btn = `<button class="cucina-btn to-cons" onclick="cucinaSetStatus('${esc(String(o.id))}', 'consegnato')">📦 Consegnato</button>`;
-    return `<div class="cucina-card st-${o.status}">
+    if (o.status === 'nuovo') btn = `<button class="cucina-btn to-prep" data-order-id="${esc(o.id)}" onclick="cucinaSetStatus(this.dataset.orderId, 'preparazione')">🔥 Inizia preparazione</button>`;
+    else if (o.status === 'preparazione') btn = `<button class="cucina-btn to-pronto" data-order-id="${esc(o.id)}" onclick="cucinaSetStatus(this.dataset.orderId, 'pronto')">✅ Segna pronto</button>`;
+    else if (o.status === 'pronto') btn = `<button class="cucina-btn to-cons" data-order-id="${esc(o.id)}" onclick="cucinaSetStatus(this.dataset.orderId, 'consegnato')">📦 Consegnato</button>`;
+    return `<div class="cucina-card st-${esc(o.status)}">
       <div class="cucina-head">
         <div class="cucina-time">${esc(o.pickup_time || '—')}</div>
         <div class="cucina-elapsed ${late ? 'late' : ''}">${cucinaElapsed(o.created_at)}${late ? ' ⚠️' : ''}</div>
-        <div class="cucina-status ${o.status}">${o.status}</div>
+        <div class="cucina-status ${esc(o.status)}">${esc(o.status)}</div>
       </div>
       <div class="cucina-cust">${esc(o.customer_name)}${o.customer_phone ? ` · <span style="font-weight:400;color:var(--muted)">${esc(o.customer_phone)}</span>` : ''}</div>
       <div class="cucina-meta"><span class="tipo">${o.order_type === 'domicilio' ? '🛵 Domicilio' : '🥡 Asporto'}</span>${o.delivery_address ? ` — ${esc(o.delivery_address)}` : ''}</div>
@@ -1995,7 +1992,7 @@ async function repairMenuOptions() {
       notify('✅ Tutto a posto: nessun prodotto con categoria o formato/scelte mancanti', 'ok');
       return;
     }
-    const lines = data.products.map(p => `${p.name} (${p.problema})`).join('\n • ');
+    const lines = data.products.map(p => `${esc(p.name)} (${p.problema})`).join('\n • ');
     const ok = confirm(
       `Trovati ${data.count} prodotti danneggiati da errori ora corretti nel sistema:\n\n • ${lines}\n\n` +
       `Ripristino categoria/formato/scelte obbligatorie ai valori originali del menu (nome, descrizione, foto, prezzo base restano quelli attuali, invariati). Procedere?`
