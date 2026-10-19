@@ -1,3 +1,5 @@
+import { DEPARTMENTS, ensureWarehouseSchema } from '../_lib/warehouse.js';
+
 // Gestione anagrafica materie prime (solo admin): lista, aggiunta, modifica, disattivazione
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 const STAFF_COOKIE = 'nfarinati_staff_session';
@@ -39,10 +41,11 @@ async function isAdminAuthorized(request, secret) {
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
-function validDepartment(d) { return d === 'Pizzeria' || d === 'Cucina'; }
+function validDepartment(d) { return DEPARTMENTS.includes(d); }
 
 // Colonna aggiunta dopo il primo rilascio: migrata in corsa sui DB già inizializzati (idempotente)
 async function migrateSchema(env) {
+  await ensureWarehouseSchema(env);
   try { await env.DB.prepare('ALTER TABLE raw_materials ADD COLUMN default_price REAL').run(); } catch (e) { /* colonna già presente */ }
 }
 

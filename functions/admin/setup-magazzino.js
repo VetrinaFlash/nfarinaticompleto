@@ -1,3 +1,5 @@
+import { ensureWarehouseSchema } from '../_lib/warehouse.js';
+
 // Setup one-click del modulo magazzino: crea tabelle + seed (idempotente).
 // Protetto da sessione admin. Alternativa a: wrangler d1 execute --file=schema-magazzino.sql
 const ADMIN_COOKIE = 'nfarinati_admin_session';
@@ -118,7 +120,7 @@ export async function onRequestPost(context) {
       env.DB.prepare(`CREATE TABLE IF NOT EXISTS raw_materials (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina')),
+        department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina','Sala','Bar')),
         supplier TEXT NOT NULL DEFAULT '',
         default_price REAL,
         active INTEGER DEFAULT 1,
@@ -173,6 +175,8 @@ export async function onRequestPost(context) {
     for (const sql of alters) {
       try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
     }
+
+    await ensureWarehouseSchema(env);
 
     const userStmt = env.DB.prepare(
       'INSERT OR IGNORE INTO staff_users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)'
