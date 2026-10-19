@@ -1,25 +1,5 @@
-// Ordini materie prime lato staff — POST crea ordine/bozza, GET lista SOLO i propri,
-// PUT aggiorna/invia la propria bozza, DELETE elimina la propria bozza
-const COOKIE_NAME = 'nfarinati_staff_session';
-
-async function verifyStaffSession(request, secret) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-  if (!match) return null;
-  const token = decodeURIComponent(match[1]);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return null;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  if (expectedHex !== sig) return null;
-  const parts = payload.split(':'); // staff:<id>:<role>:<ts>
-  if (parts[0] !== 'staff' || parts.length !== 4) return null;
-  return { id: parseInt(parts[1]), role: parts[2] };
-}
+import { ensureWarehouseSchema, canOrderItems } from '../_lib/warehouse.js';
+import { warehouseIdentity } from '../_lib/warehouse-auth.js';
 
 // Colonne aggiunte dopo il primo rilascio: migrate in corsa sui DB esistenti (idempotente)
 async function migrateSchema(env) {
@@ -51,13 +31,13 @@ function cleanupItems(items) {
   return cleanItems;
 }
 
-const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const cors = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  const session = await verifyStaffSession(request, secret);
-  if (!session) {
+  await ensureWarehouseSchema(env);
+  const session = await warehouseIdentity(env, request);
+  if (!session || !session.id) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
 
@@ -75,6 +55,8 @@ export async function onRequestPost(context) {
     if (!cleanItems) {
       return new Response(JSON.stringify({ error: 'Riga ordine non valida (materia o quantità mancante)' }), { status: 400, headers: cors });
     }
+
+    if (!(await canOrderItems(env, session, cleanItems))) return new Response(JSON.stringify({ error: 'Prodotti non disponibili o reparto non autorizzato' }), { status: 403, headers: cors });
 
     const orderRes = await env.DB.prepare(
       "INSERT INTO supply_orders (staff_user_id, notes, status, is_draft, created_at) VALUES (?, ?, 'inviato', ?, datetime('now','localtime'))"
@@ -96,9 +78,9 @@ export async function onRequestPost(context) {
 // le righe vengono sostituite con quelle passate, all'invio il timestamp diventa quello attuale
 export async function onRequestPut(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  const session = await verifyStaffSession(request, secret);
-  if (!session) {
+  await ensureWarehouseSchema(env);
+  const session = await warehouseIdentity(env, request);
+  if (!session || !session.id) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
 
@@ -124,6 +106,8 @@ export async function onRequestPut(context) {
     if (!cleanItems) {
       return new Response(JSON.stringify({ error: 'Riga ordine non valida' }), { status: 400, headers: cors });
     }
+
+    if (!(await canOrderItems(env, session, cleanItems))) return new Response(JSON.stringify({ error: 'Prodotti non disponibili o reparto non autorizzato' }), { status: 403, headers: cors });
 
     const stmts = [
       env.DB.prepare('DELETE FROM supply_order_items WHERE supply_order_id = ?').bind(orderId),
@@ -151,9 +135,9 @@ export async function onRequestPut(context) {
 // Elimina la propria bozza
 export async function onRequestDelete(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  const session = await verifyStaffSession(request, secret);
-  if (!session) {
+  await ensureWarehouseSchema(env);
+  const session = await warehouseIdentity(env, request);
+  if (!session || !session.id) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
 
@@ -179,9 +163,9 @@ export async function onRequestDelete(context) {
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  const session = await verifyStaffSession(request, secret);
-  if (!session) {
+  await ensureWarehouseSchema(env);
+  const session = await warehouseIdentity(env, request);
+  if (!session || !session.id) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
 
@@ -217,12 +201,13 @@ export async function onRequestGet(context) {
       const results = await Promise.all(chunkQueries);
       for (const res of results) {
         for (const it of (res.results || [])) {
+          if (!session.departments.includes(it.department)) continue;
           (itemsByOrder[it.supply_order_id] = itemsByOrder[it.supply_order_id] || []).push(it);
         }
       }
     }
 
-    const result = orders.results.map(o => ({ ...o, items: itemsByOrder[o.id] || [] }));
+    const result = orders.results.map(o => ({ ...o, items: itemsByOrder[o.id] || [] })).filter(o => o.is_draft || o.items.length > 0);
     return new Response(JSON.stringify({ orders: result }), { status: 200, headers: cors });
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });

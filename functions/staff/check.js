@@ -1,3 +1,5 @@
+import { ensureWarehouseSchema, getDepartments } from '../_lib/warehouse.js';
+
 // Verifica sessione staff — restituisce anche i dati utente per la UI
 const COOKIE_NAME = 'nfarinati_staff_session';
 
@@ -31,7 +33,7 @@ async function verifyStaffSession(request, secret) {
 export async function onRequestGet(context) {
   const { env, request } = context;
   const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
   const session = await verifyStaffSession(request, secret);
   if (!session) {
@@ -39,6 +41,7 @@ export async function onRequestGet(context) {
   }
 
   try {
+    await ensureWarehouseSchema(env);
     const user = await env.DB.prepare(
       'SELECT id, username, display_name, role FROM staff_users WHERE id = ? AND active = 1'
     ).bind(session.id).first();
@@ -46,6 +49,7 @@ export async function onRequestGet(context) {
     if (!user) {
       return new Response(JSON.stringify({ authenticated: false }), { status: 200, headers });
     }
+    user.departments = await getDepartments(env, user);
     return new Response(JSON.stringify({ authenticated: true, user }), { status: 200, headers });
   } catch (err) {
     return new Response(JSON.stringify({ authenticated: false, error: err.message }), { status: 200, headers });

@@ -1,3 +1,5 @@
+import { ensureWarehouseSchema, getDepartments } from '../_lib/warehouse.js';
+
 // Login staff magazzino — account individuali su tabella staff_users (D1)
 const COOKIE_NAME = 'nfarinati_staff_session';
 const COOKIE_MAX_AGE = 86400 * 7; // 7 giorni
@@ -35,6 +37,7 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ ok: false, error: 'Inserisci username e password' }), { status: 400, headers: cors });
     }
 
+    await ensureWarehouseSchema(env);
     const user = await env.DB.prepare(
       'SELECT id, username, password_hash, display_name, role FROM staff_users WHERE username = ? AND active = 1'
     ).bind(username).first();
@@ -44,13 +47,14 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ ok: false, error: 'Credenziali errate' }), { status: 401, headers: cors });
     }
 
+    const departments = await getDepartments(env, user);
     const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
     const token = await createToken(secret, user.id, user.role);
     const cookieHeader = `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Strict`;
 
     return new Response(JSON.stringify({
       ok: true,
-      user: { id: user.id, username: user.username, display_name: user.display_name, role: user.role },
+      user: { id: user.id, username: user.username, display_name: user.display_name, role: user.role, departments },
     }), { status: 200, headers: { ...cors, 'Set-Cookie': cookieHeader } });
   } catch (err) {
     return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500, headers: cors });
