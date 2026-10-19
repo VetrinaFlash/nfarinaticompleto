@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS staff_users (
 CREATE TABLE IF NOT EXISTS raw_materials (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
-  department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina')),
+  department TEXT NOT NULL CHECK(department IN ('Pizzeria','Cucina','Sala','Bar')),
   supplier TEXT NOT NULL DEFAULT '',
   default_price REAL,
   active INTEGER DEFAULT 1,
@@ -278,3 +278,11 @@ INSERT OR IGNORE INTO raw_materials (name, department, supplier) VALUES
 -- ============================================================
 INSERT OR IGNORE INTO suppliers (name)
 SELECT DISTINCT supplier FROM raw_materials WHERE supplier != '';
+
+-- Reparti aggiuntivi e account; non sovrascrive account o permessi esistenti.
+INSERT OR IGNORE INTO staff_users (username,password_hash,display_name,role) VALUES ('CONOSCENTI','8ccd803e0d1b18b8be1eeb60a0fa71bbbb5e4ec0f038e0dbd623a51ac4c7e80b','CONOSCENTI','staff');
+INSERT OR IGNORE INTO staff_users (username,password_hash,display_name,role) VALUES ('GRAZIANO','780fe97d0d453844c32478c3dcf1f8a3aa0b1886ce8e357e3cf69929d35ef165','GRAZIANO','staff');
+CREATE TABLE IF NOT EXISTS staff_visibility (
+ staff_user_id INTEGER PRIMARY KEY REFERENCES staff_users(id),
+ departments TEXT NOT NULL DEFAULT '["Pizzeria","Cucina","Sala","Bar"]'
+);

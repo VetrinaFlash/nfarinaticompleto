@@ -1,3 +1,5 @@
+import { menuPrices } from '../_lib/menu-prices.js';
+
 // CRUD menu admin (categorie e prodotti)
 const COOKIE_NAME = 'nfarinati_admin_session';
 
@@ -17,7 +19,7 @@ async function verifySession(request, secret) {
   return expectedHex === sig;
 }
 
-const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const cors = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 
 // GET: lista completa categorie e prodotti
 export async function onRequestGet(context) {
@@ -87,13 +89,16 @@ export async function onRequestPost(context) {
       if (!category_id || !name || price === undefined) {
         return new Response(JSON.stringify({ error: 'category_id, name e price obbligatori' }), { status: 400, headers: cors });
       }
+      let pricing;
+      try { pricing = menuPrices(price, prezzi_json, prezzi_json !== undefined); }
+      catch (err) { return new Response(JSON.stringify({ error: err.message }), { status: 400, headers: cors }); }
       const result = await env.DB.prepare(`
         INSERT INTO products (category_id, name, description, price, image_url, active, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json)
         VALUES (?,?,?,?,?,1,?,?,?,?,?)
       `).bind(
-        category_id, name, description || '', price, image_url || '',
+        category_id, name, description || '', pricing.price, image_url || '',
         mandatory_choice ? 1 : 0, sort_order || 0,
-        prezzi_json || JSON.stringify([{ prezzo: price }]),
+        pricing.prezzi_json,
         options_json || '{}',
         multi_options_json || '{}'
       ).run();
@@ -106,24 +111,31 @@ export async function onRequestPost(context) {
       // le varianti di formato e le scelte obbligatorie, quando non arrivano nella richiesta,
       // vanno mantenute com'erano — altrimenti ogni modifica le azzererebbe silenziosamente.
       const current = await env.DB.prepare(
-        'SELECT category_id, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json FROM products WHERE id = ?'
+        'SELECT category_id, price, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json FROM products WHERE id = ?'
       ).bind(id).first();
       if (!current) {
         return new Response(JSON.stringify({ error: 'Prodotto non trovato' }), { status: 404, headers: cors });
       }
       // category_id è un id testuale (es. "pizze-americane"): se arriva vuoto/mancante
       // si tiene quello attuale, per non "orfanizzare" il prodotto (spariva dal menu).
+      let pricing;
+      try {
+        pricing = menuPrices(price !== undefined ? price : current.price,
+          prezzi_json !== undefined ? prezzi_json : current.prezzi_json, prezzi_json !== undefined);
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), { status: 400, headers: cors });
+      }
       const safeCategoryId = (category_id && String(category_id).trim()) ? category_id : current.category_id;
       await env.DB.prepare(`
         UPDATE products SET category_id=?, name=?, description=?, price=?, image_url=?,
           mandatory_choice=?, active=?, sort_order=?, prezzi_json=?, options_json=?, multi_options_json=?
         WHERE id=?
       `).bind(
-        safeCategoryId, name, description || '', price, image_url || '',
+        safeCategoryId, name, description || '', pricing.price, image_url || '',
         mandatory_choice !== undefined ? (mandatory_choice ? 1 : 0) : current.mandatory_choice,
         active !== undefined ? active : 1,
         sort_order !== undefined ? sort_order : current.sort_order,
-        prezzi_json !== undefined ? prezzi_json : current.prezzi_json,
+        pricing.prezzi_json,
         options_json !== undefined ? options_json : current.options_json,
         multi_options_json !== undefined ? multi_options_json : current.multi_options_json,
         id
