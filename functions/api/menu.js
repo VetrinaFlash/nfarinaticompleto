@@ -1,10 +1,12 @@
+import { menuPrices } from '../_lib/menu-prices.js';
+
 // Restituisce il menu pubblico dal DB D1 nel formato compatibile con menu.html
 export async function onRequestGet(context) {
   const { env } = context;
   const cors = {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Cache-Control': 'public, max-age=300',
+    'Cache-Control': 'no-store',
   };
 
   try {
@@ -27,7 +29,8 @@ export async function onRequestGet(context) {
         let scelte_obbligatorie = {};
         let scelte_multiple = {};
 
-        try { prezzi = JSON.parse(prod.prezzi_json || '[]'); } catch {}
+        // Also honours base-price edits saved before the synchronization fix.
+        prezzi = menuPrices(prod.price, prod.prezzi_json).prices;
         try { scelte_obbligatorie = JSON.parse(prod.options_json || '{}'); } catch {}
         try { scelte_multiple = JSON.parse(prod.multi_options_json || '{}'); } catch {}
 
