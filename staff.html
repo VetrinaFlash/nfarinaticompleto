@@ -197,13 +197,10 @@
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="text" id="search" placeholder="Cerca materia prima..." oninput="renderMaterials()">
     </div>
-    <div class="chips" id="dep-chips">
-      <div class="chip active" data-dep="" onclick="setDep(this)">Tutti i reparti</div>
-      <div class="chip" data-dep="Pizzeria" onclick="setDep(this)">🍕 Pizzeria</div>
-      <div class="chip" data-dep="Cucina" onclick="setDep(this)">🍳 Cucina</div>
-      <div class="chip" data-dep="Sala" onclick="setDep(this)">🍽️ Sala</div>
-      <div class="chip" data-dep="Bar" onclick="setDep(this)">🍸 Bar</div>
-    </div>
+    <label for="department-filter">Reparto</label>
+    <select class="supplier-select" id="department-filter" onchange="setDep(this)">
+      <option value="">Tutti i reparti</option>
+    </select>
     <select class="supplier-select" id="supplier-filter" onchange="renderMaterials()">
       <option value="">Tutti i fornitori</option>
     </select>
@@ -418,14 +415,13 @@ async function loadMaterials() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Errore catalogo');
     materials = data.materials || [];
-    currentUser.departments = data.departments || [];
-    document.querySelectorAll('#dep-chips [data-dep]').forEach(chip => {
-      chip.style.display = !chip.dataset.dep || currentUser.departments.includes(chip.dataset.dep) ? '' : 'none';
-    });
-    if (depFilter && !currentUser.departments.includes(depFilter)) {
-      depFilter = '';
-      document.querySelectorAll('#dep-chips .chip').forEach(chip => chip.classList.toggle('active', !chip.dataset.dep));
-    }
+    const allowedDepartments = data.departments ?? currentUser.departments ?? [...new Set(materials.map(m => m.department))];
+    currentUser.departments = allowedDepartments;
+    const departmentSelect = document.getElementById('department-filter');
+    departmentSelect.innerHTML = '<option value="">Tutti i reparti</option>' +
+      allowedDepartments.map(dep => `<option value="${escAttr(dep)}">${departmentIcon(dep)} ${esc(dep)}</option>`).join('');
+    if (depFilter && !allowedDepartments.includes(depFilter)) depFilter = '';
+    departmentSelect.value = depFilter;
     const suppliers = [...new Set(materials.map(m => m.supplier))].sort((a, b) => a.localeCompare(b, 'it'));
     const sel = document.getElementById('supplier-filter');
     sel.innerHTML = '<option value="">Tutti i fornitori</option>' +
@@ -439,9 +435,7 @@ async function loadMaterials() {
 }
 
 function setDep(el) {
-  document.querySelectorAll('#dep-chips .chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  depFilter = el.dataset.dep;
+  depFilter = el.value;
   renderMaterials();
 }
 
