@@ -2705,7 +2705,7 @@
                 let sc = item.scelte_obbligatorie[gruppo].find(o => o.valore === sel);
                 if(sc) { 
                     extraPrice += sc.supplemento; 
-                    customParts.push(`${escapeMenu(gruppo)}: ${sel}`); 
+                    customParts.push(`${gruppo}: ${sel}`);
                 }
             }
 
@@ -2716,7 +2716,7 @@
                             let sc = item.scelte_multiple[gruppo].find(o => o.valore === val);
                             if(sc) { 
                                 extraPrice += sc.supplemento; 
-                                customParts.push(`${escapeMenu(gruppo)}: ${val}`); 
+                                customParts.push(`${gruppo}: ${val}`);
                             }
                         });
                     }
@@ -2748,7 +2748,7 @@
                 itemMap[customId] = { 
                     id: customId, baseId: item.id, name: item.name, price: newPrice, isCustom: true, 
                     customParts: customParts, removed: removedArr, categoryName: item.categoryName,
-                    selections: {...currentModalState.selections}, multi: structuredClone(currentModalState.multi || {}) 
+                    selections: {...currentModalState.selections}, multi: structuredClone(currentModalState.multi || {})
                 };
                 
                 let variantHtml = `
