@@ -1,3 +1,4 @@
+import {adminCookie as fixtureAdminCookie} from './helpers.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -46,14 +47,7 @@ async function staffCookie(env,username,password) {
   assert.equal((await response.json()).ok,true);
   return response.headers.get('set-cookie').split(';')[0];
 }
-async function adminCookie(env) {
-  // Read the existing admin credentials instead of duplicating them in the tests.
-  const source=readFileSync(new URL('../functions/admin/login.js',import.meta.url),'utf8');
-  const username=source.match(/const USERNAME = '([^']+)'/)[1];
-  const password=source.match(/const PASSWORD = '([^']+)'/)[1];
-  const response=await adminLogin(context(env,'/admin/login','POST',{username,password}));
-  assert.equal(response.status,200); return response.headers.get('set-cookie').split(';')[0];
-}
+async function adminCookie(env) { return fixtureAdminCookie(env); }
 
 test('upgrade preserves IDs, prices, inactive materials, orders, items, indexes and sequence; repeat is harmless', async()=>{
   const {env,db}=fixture();
