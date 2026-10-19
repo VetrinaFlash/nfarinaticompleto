@@ -737,9 +737,10 @@
     <div class="form-group"><label>Nome prodotto</label><input type="text" id="pm-name"></div>
     <div class="form-group"><label>Ingredienti / Descrizione</label><textarea id="pm-desc"></textarea></div>
     <div class="form-row">
-      <div class="form-group"><label>Prezzo base (€)</label><input type="number" id="pm-price" step="0.5" min="0"></div>
+      <div class="form-group"><label id="pm-price-label">Prezzo base (€)</label><input type="number" id="pm-price" step="0.01" min="0" inputmode="decimal"></div>
       <div class="form-group"><label>URL Immagine</label><input type="text" id="pm-img" oninput="previewImg(this)"></div>
     </div>
+    <div id="pm-variant-prices"></div>
     <img id="pm-img-preview" class="img-preview" alt="Preview">
     <div style="margin-top:8px;font-size:.82rem;color:var(--muted);">
       <div id="pm-img-final" style="word-break:break-all;display:none;margin-bottom:6px;color:var(--text);"></div>
@@ -1231,7 +1232,7 @@ async function checkNewOrders() {
 // ════════════════════════════════════════════════
 async function loadMenu() {
   try {
-    const res = await fetch('/admin/menu');
+    const res = await fetch('/admin/menu', { cache: 'no-store' });
     if (!res.ok) return;
     const d = await res.json();
     menuData = d;
@@ -1242,7 +1243,7 @@ async function loadMenu() {
     d.categories.forEach(c => {
       const count = d.products.filter(p => p.category_id === c.id).length;
       catList.innerHTML += `
-        <div class="cat-item ${selectedCatId===c.id?'active':''}" onclick="filterByCat(${c.id})">
+        <div class="cat-item ${selectedCatId===c.id?'active':''}" onclick="filterByCat(decodeURIComponent(this.dataset.categoryId))" data-category-id="${encodeURIComponent(c.id)}">
           ${esc(c.name)} <span class="count">${count}</span>
         </div>`;
     });
@@ -1272,8 +1273,7 @@ function renderProducts() {
   const tbody = document.querySelector('#menu-products-table tbody');
   tbody.innerHTML = products.map(p => {
     const cat = menuData.categories.find(c => c.id === p.category_id);
-    let price = '—';
-    try { const pz = JSON.parse(p.prezzi_json); price = '€' + (pz[0]?.prezzo || 0).toFixed(2); } catch {}
+    const price = '€' + Number(p.price).toFixed(2);
     return `<tr>
       <td>${esc(p.name)}</td>
       <td>${esc(cat?.name || '—')}</td>
@@ -1287,11 +1287,25 @@ function renderProducts() {
   }).join('') || '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Nessun prodotto</td></tr>';
 }
 
+let productPriceVariants = [];
+
+function setProductPrices(product) {
+  let variants = [];
+  try { variants = JSON.parse(product?.prezzi_json || '[]'); } catch {}
+  productPriceVariants = Array.isArray(variants) ? variants.filter(v => v && typeof v === 'object') : [];
+  document.getElementById('pm-price-label').textContent = productPriceVariants[0]?.variante
+    ? `Prezzo ${productPriceVariants[0].variante} (€)` : 'Prezzo base (€)';
+  document.getElementById('pm-price').value = product ? product.price : '';
+  document.getElementById('pm-variant-prices').innerHTML = productPriceVariants.slice(1).map((variant,index) => `
+    <div class="form-group"><label for="pm-variant-${index + 1}">Prezzo ${esc(variant.variante || 'formato ' + (index + 2))} (€)</label>
+      <input type="number" id="pm-variant-${index + 1}" step="0.01" min="0" inputmode="decimal" value="${Number.isFinite(Number(variant.prezzo)) ? Number(variant.prezzo) : ''}"></div>`).join('');
+}
+
 function openProductModal(id) {
   document.getElementById('pm-id').value = '';
   document.getElementById('pm-name').value = '';
   document.getElementById('pm-desc').value = '';
-  document.getElementById('pm-price').value = '';
+  setProductPrices(null);
   document.getElementById('pm-img').value = '';
   document.getElementById('pm-active').checked = true;
   document.getElementById('pm-img-preview').classList.remove('visible');
@@ -1306,9 +1320,7 @@ function editProduct(id) {
   document.getElementById('pm-name').value = p.name || '';
   document.getElementById('pm-desc').value = p.description || '';
   document.getElementById('pm-cat').value = p.category_id || '';
-  let price = '';
-  try { const pz = JSON.parse(p.prezzi_json); price = pz[0]?.prezzo || ''; } catch {}
-  document.getElementById('pm-price').value = price;
+  setProductPrices(p);
   document.getElementById('pm-img').value = p.image_url || '';
   document.getElementById('pm-active').checked = !!p.active;
   const preview = document.getElementById('pm-img-preview');
@@ -1342,11 +1354,26 @@ async function saveProduct() {
     category_id: document.getElementById('pm-cat').value, // id testuale (es. "pizze-americane"), non numerico
     name: document.getElementById('pm-name').value.trim(),
     description: document.getElementById('pm-desc').value.trim(),
-    price: parseFloat(document.getElementById('pm-price').value) || 0,
+    price: Number(document.getElementById('pm-price').value.replace(',', '.')),
     image_url: normalizeImageUrl(document.getElementById('pm-img').value.trim()),
     active: document.getElementById('pm-active').checked ? 1 : 0
   };
   if (!body.name) { notify('Nome obbligatorio', 'err'); return; }
+  const priceInput = document.getElementById('pm-price');
+  if (!priceInput.value.trim() || !Number.isFinite(body.price) || body.price < 0) {
+    notify('Inserisci un prezzo valido, maggiore o uguale a zero', 'err'); return;
+  }
+  const prices = productPriceVariants.length ? productPriceVariants.map(v => ({...v})) : [{prezzo:body.price}];
+  prices[0].prezzo = body.price;
+  for (let index = 1; index < prices.length; index++) {
+    const value = document.getElementById('pm-variant-' + index).value.trim();
+    const price = Number(value.replace(',', '.'));
+    if (!value || !Number.isFinite(price) || price < 0) {
+      notify('Inserisci un prezzo valido per ogni formato', 'err'); return;
+    }
+    prices[index].prezzo = price;
+  }
+  body.prezzi_json = JSON.stringify(prices);
   try {
     const res = await fetch('/admin/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     if (res.ok) { notify('Prodotto salvato', 'ok'); closeModal('product-modal'); loadMenu(); }

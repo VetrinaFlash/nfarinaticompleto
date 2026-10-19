@@ -2306,7 +2306,7 @@
 
         async function loadMenuFromAPI() {
             try {
-                const resp = await fetch('/api/menu');
+                const resp = await fetch('/api/menu', { cache: 'no-store' });
                 if (!resp.ok) throw new Error('API non disponibile');
                 const data = await resp.json();
                 return (Array.isArray(data) && data.length > 0) ? data : null;

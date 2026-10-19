@@ -295,6 +295,7 @@
     <div class="tab" data-tab="costs" onclick="switchTab('costs')"><i class="fa-solid fa-euro-sign"></i> Contabilità</div>
     <div class="tab" data-tab="anagrafica" onclick="switchTab('anagrafica')"><i class="fa-brands fa-whatsapp"></i> Fornitori</div>
     <div class="tab" data-tab="prodotti" onclick="switchTab('prodotti')"><i class="fa-solid fa-box-open"></i> Prodotti</div>
+    <div class="tab" data-tab="staff" onclick="switchTab('staff')"><i class="fa-solid fa-user-lock"></i> Accessi staff</div>
   </div>
 
   <div class="content">
@@ -313,6 +314,8 @@
         <option value="">Tutti i reparti</option>
         <option value="Pizzeria">🍕 Pizzeria</option>
         <option value="Cucina">🍳 Cucina</option>
+        <option value="Sala">🍽️ Sala</option>
+        <option value="Bar">🍸 Bar</option>
       </select>
       <select id="f-supplier" onchange="applyFilters()"><option value="">Tutti i fornitori</option></select>
       <input type="text" id="f-material" placeholder="Cerca materia prima..." oninput="applyFilters()">
@@ -331,6 +334,7 @@
     <div id="view-costs" style="display:none"></div>
     <div id="view-anagrafica" style="display:none"></div>
     <div id="view-prodotti" style="display:none"></div>
+    <div id="view-staff" style="display:none"></div>
   </div>
 </div>
 
@@ -396,6 +400,8 @@
       <div class="chip active" data-dep="" onclick="setPickerDep(this)">Tutti i reparti</div>
       <div class="chip" data-dep="Pizzeria" onclick="setPickerDep(this)">🍕 Pizzeria</div>
       <div class="chip" data-dep="Cucina" onclick="setPickerDep(this)">🍳 Cucina</div>
+      <div class="chip" data-dep="Sala" onclick="setPickerDep(this)">🍽️ Sala</div>
+      <div class="chip" data-dep="Bar" onclick="setPickerDep(this)">🍸 Bar</div>
     </div>
     <select class="picker-supplier" id="picker-supplier" onchange="renderPicker()">
       <option value="">Tutti i fornitori</option>
@@ -413,6 +419,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+function departmentIcon(department) { return ({Pizzeria:'🍕', Cucina:'🍳', Sala:'🍽️', Bar:'🍸'})[department] || '📦'; }
 // Dentro l'iframe della dashboard admin: nascondi la topbar propria
 if (window.self !== window.top) document.documentElement.classList.add('embedded');
 
@@ -527,7 +534,7 @@ function startAutoRefresh() {
 let materialsCatalog = [];
 async function loadMaterialsCatalog() {
   try {
-    const res = await fetch('/staff/materials');
+    const res = await fetch('/admin/materials');
     const data = await res.json();
     materialsCatalog = data.materials || [];
   } catch (e) {}
@@ -622,15 +629,16 @@ function applyFilters() { render(); }
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-  ['pending', 'suppliers', 'history', 'costs', 'anagrafica', 'prodotti'].forEach(v => {
+  ['pending', 'suppliers', 'history', 'costs', 'anagrafica', 'prodotti', 'staff'].forEach(v => {
     document.getElementById('view-' + v).style.display = v === tab ? 'block' : 'none';
   });
   // Filtri e toolbar ordini (date, dipendente, fornitore, "Nuovo ordine", export...)
   // servono solo alle viste che lavorano sugli ordini: su Fornitori e Prodotti,
   // che hanno una propria ricerca dedicata, andavano a sovrapporsi creando confusione.
-  const showOrderTools = tab !== 'anagrafica' && tab !== 'prodotti';
+  const showOrderTools = !['anagrafica', 'prodotti', 'staff'].includes(tab);
   document.getElementById('filters').style.display = showOrderTools ? '' : 'none';
   document.getElementById('order-toolbar').style.display = showOrderTools ? '' : 'none';
+  if (tab === 'staff') loadStaffAccess();
   render();
 }
 
@@ -867,7 +875,7 @@ function renderPicker() {
     return `<div class="mat-row ${qty > 0 ? 'selected' : ''}" id="pmat-${m.id}">
       <div class="mat-info">
         <div class="mat-name">${esc(m.name)}</div>
-        <div class="mat-meta">${m.department === 'Pizzeria' ? '🍕' : '🍳'} ${esc(m.department)} · ${esc(m.supplier)}</div>
+        <div class="mat-meta">${departmentIcon(m.department)} ${esc(m.department)} · ${esc(m.supplier)}</div>
       </div>
       <div class="stepper">
         <button onclick="pickerChangeQty(${m.id}, -1)"><i class="fa-solid fa-minus"></i></button>
@@ -1356,6 +1364,8 @@ function depSelectHtml(id, val) {
   return `<select id="${id}" style="padding:9px 8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:.78rem;outline:none">
       <option value="Pizzeria" ${val === 'Pizzeria' ? 'selected' : ''}>🍕 Pizzeria</option>
       <option value="Cucina" ${val === 'Cucina' ? 'selected' : ''}>🍳 Cucina</option>
+      <option value="Sala" ${val === 'Sala' ? 'selected' : ''}>🍽️ Sala</option>
+      <option value="Bar" ${val === 'Bar' ? 'selected' : ''}>🍸 Bar</option>
     </select>`;
 }
 
@@ -1741,6 +1751,40 @@ function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 function escJs(s) { return String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;'); }
 
 checkAuth();
+
+// Per-account warehouse visibility. Empty selection explicitly blocks all departments.
+async function loadStaffAccess() {
+  const box = document.getElementById('view-staff');
+  box.innerHTML = '<div class="empty-note">Caricamento account...</div>';
+  try {
+    const res = await fetch('/admin/staff-access', {cache:'no-store'});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore caricamento accessi');
+    box.innerHTML = '<div class="wa-hint">Scegli i reparti visibili a ogni account e premi Salva. Le modifiche valgono anche per le sessioni già aperte, al prossimo caricamento. Nessuna selezione blocca tutti i reparti; gli amministratori vedono sempre tutto.</div>' +
+      data.users.map(user => `<div class="supplier-row" style="flex-wrap:wrap;align-items:center;gap:14px" id="staff-access-${user.id}">
+        <div style="min-width:140px"><b>${esc(user.display_name)}</b><div style="font-size:.75rem;color:var(--muted)">${esc(user.username)}${user.active ? '' : ' · disattivato'}</div></div>
+        ${data.departments.map(department => `<label style="display:flex;align-items:center;gap:7px;padding:8px;cursor:pointer"><input type="checkbox" style="flex:0 0 20px;min-width:20px;width:20px;height:20px;padding:0;accent-color:var(--gold)" value="${escAttr(department)}" ${user.departments.includes(department) ? 'checked' : ''} ${user.role === 'admin' ? 'disabled' : ''}>${departmentIcon(department)} ${esc(department)}</label>`).join('')}
+        ${user.role === 'admin' ? '<span>Amministratore</span>' : `<button class="supplier-save" onclick="saveStaffAccess(${user.id},this)">Salva</button>`}
+        <span class="access-status" role="status" style="font-size:.8rem"></span>
+      </div>`).join('');
+  } catch (e) { box.innerHTML = `<div class="empty-note">${esc(e.message)}</div><button class="tool-btn" onclick="loadStaffAccess()">Riprova</button>`; }
+}
+async function saveStaffAccess(id, button) {
+  const row = document.getElementById('staff-access-' + id);
+  const departments = [...row.querySelectorAll('input:checked')].map(input => input.value);
+  const status = row.querySelector('.access-status');
+  button.disabled = true;
+  status.textContent = '';
+  try {
+    const res = await fetch('/admin/staff-access', {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({id,departments})});
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Salvataggio fallito');
+    status.textContent = '✓ Salvato';
+    showToast('Accessi staff aggiornati');
+  } catch (e) { status.textContent = e.message; showToast(e.message,true); }
+  finally { button.disabled = false; }
+}
+
 </script>
 </body>
 </html>

@@ -201,6 +201,8 @@
       <div class="chip active" data-dep="" onclick="setDep(this)">Tutti i reparti</div>
       <div class="chip" data-dep="Pizzeria" onclick="setDep(this)">🍕 Pizzeria</div>
       <div class="chip" data-dep="Cucina" onclick="setDep(this)">🍳 Cucina</div>
+      <div class="chip" data-dep="Sala" onclick="setDep(this)">🍽️ Sala</div>
+      <div class="chip" data-dep="Bar" onclick="setDep(this)">🍸 Bar</div>
     </div>
     <select class="supplier-select" id="supplier-filter" onchange="renderMaterials()">
       <option value="">Tutti i fornitori</option>
@@ -249,6 +251,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+function departmentIcon(department) { return ({Pizzeria:'🍕', Cucina:'🍳', Sala:'🍽️', Bar:'🍸'})[department] || '📦'; }
 let currentUser = null;
 let materials = [];
 let cart = {}; // material_id -> { quantity, unit_price }
@@ -304,12 +307,11 @@ async function doLogout() {
   location.reload();
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   document.getElementById('who').textContent = `Ciao, ${currentUser.display_name}`;
-  loadMaterials();
-  restoreDraft();
+  if (await loadMaterials()) await restoreDraft();
 }
 
 // Al login: riprende la bozza salvata sul server (o il carrello locale non salvato)
@@ -334,6 +336,8 @@ async function restoreDraft() {
         if (saved && Object.keys(cart).length === 0) cart = saved;
       } catch (e2) {}
     }
+    const visibleIds = new Set(materials.map(m => String(m.id)));
+    cart = Object.fromEntries(Object.entries(cart).filter(([id]) => visibleIds.has(id)));
     updateCartBar();
     renderMaterials();
     updateDraftBanner();
@@ -412,14 +416,25 @@ async function loadMaterials() {
   try {
     const res = await fetch('/staff/materials');
     const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore catalogo');
     materials = data.materials || [];
+    currentUser.departments = data.departments || [];
+    document.querySelectorAll('#dep-chips [data-dep]').forEach(chip => {
+      chip.style.display = !chip.dataset.dep || currentUser.departments.includes(chip.dataset.dep) ? '' : 'none';
+    });
+    if (depFilter && !currentUser.departments.includes(depFilter)) {
+      depFilter = '';
+      document.querySelectorAll('#dep-chips .chip').forEach(chip => chip.classList.toggle('active', !chip.dataset.dep));
+    }
     const suppliers = [...new Set(materials.map(m => m.supplier))].sort((a, b) => a.localeCompare(b, 'it'));
     const sel = document.getElementById('supplier-filter');
     sel.innerHTML = '<option value="">Tutti i fornitori</option>' +
       suppliers.map(s => `<option value="${escAttr(s)}">${esc(s)}</option>`).join('');
     renderMaterials();
+    return true;
   } catch (e) {
     document.getElementById('materials-list').innerHTML = '<div class="empty-note">Errore nel caricamento del catalogo</div>';
+    return false;
   }
 }
 
@@ -446,7 +461,7 @@ function renderMaterials() {
     return `<div class="mat-row ${qty > 0 ? 'selected' : ''}" id="mat-${m.id}">
       <div class="mat-info">
         <div class="mat-name">${esc(m.name)}</div>
-        <div class="mat-meta"><span class="dep ${m.department.toLowerCase()}">${m.department === 'Pizzeria' ? '🍕' : '🍳'} ${esc(m.department)}</span> · ${esc(m.supplier)}</div>
+        <div class="mat-meta"><span class="dep ${m.department.toLowerCase()}">${departmentIcon(m.department)} ${esc(m.department)}</span> · ${esc(m.supplier)}</div>
       </div>
       <div class="stepper">
         <button onclick="changeQty(${m.id}, -1)"><i class="fa-solid fa-minus"></i></button>
@@ -657,6 +672,8 @@ async function resumeDraft(id) {
       if (it.material_id) cart[it.material_id] = { quantity: it.quantity, unit_price: it.unit_price ?? '' };
     }
     document.getElementById('order-notes').value = draft.notes || '';
+    const visibleIds = new Set(materials.map(m => String(m.id)));
+    cart = Object.fromEntries(Object.entries(cart).filter(([id]) => visibleIds.has(id)));
     updateCartBar();
     renderMaterials();
     updateDraftBanner();
@@ -709,6 +726,14 @@ function showToast(msg, isError) {
 function esc(s) { const d = document.createElement('div'); d.textContent = s ?? ''; return d.innerHTML; }
 function escAttr(s) { return esc(s).replace(/"/g, '&quot;'); }
 
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden && currentUser && await loadMaterials()) {
+    const visibleIds = new Set(materials.map(m => String(m.id)));
+    cart = Object.fromEntries(Object.entries(cart).filter(([id]) => visibleIds.has(id)));
+    updateCartBar();
+    renderMaterials();
+  }
+});
 checkAuth();
 </script>
 </body>
