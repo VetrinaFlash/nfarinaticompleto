@@ -1,3 +1,4 @@
+import {adminCookie as fixtureAdminCookie} from './helpers.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
@@ -14,6 +15,7 @@ async function fixture() {
   const variants=[{prezzo:8,variante:'Personale'},{prezzo:17,variante:'Familiare'}];
   db.prepare('INSERT INTO products(id,category_id,name,price,prezzi_json,options_json,multi_options_json,mandatory_choice) VALUES(1,?,?,?,?,?,?,1)').run('pizze','Margherita',8,JSON.stringify(variants),'{"Impasto":[{"valore":"Classico"}]}','{"Extra":[{"valore":"Basilico"}]}');
   const env={ADMIN_TOKEN_SECRET:'test-menu-secret', DB:{
+    async batch(statements){ const out=[];for(const s of statements)out.push(await s.run());return out; },
     prepare(sql) {
       let args=[];
       return {
@@ -24,11 +26,7 @@ async function fixture() {
       };
     },
   }};
-  const source=readFileSync(new URL('../functions/admin/login.js',import.meta.url),'utf8');
-  const username=source.match(/const USERNAME = '([^']+)'/)[1];
-  const password=source.match(/const PASSWORD = '([^']+)'/)[1];
-  const login=await adminLogin({env,request:new Request('https://example.com/admin/login',{method:'POST',body:JSON.stringify({username,password})})});
-  const cookie=login.headers.get('set-cookie').split(';')[0];
+  const cookie=await fixtureAdminCookie(env);
   function save(body,authorized=true){return updateMenu({env,request:new Request('https://example.com/admin/menu',{method:'POST',headers:{'Content-Type':'application/json',Cookie:authorized?cookie:''},body:JSON.stringify(body)})});}
   const payload={action:'update_product',id:1,category_id:'pizze',name:'Margherita',description:'Pomodoro e mozzarella',active:1};
   const read=()=>publicMenu({env});

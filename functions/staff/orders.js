@@ -24,8 +24,8 @@ function cleanupItems(items) {
     const quantity = parseFloat(it.quantity);
     const unitPrice = it.unit_price === null || it.unit_price === undefined || it.unit_price === ''
       ? null : parseFloat(it.unit_price);
-    if (!materialId || !(quantity > 0)) return null;
-    if (unitPrice !== null && !(unitPrice >= 0)) return null;
+    if (!Number.isSafeInteger(materialId) || materialId < 1 || !Number.isFinite(quantity) || quantity <= 0 || quantity > 1000000) return null;
+    if (unitPrice !== null && (!Number.isFinite(unitPrice) || unitPrice < 0 || unitPrice > 1000000)) return null;
     cleanItems.push({ materialId, quantity, unitPrice });
   }
   return cleanItems;
@@ -48,7 +48,7 @@ export async function onRequestPost(context) {
     const notes = (body.notes || '').toString().slice(0, 1000);
     const isDraft = body.draft ? 1 : 0;
 
-    if (items.length === 0) {
+    if (items.length === 0 || items.length > 250) {
       return new Response(JSON.stringify({ error: 'Ordine vuoto: aggiungi almeno una materia prima' }), { status: 400, headers: cors });
     }
     const cleanItems = cleanupItems(items);
@@ -70,7 +70,7 @@ export async function onRequestPost(context) {
 
     return new Response(JSON.stringify({ ok: true, order_id: orderId, is_draft: isDraft }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
@@ -99,7 +99,7 @@ export async function onRequestPut(context) {
       return new Response(JSON.stringify({ error: 'Bozza non trovata' }), { status: 404, headers: cors });
     }
 
-    if (items.length === 0) {
+    if (items.length === 0 || items.length > 250) {
       return new Response(JSON.stringify({ error: 'La bozza è vuota: aggiungi almeno una materia prima' }), { status: 400, headers: cors });
     }
     const cleanItems = cleanupItems(items);
@@ -128,7 +128,7 @@ export async function onRequestPut(context) {
 
     return new Response(JSON.stringify({ ok: true, order_id: orderId, sent: action === 'send' }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
@@ -157,7 +157,7 @@ export async function onRequestDelete(context) {
     ]);
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
@@ -210,7 +210,7 @@ export async function onRequestGet(context) {
     const result = orders.results.map(o => ({ ...o, items: itemsByOrder[o.id] || [] })).filter(o => o.is_draft || o.items.length > 0);
     return new Response(JSON.stringify({ orders: result }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

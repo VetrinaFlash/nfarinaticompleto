@@ -52,7 +52,7 @@ export async function onRequestGet(context) {
 
     return new Response(JSON.stringify(rawMenu), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

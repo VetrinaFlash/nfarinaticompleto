@@ -1,64 +1,15 @@
+import { adminIdentity } from '../_lib/auth.js';
 // Dashboard admin ordini magazzino — GET con filtri, PUT cambio stato/modifica ordine, DELETE
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 const STAFF_COOKIE = 'nfarinati_staff_session';
 
-async function verifyHmacToken(token, secret) {
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return null;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig ? payload : null;
-}
-
-function getCookie(request, name) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-// Autorizzato: admin (sessione esistente) oppure utente staff con role=admin
-async function isAdminAuthorized(request, secret) {
-  const adminToken = getCookie(request, ADMIN_COOKIE);
-  if (adminToken) {
-    const payload = await verifyHmacToken(adminToken, secret);
-    if (payload && payload.startsWith('admin:')) return true;
-  }
-  const staffToken = getCookie(request, STAFF_COOKIE);
-  if (staffToken) {
-    const payload = await verifyHmacToken(staffToken, secret);
-    if (payload) {
-      const parts = payload.split(':'); // staff:<id>:<role>:<ts>
-      if (parts[0] === 'staff' && parts[2] === 'admin') return true;
-    }
-  }
-  return false;
-}
-
-// Colonne per le rettifiche admin: aggiunte in corsa sui DB già inizializzati (idempotente)
-async function migrateSchema(env) {
-  const alters = [
-    'ALTER TABLE supply_order_items ADD COLUMN original_quantity REAL',
-    'ALTER TABLE supply_order_items ADD COLUMN removed INTEGER DEFAULT 0',
-    'ALTER TABLE supply_order_items ADD COLUMN added_by_admin INTEGER DEFAULT 0',
-    'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
-    'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
-    'ALTER TABLE supply_orders ADD COLUMN is_draft INTEGER DEFAULT 0',
-    'ALTER TABLE raw_materials ADD COLUMN default_price REAL',
-  ];
-  for (const sql of alters) {
-    try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
-  }
-}
+async function isAdminAuthorized(request, env) { return !!(await adminIdentity(env, request)); }
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -145,14 +96,14 @@ export async function onRequestGet(context) {
     const result = orders.results.map(o => ({ ...o, items: itemsByOrder[o.id] || [] }));
     return new Response(JSON.stringify({ orders: result, users: users.results }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 // Nuovo ordine creato direttamente dall'admin (attribuito all'utente "Admin")
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -199,13 +150,13 @@ export async function onRequestPost(context) {
 
     return new Response(JSON.stringify({ ok: true, order_id: orderId }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 export async function onRequestPut(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -230,7 +181,7 @@ export async function onRequestPut(context) {
     }
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
@@ -254,7 +205,7 @@ async function editOrder(env, body) {
   for (const it of (Array.isArray(body.items) ? body.items : [])) {
     const price = (it.unit_price === '' || it.unit_price === null || it.unit_price === undefined)
       ? null : parseFloat(it.unit_price);
-    if (price !== null && !(price >= 0)) continue;
+    if (price !== null && (!Number.isFinite(price) || price < 0 || price > 1000000)) continue;
 
     if (it.item_id) {
       const cur = byId.get(parseInt(it.item_id));
@@ -269,7 +220,7 @@ async function editOrder(env, body) {
       }
 
       let qty = parseFloat(it.quantity);
-      if (!(qty > 0)) qty = cur.quantity;
+      if (!Number.isFinite(qty) || qty <= 0 || qty > 1000000) qty = cur.quantity;
       let orig = cur.original_quantity;
       if (qty !== cur.quantity) {
         if (orig === null || orig === undefined) orig = cur.quantity;
@@ -304,7 +255,7 @@ async function editOrder(env, body) {
 
 export async function onRequestDelete(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -321,7 +272,7 @@ export async function onRequestDelete(context) {
     ]);
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <script src="https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js"></script>
+    <script src="/checkout-client.js"></script>
 
     <style>
         :root {
@@ -2235,7 +2236,7 @@
             const summary = getClosureSummary(settings, days);
             const rawHours = settings.homepage_hours || 'Mar-Dom 18:30 - 23:30';
             const hoursText = rawHours.replace(/\s*\([^)]*\)\s*$/, '').replace(/<br\s*\/?>/gi, ' · ').replace(/<[^>]+>/g, '');
-            el.innerHTML = `<i class="fa-regular fa-clock"></i> ${hoursText}${summary ? ` · ${summary}` : ''}`;
+            el.innerHTML = `<i class="fa-regular fa-clock"></i> ${escapeMenu(hoursText)}${summary ? ` · ${summary}` : ''}`;
 
             if (banner) {
                 const today = new Date().getDay();
@@ -2384,7 +2385,7 @@
             const container = document.getElementById('menu-container');
             menuData.forEach(category => {
                 const sectionDiv = document.createElement('div'); sectionDiv.className = 'category-section'; sectionDiv.id = `cat-${category.id}`;
-                sectionDiv.innerHTML = `<h2 class="category-title">${category.category}</h2>`;
+                sectionDiv.innerHTML = `<h2 class="category-title">${escapeMenu(category.category)}</h2>`;
                 category.items.forEach(item => {
                     
                     let hasVariants = item.prezzi.length > 1;
@@ -2418,13 +2419,13 @@
                       } else if (_src.startsWith('/')) {
                         _src = window.location.origin + _src;
                       }
-                      imgHtml = `<img src="${_src}" alt="${item.name}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
+                      imgHtml = `<img src="${escapeMenu(_src)}" alt="${escapeMenu(item.name)}" class="item-image" loading="lazy" onerror="this.style.display='none'">`;
                     }
                     sectionDiv.innerHTML += `
                         <div class="menu-item">
                             ${imgHtml}
-                            <div class="item-header"><div class="item-name">${item.name}</div><div class="item-price">${displayPrice}</div></div>
-                            <p class="item-desc">${item.desc || ''}</p>
+                            <div class="item-header"><div class="item-name">${escapeMenu(item.name)}</div><div class="item-price">${displayPrice}</div></div>
+                            <p class="item-desc">${escapeMenu(item.desc || '')}</p>
                             <div class="controls">
                                 <div style="flex-grow: 1;"></div>
                                 <div class="qty-box">
@@ -2497,6 +2498,11 @@
             document.getElementById('custom-modal').classList.add('active');
         }
 
+        function escapeMenu(value) {
+            const element = document.createElement('span'); element.textContent = String(value ?? '');
+            return element.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function renderModalContent() {
             const item = itemMap[currentModalState.itemId];
             const container = document.getElementById('custom-dynamic-sections');
@@ -2509,11 +2515,11 @@
                 html += `<div class="custom-section-title">Formato / Impasto <span class="badge-req">Obbligatorio</span></div><div class="custom-group">`;
                 item.prezzi.forEach(opt => {
                     const isChecked = currentModalState.selections['variante'] === opt.variante ? 'checked' : '';
-                    let safeVariante = opt.variante.replace(/"/g, '&quot;');
+                    let safeVariante = escapeMenu(opt.variante);
                     html += `
                         <label class="custom-option-card ${isChecked ? 'selected' : ''}">
                             <div class="custom-option-left">
-                                <input type="radio" name="variante" value="${safeVariante}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${opt.variante}
+                                <input type="radio" name="variante" value="${safeVariante}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${escapeMenu(opt.variante)}
                             </div>
                             <span class="custom-price">${opt.prezzo.toFixed(2).replace('.',',')}€</span>
                         </label>`;
@@ -2523,17 +2529,17 @@
 
             if (Object.keys(item.scelte_obbligatorie).length > 0) {
                 for (let gruppo in item.scelte_obbligatorie) {
-                    let safeGruppo = gruppo.replace(/"/g, '&quot;');
-                    html += `<div class="custom-section-title">${gruppo} <span class="badge-req">Obbligatorio</span></div><div class="custom-group">`;
+                    let safeGruppo = escapeMenu(gruppo);
+                    html += `<div class="custom-section-title">${escapeMenu(gruppo)} <span class="badge-req">Obbligatorio</span></div><div class="custom-group">`;
                     item.scelte_obbligatorie[gruppo].forEach(opt => {
                         const isChecked = currentModalState.selections[gruppo] === opt.valore ? 'checked' : '';
                         let pText = opt.supplemento > 0 ? `+${opt.supplemento.toFixed(2)}€` : '';
-                        let safeValore = opt.valore.replace(/"/g, '&quot;');
+                        let safeValore = escapeMenu(opt.valore);
                         
                         html += `
                             <label class="custom-option-card ${isChecked ? 'selected' : ''}">
                                 <div class="custom-option-left">
-                                    <input type="radio" name="${safeGruppo}" value="${safeValore}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${opt.valore}
+                                    <input type="radio" name="${safeGruppo}" value="${safeValore}" ${isChecked} onchange="updateModalState(this.name, this.value)"> ${escapeMenu(opt.valore)}
                                 </div>
                                 <span class="custom-price">${pText}</span>
                             </label>`;
@@ -2544,11 +2550,11 @@
 
             if (item.scelte_multiple && Object.keys(item.scelte_multiple).length > 0) {
                 for (let gruppo in item.scelte_multiple) {
-                    let safeGruppo = gruppo.replace(/"/g, '&quot;');
+                    let safeGruppo = escapeMenu(gruppo);
                     
                     // --- INIZIO MODIFICA TESTO ---
                     let badgeText = (gruppo === 'Salse') ? 'Obbligatorio (Max 2)' : 'Obbligatorio (1 o più)';
-                    html += `<div class="custom-section-title">${gruppo} <span class="badge-req">${badgeText}</span></div><div class="custom-group">`;
+                    html += `<div class="custom-section-title">${escapeMenu(gruppo)} <span class="badge-req">${badgeText}</span></div><div class="custom-group">`;
                     // --- FINE MODIFICA TESTO ---
 
                     item.scelte_multiple[gruppo].forEach(opt => {
@@ -2557,12 +2563,12 @@
                             isChecked = true;
                         }
                         let pText = opt.supplemento > 0 ? `+${opt.supplemento.toFixed(2)}€` : '';
-                        let safeValore = opt.valore.replace(/"/g, '&quot;');
+                        let safeValore = escapeMenu(opt.valore);
                         
                         html += `
                             <label class="custom-option-card ${isChecked ? 'selected' : ''}">
                                 <div class="custom-option-left">
-                                    <input type="checkbox" name="${safeGruppo}" value="${safeValore}" ${isChecked ? 'checked' : ''} onchange="updateMultiState('${safeGruppo}', '${safeValore}')"> ${opt.valore}
+                                    <input type="checkbox" name="${safeGruppo}" value="${safeValore}" ${isChecked ? 'checked' : ''} onchange="updateMultiState(this.name, this.value)"> ${escapeMenu(opt.valore)}
                                 </div>
                                 <span class="custom-price">${pText}</span>
                             </label>`;
@@ -2575,11 +2581,11 @@
                 html += `<div class="custom-section-title">Rimuovi Ingredienti <span class="badge-opt">Gratis</span></div><div class="custom-group">`;
                 item.ingredientsList.forEach(ingr => {
                     const isChecked = currentModalState.removals[ingr] ? 'checked' : '';
-                    let safeIngr = ingr.replace(/"/g, '&quot;');
+                    let safeIngr = escapeMenu(ingr);
                     html += `
                         <label class="custom-option-card opt-removal ${isChecked ? 'selected' : ''}">
                             <div class="custom-option-left">
-                                <input type="checkbox" value="${safeIngr}" ${isChecked} onchange="toggleRemoval(this.value)"> Senza: ${ingr}
+                                <input type="checkbox" value="${safeIngr}" ${isChecked} onchange="toggleRemoval(this.value)"> Senza: ${escapeMenu(ingr)}
                             </div>
                         </label>`;
                 });
@@ -2699,7 +2705,7 @@
                 let sc = item.scelte_obbligatorie[gruppo].find(o => o.valore === sel);
                 if(sc) { 
                     extraPrice += sc.supplemento; 
-                    customParts.push(`${gruppo}: ${sel}`); 
+                    customParts.push(`${gruppo}: ${sel}`);
                 }
             }
 
@@ -2710,7 +2716,7 @@
                             let sc = item.scelte_multiple[gruppo].find(o => o.valore === val);
                             if(sc) { 
                                 extraPrice += sc.supplemento; 
-                                customParts.push(`${gruppo}: ${val}`); 
+                                customParts.push(`${gruppo}: ${val}`);
                             }
                         });
                     }
@@ -2720,7 +2726,7 @@
             let removedArr = [];
             for (let ingr in currentModalState.removals) {
                 if (currentModalState.removals[ingr]) {
-                    customParts.push(`SENZA: ${ingr}`);
+                    customParts.push(`SENZA: ${escapeMenu(ingr)}`);
                     removedArr.push(ingr);
                 }
             }
@@ -2741,7 +2747,8 @@
             if (!itemMap[customId]) {
                 itemMap[customId] = { 
                     id: customId, baseId: item.id, name: item.name, price: newPrice, isCustom: true, 
-                    customParts: customParts, removed: removedArr, categoryName: item.categoryName 
+                    customParts: customParts, removed: removedArr, categoryName: item.categoryName,
+                    selections: {...currentModalState.selections}, multi: structuredClone(currentModalState.multi || {})
                 };
                 
                 let variantHtml = `
@@ -2755,7 +2762,7 @@
                             </div>
                         </div>
                         <div class="variant-desc">
-                            ${customParts.join(' | ')}
+                            ${customParts.map(escapeMenu).join(' | ')}
                         </div>
                     </div>
                 `;
@@ -2814,7 +2821,7 @@
                 }
             }
 
-            let sconto = total * 0.10;
+            let sconto = Math.round(total * 10) / 100;
 
             // Sconto promo code (aggiuntivo)
             let promoDiscountAmt = 0;
@@ -2824,7 +2831,7 @@
                 } else {
                     promoDiscountAmt = Math.min(appliedPromoCode.value, total - sconto);
                 }
-                promoDiscountAmt = Math.round(promoDiscountAmt * 100) / 100;
+                promoDiscountAmt = Math.min(Math.round(promoDiscountAmt * 100) / 100, Math.round((total - sconto) * 100) / 100);
             }
 
             let deliveryFee = 0;
@@ -2869,8 +2876,8 @@
                     `;
                     if (promoDiscountAmt > 0 && appliedPromoCode) {
                         const label = appliedPromoCode.type === 'percentage'
-                            ? `Promo "${appliedPromoCode.code}" (-${appliedPromoCode.value}%):`
-                            : `Promo "${appliedPromoCode.code}":`;
+                            ? `Promo "${escapeMenu(appliedPromoCode.code)}" (-${appliedPromoCode.value}%):`
+                            : `Promo "${escapeMenu(appliedPromoCode.code)}":`;
                         html += `<div class="summary-line promo-line"><span>${label}</span> <span>- ${promoDiscountAmt.toFixed(2).replace('.',',')} €</span></div>`;
                     }
                     if (deliveryFee > 0) {
@@ -2948,13 +2955,13 @@
                     let lineTotal = item.price * cart[id];
                     let customTesto = "";
                     if(item.isCustom && item.customParts && item.customParts.length > 0) {
-                        customTesto = `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.3;">↳ ${item.customParts.join('<br>↳ ')}</div>`;
+                        customTesto = `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:3px; line-height:1.3;">↳ ${item.customParts.map(escapeMenu).join('<br>↳ ')}</div>`;
                     }
                     
                     html += `
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; font-size:0.95rem; font-weight:600; color:var(--text-dark); border-bottom: 1px solid var(--border-light); padding-bottom: 8px;">
                             <div style="flex:1; padding-right:10px;">
-                                <span><strong style="color:var(--accent-main); font-size:1.05rem;">${cart[id]}x</strong> ${item.name}</span>
+                                <span><strong style="color:var(--accent-main); font-size:1.05rem;">${cart[id]}x</strong> ${escapeMenu(item.name)}</span>
                                 ${customTesto}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
@@ -3037,7 +3044,7 @@
                 html += `
                     <div class="upsell-card">
                         <div class="upsell-card-info">
-                            <div class="upsell-name">${c.name}</div>
+                            <div class="upsell-name">${escapeMenu(c.name)}</div>
                             <div class="upsell-price">+${c.price.toFixed(2).replace('.',',')} €</div>
                         </div>
                         <button class="upsell-btn" type="button" onclick="handleUpsellClick(${c.id});">AGGIUNGI</button>
@@ -3225,18 +3232,20 @@
                     const lineTotal = item.price * cart[id]; 
                     total += lineTotal;
                     
-                    cartItems.push({ name: item.name, price: item.price, qty: cart[id] });
+                    const baseItem = itemMap[item.baseId || item.id];
+                    if (!baseItem.db_id) { alert('Menù temporaneamente non disponibile. Ricarica la pagina prima di ordinare.'); return; }
+                    cartItems.push({ productId: baseItem.db_id, qty: cart[id], selections: item.selections || {}, multi: item.multi || {}, removed: item.removed || [] });
                     
                     let customTesto = "";
                     if(item.isCustom && item.customParts) {
                         customTesto += `\n   ↳ ${item.customParts.join('\n   ↳ ')}`;
                     }
                     
-                    text += `▪️ ${cart[id]}x ${item.name} (${lineTotal.toFixed(2)}€)${customTesto}\n`;
+                    text += `▪️ ${cart[id]}x ${escapeMenu(item.name)} (${lineTotal.toFixed(2)}€)${customTesto}\n`;
                 }
             }
 
-            let sconto = total * 0.10;
+            let sconto = Math.round(total * 10) / 100;
 
             // Sconto promo code
             let promoDiscountAmt = 0;
@@ -3247,7 +3256,7 @@
                 } else {
                     promoDiscountAmt = Math.min(appliedPromoCode.value, total - sconto);
                 }
-                promoDiscountAmt = Math.round(promoDiscountAmt * 100) / 100;
+                promoDiscountAmt = Math.min(Math.round(promoDiscountAmt * 100) / 100, Math.round((total - sconto) * 100) / 100);
                 promoCodeStr = appliedPromoCode.code;
             }
 
@@ -3283,64 +3292,45 @@
                 total: finalTotal,
                 paymentMethod: metodoPagamento,
             };
-            localStorage.setItem('NFARINATI_order_data', JSON.stringify(orderData));
-
             const btn = document.getElementById('pay-btn');
-
-            if (metodoPagamento === "contanti") {
-                text = `⚠️ *ORDINE DA PAGARE IN CONTANTI* ⚠️\n\n` + text;
-                localStorage.setItem('peterbun_order_message', text);
-                window.location.href = "successo.html";
-                return;
-            }
-
-            text = `✅ *ORDINE PAGATO ONLINE (SumUp)*\n\n` + text;
-            localStorage.setItem('peterbun_order_message', text);
-            
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Collegamento SumUp...'; 
+            if (btn.disabled) return;
             btn.disabled = true;
-
+            btn.textContent = 'Conferma ordine…';
             try {
-                const response = await fetch("/paga", {
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ items: cartItems, orderId: orderId, totalAmount: Math.round(finalTotal * 100) / 100 })
+                const response = await fetch('/api/checkout', {
+                    method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(orderData)
                 });
                 const data = await response.json();
-                
-                if (data.checkoutId) { 
-                    document.getElementById('dati-cliente-form').style.display = 'none';
-                    document.getElementById('modal-footer-cassa').style.display = 'none';
-                    document.getElementById('sumup-card-container').style.display = 'block';
-                    
-                    SumUpCard.mount({
-                        id: 'sumup-card',
-                        checkoutId: data.checkoutId,
-                        googlePay: { merchantId: 'INSERISCI_ID_GOOGLE_QUI', merchantName: "N'Farinati Modern Pizza" },
-                        applePay: { merchantName: "N'Farinati Modern Pizza" },
-                        onResponse: function(type, body) {
-                            if (type === 'success' && body.status === 'PAID') {
-                                window.location.href = "successo.html";
-                            } 
-                            else if (type === 'success' && body.status === 'FAILED') {
-                                alert("Transazione negata dalla banca. Verifica i dati e riprova.");
-                                window.location.href = "errore.html";
-                            } 
-                            else if (type === 'error' || type === 'fail' || type === 'declined') {
-                                alert("Errore durante il pagamento:\n" + JSON.stringify(body));
-                                window.location.href = "errore.html";
-                            }
-                        }
-                    });
-                } else if (data.redirectUrl) {
-                    window.location.href = data.redirectUrl;
-                } else { 
-                    alert("ERRORE DI SUMUP:\n" + JSON.stringify(data, null, 2)); 
-                    cambiaBottonePagamento();
-                    btn.disabled = false; 
+                if (!response.ok || !data.ok) throw new Error(data.error || 'Impossibile avviare l’ordine');
+                if (Math.round(data.order.total * 100) !== Math.round(finalTotal * 100) && !confirm('Il menù è stato aggiornato. Il totale è ' + data.order.total.toFixed(2) + ' €. Vuoi continuare?')) { cambiaBottonePagamento(); btn.disabled = false; return; }
+                sessionStorage.setItem('NFARINATI_pending_v2', JSON.stringify({orderId:data.orderId,orderToken:data.orderToken}));
+                localStorage.removeItem('NFARINATI_order_data');
+                localStorage.removeItem('peterbun_order_message');
+                if (metodoPagamento === 'contanti') {
+                    await confirmPendingOrder();
+                    window.location.href = 'successo.html';
+                    return;
                 }
+                if (!data.checkoutId) throw new Error('Pagamento non disponibile');
+                document.getElementById('dati-cliente-form').style.display = 'none';
+                document.getElementById('modal-footer-cassa').style.display = 'none';
+                document.getElementById('sumup-card-container').style.display = 'block';
+                SumUpCard.mount({
+                    id:'sumup-card', checkoutId:data.checkoutId,
+                    locale:'it-IT', amount:data.order.total, currency:'EUR',
+                    ...(data.googlePayMerchantId ? {googlePay:{merchantId:data.googlePayMerchantId,merchantName:"N'Farinati Modern Pizza"}} : {}),
+                    applePay:{merchantName:"N'Farinati Modern Pizza"},
+                    onResponse:function(type, body) {
+                        if (type === 'success' && body.status === 'PAID') {
+                            window.location.href = 'successo.html';
+                        } else if (body?.status === 'FAILED' || ['error','fail','declined'].includes(type)) {
+                            alert('Pagamento non riuscito. Riprova o contatta il locale.');
+                            window.location.href = 'errore.html';
+                        }
+                    }
+                });
             } catch (error) {
-                alert("Errore di connessione al server:\n" + error.message); 
+                alert(error.message || 'Errore di connessione');
                 cambiaBottonePagamento();
                 btn.disabled = false;
             }

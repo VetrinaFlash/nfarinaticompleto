@@ -1,34 +1,15 @@
+import { adminIdentity } from '../_lib/auth.js';
 import { ensureWarehouseSchema } from '../_lib/warehouse.js';
 
 // Setup one-click del modulo magazzino: crea tabelle + seed (idempotente).
 // Protetto da sessione admin. Alternativa a: wrangler d1 execute --file=schema-magazzino.sql
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 
-async function verifyAdminSession(request, secret) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${ADMIN_COOKIE}=([^;]+)`));
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return false;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig && payload.startsWith('admin:');
-}
-
-async function sha256Hex(text) {
-  const data = new TextEncoder().encode(text);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
-}
+async function verifyAdminSession(request, env) { return !!(await adminIdentity(env, request)); }
 
 const STAFF_ACCOUNTS = [
-  { username: 'UCCELLO', password: 'UCCELLO', display_name: 'Uccello', role: 'staff' },
-  { username: 'GALICI', password: 'GALICI', display_name: 'Galici', role: 'staff' },
+  { username: 'UCCELLO', password_hash: '8551135fa91cf81e4cccf25dd80a8e3174361cd0eaa3fc732858aba4944ee164', display_name: 'Uccello', role: 'staff' },
+  { username: 'GALICI', password_hash: 'b85df3b605ac375292be1a597f60d61f8ac224bd06adce64731a8f43fc92e35c', display_name: 'Galici', role: 'staff' },
 ];
 
 // nome, reparto, fornitore — chiave univoca (nome, reparto)
@@ -101,7 +82,7 @@ const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin'
 
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifyAdminSession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -183,7 +164,7 @@ export async function onRequestPost(context) {
     );
     const userBinds = [];
     for (const acc of STAFF_ACCOUNTS) {
-      const hash = await sha256Hex(`nfarinati-staff:${acc.username}:${acc.password}`);
+      const hash = acc.password_hash;
       userBinds.push(userStmt.bind(acc.username, hash, acc.display_name, acc.role));
     }
     await env.DB.batch(userBinds);
@@ -203,7 +184,7 @@ export async function onRequestPost(context) {
 
     return new Response(JSON.stringify({ ok: true, users: counts.users, materials: counts.materials, suppliers: counts.suppliers }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

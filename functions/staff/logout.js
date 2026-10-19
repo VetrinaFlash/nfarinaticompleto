@@ -1,11 +1,3 @@
-const COOKIE_NAME = 'nfarinati_staff_session';
-
-export async function onRequestPost() {
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict`,
-    },
-  });
-}
+import { logout } from "../_lib/auth.js";
+export const onRequestPost = ({ env, request }) =>
+  logout(env, request, "staff");

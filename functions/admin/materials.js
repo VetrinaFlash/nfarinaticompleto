@@ -1,43 +1,11 @@
+import { adminIdentity } from '../_lib/auth.js';
 import { DEPARTMENTS, ensureWarehouseSchema } from '../_lib/warehouse.js';
 
 // Gestione anagrafica materie prime (solo admin): lista, aggiunta, modifica, disattivazione
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 const STAFF_COOKIE = 'nfarinati_staff_session';
 
-async function verifyHmacToken(token, secret) {
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return null;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig ? payload : null;
-}
-
-function getCookie(request, name) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
-async function isAdminAuthorized(request, secret) {
-  const adminToken = getCookie(request, ADMIN_COOKIE);
-  if (adminToken) {
-    const payload = await verifyHmacToken(adminToken, secret);
-    if (payload && payload.startsWith('admin:')) return true;
-  }
-  const staffToken = getCookie(request, STAFF_COOKIE);
-  if (staffToken) {
-    const payload = await verifyHmacToken(staffToken, secret);
-    if (payload) {
-      const parts = payload.split(':');
-      if (parts[0] === 'staff' && parts[2] === 'admin') return true;
-    }
-  }
-  return false;
-}
+async function isAdminAuthorized(request, env) { return !!(await adminIdentity(env, request)); }
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
@@ -53,13 +21,13 @@ async function migrateSchema(env) {
 function parsePrice(raw) {
   if (raw === null || raw === undefined || raw === '') return { ok: true, value: null };
   const n = parseFloat(raw);
-  if (!(n >= 0)) return { ok: false };
+  if (!Number.isFinite(n) || n < 0 || n > 1000000) return { ok: false };
   return { ok: true, value: n };
 }
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -70,13 +38,13 @@ export async function onRequestGet(context) {
     ).all();
     return new Response(JSON.stringify({ materials: rows.results }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -99,13 +67,13 @@ export async function onRequestPost(context) {
     ).bind(cleanName, department, cleanSupplier, price.value).run();
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 export async function onRequestPut(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -137,7 +105,7 @@ export async function onRequestPut(context) {
 // Disattivazione (soft-delete): lo storico ordini resta intatto
 export async function onRequestDelete(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await isAdminAuthorized(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -150,7 +118,7 @@ export async function onRequestDelete(context) {
     await env.DB.prepare('UPDATE raw_materials SET active = 0 WHERE id = ?').bind(id).run();
     return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

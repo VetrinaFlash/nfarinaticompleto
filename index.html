@@ -589,11 +589,20 @@
             const buttons = typeof s.homepage_buttons === 'string' ? JSON.parse(s.homepage_buttons) : s.homepage_buttons;
             if (Array.isArray(buttons) && buttons.length) {
               const container = document.getElementById('hero-actions');
-              container.innerHTML = buttons.map(b => {
-                const cls = b.style === 'primary' ? 'btn primary' : 'btn';
-                const icon = b.icon ? `<i class="${b.icon}"></i> ` : '';
-                return `<a class="${cls}" href="${b.link}">${icon}${b.text}</a>`;
-              }).join('');
+              container.replaceChildren();
+              buttons.forEach(b => {
+                const link = document.createElement('a');
+                let target;
+                try { target = new URL(String(b.link || ''), location.href); } catch { return; }
+                if (!['http:', 'https:', 'tel:', 'mailto:'].includes(target.protocol)) return;
+                link.className = b.style === 'primary' ? 'btn primary' : 'btn';
+                link.href = target.href;
+                if (typeof b.icon === 'string' && /^[a-zA-Z0-9 _-]{1,100}$/.test(b.icon)) {
+                  const icon = document.createElement('i'); icon.className = b.icon; link.append(icon, ' ');
+                }
+                link.append(document.createTextNode(String(b.text || '')));
+                container.append(link);
+              });
             }
           } catch {}
         }

@@ -1,30 +1,17 @@
+import { adminIdentity } from '../_lib/auth.js';
 import { menuPrices } from '../_lib/menu-prices.js';
 
 // CRUD menu admin (categorie e prodotti)
 const COOKIE_NAME = 'nfarinati_admin_session';
 
-async function verifySession(request, secret) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${COOKIE_NAME}=([^;]+)`));
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return false;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig;
-}
+async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
 
 const cors = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
 
 // GET: lista completa categorie e prodotti
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifySession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -34,14 +21,14 @@ export async function onRequestGet(context) {
     const prods = await env.DB.prepare('SELECT * FROM products ORDER BY category_id, sort_order ASC').all();
     return new Response(JSON.stringify({ categories: cats.results, products: prods.results }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 // POST: crea o aggiorna categoria/prodotto, o elimina (action nel body)
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifySession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -91,7 +78,7 @@ export async function onRequestPost(context) {
       }
       let pricing;
       try { pricing = menuPrices(price, prezzi_json, prezzi_json !== undefined); }
-      catch (err) { return new Response(JSON.stringify({ error: err.message }), { status: 400, headers: cors }); }
+      catch (err) { return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 400, headers: cors }); }
       const result = await env.DB.prepare(`
         INSERT INTO products (category_id, name, description, price, image_url, active, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json)
         VALUES (?,?,?,?,?,1,?,?,?,?,?)
@@ -123,7 +110,7 @@ export async function onRequestPost(context) {
         pricing = menuPrices(price !== undefined ? price : current.price,
           prezzi_json !== undefined ? prezzi_json : current.prezzi_json, prezzi_json !== undefined);
       } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), { status: 400, headers: cors });
+        return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 400, headers: cors });
       }
       const safeCategoryId = (category_id && String(category_id).trim()) ? category_id : current.category_id;
       await env.DB.prepare(`
@@ -150,7 +137,7 @@ export async function onRequestPost(context) {
 
     return new Response(JSON.stringify({ error: 'Azione non valida' }), { status: 400, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

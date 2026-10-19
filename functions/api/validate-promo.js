@@ -9,7 +9,7 @@ export async function onRequestPost(context) {
   try {
     const { code, subtotal } = await request.json();
 
-    if (!code || !code.trim()) {
+    if (typeof code !== 'string' || code.length > 80 || !code.trim() || !Number.isFinite(Number(subtotal)) || Number(subtotal) < 0 || Number(subtotal) > 100000) {
       return new Response(JSON.stringify({ valid: false, error: 'Codice non inserito' }), { status: 400, headers: cors });
     }
 
@@ -38,7 +38,7 @@ export async function onRequestPost(context) {
       discountAmount,
     }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ valid: false, error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ valid: false, error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 

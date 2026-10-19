@@ -1,3 +1,4 @@
+import { adminIdentity } from '../_lib/auth.js';
 // Ripristino una tantum: alcuni prodotti hanno perso la categoria (per un bug
 // nel form admin che inviava category_id come numero invece che come testo,
 // azzerandola a NULL e facendoli sparire dal menu pubblico) e/o le loro
@@ -9,21 +10,7 @@
 // stato attivo, che restano quelli attuali.
 const ADMIN_COOKIE = 'nfarinati_admin_session';
 
-async function verifySession(request, secret) {
-  const cookieHeader = request.headers.get('Cookie') || '';
-  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${ADMIN_COOKIE}=([^;]+)`));
-  if (!match) return false;
-  const token = decodeURIComponent(match[1]);
-  const lastDot = token.lastIndexOf('.');
-  if (lastDot === -1) return false;
-  const payload = token.substring(0, lastDot);
-  const sig = token.substring(lastDot + 1);
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey('raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const expectedSig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-  const expectedHex = [...new Uint8Array(expectedSig)].map(b => b.toString(16).padStart(2, '0')).join('');
-  return expectedHex === sig;
-}
+async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
 
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
@@ -59,7 +46,7 @@ function diagnose(p, ref) {
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifySession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -90,13 +77,13 @@ export async function onRequestGet(context) {
       })),
     }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env.ADMIN_TOKEN_SECRET || 'default-dev-secret-change-in-prod';
+  const secret = env;
   if (!(await verifySession(request, secret))) {
     return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
   }
@@ -133,7 +120,7 @@ export async function onRequestPost(context) {
 
     return new Response(JSON.stringify({ ok: true, restored_count: restored.length, restored }), { status: 200, headers: cors });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
   }
 }
 
