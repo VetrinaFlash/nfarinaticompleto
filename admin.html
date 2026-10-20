@@ -459,10 +459,10 @@
       <div class="nav-item" data-section="settings" onclick="goTo('settings')">
         <i class="fa-solid fa-sliders"></i> Impostazioni
       </div>
-      <div class="nav-item" data-section="magazzino" onclick="goTo('magazzino'); loadMagazzinoFrame()">
+      <a class="nav-item" href="admin-magazzino.html" style="text-decoration:none">
         <i class="fa-solid fa-boxes-stacked"></i> Magazzino
         <span class="badge" id="magazzino-badge" style="display:none">0</span>
-      </div>
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
@@ -687,12 +687,6 @@
         <button class="cucina-refresh" onclick="cucinaLoad(true)"><i class="fa-solid fa-rotate"></i> Aggiorna</button>
       </div>
       <div class="cucina-grid" id="cucina-grid"><div class="cucina-empty">Caricamento...</div></div>
-    </section>
-
-    <!-- MAGAZZINO (modulo ordini materie prime, pagina incorporata) -->
-    <section id="section-magazzino" class="section">
-      <iframe id="magazzino-frame" title="Ordini Magazzino"
-        style="width:100%;height:calc(100vh - 48px);border:none;border-radius:14px;background:var(--bg);display:block;"></iframe>
     </section>
 
   </main>
@@ -2010,13 +2004,8 @@ async function repairMenuOptions() {
 </script>
 <script>
 /* Modulo Magazzino: badge + notifica (toast e suono, come per gli ordini
-   clienti) quando arriva un nuovo ordine materie prime, e caricamento lazy
-   della sezione incorporata.
+   clienti) quando arriva un nuovo ordine materie prime.
    Script autonomo: non interagisce con la logica esistente della pagina. */
-function loadMagazzinoFrame() {
-  const frame = document.getElementById('magazzino-frame');
-  if (frame && !frame.src) frame.src = 'admin-magazzino.html';
-}
 (function () {
   let lastPending = null; // null = primo rilevamento, non notificare
 
