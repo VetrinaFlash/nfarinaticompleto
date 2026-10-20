@@ -5,6 +5,24 @@ const STAFF_COOKIE = 'nfarinati_staff_session';
 
 async function isAdminAuthorized(request, env) { return !!(await adminIdentity(env, request)); }
 
+// Colonne per le rettifiche admin: aggiunte in corsa sui DB già inizializzati (idempotente).
+// Questa migrazione era presente prima del security refactor ed è necessaria perché
+// GET/edit usano queste colonne anche sui database creati con una versione precedente.
+async function migrateSchema(env) {
+  const alters = [
+    'ALTER TABLE supply_order_items ADD COLUMN original_quantity REAL',
+    'ALTER TABLE supply_order_items ADD COLUMN removed INTEGER DEFAULT 0',
+    'ALTER TABLE supply_order_items ADD COLUMN added_by_admin INTEGER DEFAULT 0',
+    'ALTER TABLE supply_orders ADD COLUMN modified INTEGER DEFAULT 0',
+    'ALTER TABLE supply_orders ADD COLUMN modified_at TEXT',
+    'ALTER TABLE supply_orders ADD COLUMN is_draft INTEGER DEFAULT 0',
+    'ALTER TABLE raw_materials ADD COLUMN default_price REAL',
+  ];
+  for (const sql of alters) {
+    try { await env.DB.prepare(sql).run(); } catch (e) { /* colonna già presente */ }
+  }
+}
+
 const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
 
 export async function onRequestGet(context) {
