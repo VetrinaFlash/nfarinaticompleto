@@ -1,143 +1,309 @@
 import { adminIdentity } from '../_lib/auth.js';
 import { menuPrices } from '../_lib/menu-prices.js';
 
-// CRUD menu admin (categorie e prodotti)
-const COOKIE_NAME = 'nfarinati_admin_session';
+async function verifySession(request, env) {
+  return !!(await adminIdentity(env, request));
+}
 
-async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
+const cors = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'Access-Control-Allow-Origin': '*',
+};
 
-const cors = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' };
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), { status, headers: cors });
+}
 
-// GET: lista completa categorie e prodotti
+function cleanText(value, max = 5000) {
+  return String(value ?? '').trim().slice(0, max);
+}
+
+function categoryId(value) {
+  const id = cleanText(value, 120);
+  return id || null;
+}
+
+function productId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function integerOr(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isInteger(n) ? n : fallback;
+}
+
+function flag(value, fallback = 1) {
+  if (value === undefined || value === null) return fallback ? 1 : 0;
+  return value === true || value === 1 || value === '1' || value === 'true' ? 1 : 0;
+}
+
+function jsonObjectText(value, fallback = '{}') {
+  if (value === undefined) return fallback;
+  let parsed = value;
+  if (typeof value === 'string') {
+    try { parsed = JSON.parse(value || '{}'); }
+    catch { throw new Error('Configurazione opzioni non valida'); }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Configurazione opzioni non valida');
+  }
+  return JSON.stringify(parsed);
+}
+
+async function getCategory(env, id) {
+  return id
+    ? await env.DB.prepare('SELECT * FROM categories WHERE id = ?').bind(id).first()
+    : null;
+}
+
+async function getProduct(env, id) {
+  return id
+    ? await env.DB.prepare('SELECT * FROM products WHERE id = ?').bind(id).first()
+    : null;
+}
+
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env;
-  if (!(await verifySession(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  if (!(await verifySession(request, env))) {
+    return json({ error: 'Non autorizzato' }, 401);
   }
 
   try {
-    const cats = await env.DB.prepare('SELECT * FROM categories ORDER BY sort_order ASC').all();
-    const prods = await env.DB.prepare('SELECT * FROM products ORDER BY category_id, sort_order ASC').all();
-    return new Response(JSON.stringify({ categories: cats.results, products: prods.results }), { status: 200, headers: cors });
+    const cats = await env.DB.prepare(
+      'SELECT * FROM categories ORDER BY sort_order ASC, name ASC'
+    ).all();
+    const prods = await env.DB.prepare(
+      'SELECT * FROM products ORDER BY category_id, sort_order ASC, id ASC'
+    ).all();
+
+    return json({
+      categories: cats.results || [],
+      products: prods.results || [],
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
+    console.error('Admin menu GET failed', err?.name, err?.message);
+    return json({ error: 'Operazione non riuscita' }, 500);
   }
 }
 
-// POST: crea o aggiorna categoria/prodotto, o elimina (action nel body)
 export async function onRequestPost(context) {
   const { env, request } = context;
-  const secret = env;
-  if (!(await verifySession(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  if (!(await verifySession(request, env))) {
+    return json({ error: 'Non autorizzato' }, 401);
   }
 
   try {
     const body = await request.json();
-    const { action } = body;
+    const action = cleanText(body?.action, 60);
 
     if (action === 'create_category') {
-      const { id, name, icon, sort_order } = body;
-      if (!name) return new Response(JSON.stringify({ error: 'name obbligatorio' }), { status: 400, headers: cors });
-      const autoId = id || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now();
-      await env.DB.prepare('INSERT INTO categories (id, name, icon, sort_order, active) VALUES (?,?,?,?,1)')
-        .bind(autoId, name, icon || '🍴', sort_order || 0).run();
-      return new Response(JSON.stringify({ ok: true, id: autoId }), { status: 200, headers: cors });
+      const name = cleanText(body.name, 120);
+      if (!name) return json({ error: 'Nome categoria obbligatorio' }, 400);
+
+      const suppliedId = categoryId(body.id);
+      const slug = name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 70) || 'categoria';
+      const id = suppliedId || `${slug}-${Date.now()}`;
+
+      if (await getCategory(env, id)) {
+        return json({ error: 'Esiste già una categoria con questo ID' }, 409);
+      }
+
+      await env.DB.prepare(
+        'INSERT INTO categories (id, name, icon, sort_order, active) VALUES (?,?,?,?,1)'
+      ).bind(
+        id,
+        name,
+        cleanText(body.icon || '🍴', 20) || '🍴',
+        integerOr(body.sort_order, 0),
+      ).run();
+
+      return json({ ok: true, id });
     }
 
     if (action === 'update_category') {
-      const { id, name, icon, sort_order, active } = body;
-      // Il form categoria invia solo nome e ordine: icona e stato attivo, quando
-      // non arrivano nella richiesta, vanno mantenuti com'erano (altrimenti ogni
-      // rinomina resetterebbe l'icona a quella generica).
-      const current = await env.DB.prepare('SELECT icon, active FROM categories WHERE id = ?').bind(id).first();
-      if (!current) {
-        return new Response(JSON.stringify({ error: 'Categoria non trovata' }), { status: 404, headers: cors });
-      }
-      await env.DB.prepare('UPDATE categories SET name=?, icon=?, sort_order=?, active=? WHERE id=?')
-        .bind(
-          name,
-          icon !== undefined ? icon : current.icon,
-          sort_order || 0,
-          active !== undefined ? active : current.active,
-          id
-        ).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+      const id = categoryId(body.id);
+      if (!id) return json({ error: 'ID categoria non valido' }, 400);
+
+      const current = await getCategory(env, id);
+      if (!current) return json({ error: 'Categoria non trovata' }, 404);
+
+      const name = body.name === undefined ? current.name : cleanText(body.name, 120);
+      if (!name) return json({ error: 'Nome categoria obbligatorio' }, 400);
+
+      await env.DB.prepare(
+        'UPDATE categories SET name=?, icon=?, sort_order=?, active=? WHERE id=?'
+      ).bind(
+        name,
+        body.icon !== undefined ? (cleanText(body.icon, 20) || '🍴') : current.icon,
+        body.sort_order !== undefined ? integerOr(body.sort_order, current.sort_order || 0) : (current.sort_order || 0),
+        flag(body.active, current.active),
+        id,
+      ).run();
+
+      return json({ ok: true, id });
     }
 
     if (action === 'delete_category') {
-      await env.DB.prepare('UPDATE categories SET active = 0 WHERE id = ?').bind(body.id).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+      const id = categoryId(body.id);
+      if (!id) return json({ error: 'ID categoria non valido' }, 400);
+
+      const current = await getCategory(env, id);
+      if (!current) return json({ error: 'Categoria non trovata' }, 404);
+
+      const countRow = await env.DB.prepare(
+        'SELECT COUNT(*) AS total FROM products WHERE category_id = ?'
+      ).bind(id).first();
+      const productCount = Number(countRow?.total || 0);
+
+      if (productCount > 0 && body.delete_products !== true) {
+        return json({
+          error: `La categoria contiene ${productCount} prodotti. Conferma anche l'eliminazione dei prodotti.`,
+          product_count: productCount,
+        }, 409);
+      }
+
+      if (productCount > 0) {
+        await env.DB.batch([
+          env.DB.prepare('DELETE FROM products WHERE category_id = ?').bind(id),
+          env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id),
+        ]);
+      } else {
+        await env.DB.prepare('DELETE FROM categories WHERE id = ?').bind(id).run();
+      }
+
+      return json({ ok: true, id, deleted_products: productCount });
     }
 
     if (action === 'create_product') {
-      const { category_id, name, description, price, image_url, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json } = body;
-      if (!category_id || !name || price === undefined) {
-        return new Response(JSON.stringify({ error: 'category_id, name e price obbligatori' }), { status: 400, headers: cors });
+      const catId = categoryId(body.category_id);
+      const name = cleanText(body.name, 180);
+      if (!catId || !name || body.price === undefined) {
+        return json({ error: 'Categoria, nome e prezzo sono obbligatori' }, 400);
       }
+
+      if (!(await getCategory(env, catId))) {
+        return json({ error: 'Categoria non trovata' }, 400);
+      }
+
       let pricing;
-      try { pricing = menuPrices(price, prezzi_json, prezzi_json !== undefined); }
-      catch (err) { return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 400, headers: cors }); }
+      let optionsJson;
+      let multiOptionsJson;
+      try {
+        pricing = menuPrices(body.price, body.prezzi_json, body.prezzi_json !== undefined);
+        optionsJson = jsonObjectText(body.options_json, '{}');
+        multiOptionsJson = jsonObjectText(body.multi_options_json, '{}');
+      } catch (err) {
+        return json({ error: err.message || 'Dati prodotto non validi' }, 400);
+      }
+
       const result = await env.DB.prepare(`
-        INSERT INTO products (category_id, name, description, price, image_url, active, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json)
-        VALUES (?,?,?,?,?,1,?,?,?,?,?)
+        INSERT INTO products (
+          category_id, name, description, price, image_url, active,
+          mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json
+        )
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
       `).bind(
-        category_id, name, description || '', pricing.price, image_url || '',
-        mandatory_choice ? 1 : 0, sort_order || 0,
+        catId,
+        name,
+        cleanText(body.description, 5000),
+        pricing.price,
+        cleanText(body.image_url, 2000),
+        flag(body.active, 1),
+        flag(body.mandatory_choice, 0),
+        integerOr(body.sort_order, 0),
         pricing.prezzi_json,
-        options_json || '{}',
-        multi_options_json || '{}'
+        optionsJson,
+        multiOptionsJson,
       ).run();
-      return new Response(JSON.stringify({ ok: true, id: result.meta.last_row_id }), { status: 200, headers: cors });
+
+      return json({ ok: true, id: result.meta.last_row_id });
     }
 
     if (action === 'update_product') {
-      const { id, category_id, name, description, price, image_url, mandatory_choice, active, sort_order, prezzi_json, options_json, multi_options_json } = body;
-      // Il form semplice dell'admin invia solo nome/descrizione/prezzo/foto/categoria/attivo:
-      // le varianti di formato e le scelte obbligatorie, quando non arrivano nella richiesta,
-      // vanno mantenute com'erano — altrimenti ogni modifica le azzererebbe silenziosamente.
-      const current = await env.DB.prepare(
-        'SELECT category_id, price, mandatory_choice, sort_order, prezzi_json, options_json, multi_options_json FROM products WHERE id = ?'
-      ).bind(id).first();
-      if (!current) {
-        return new Response(JSON.stringify({ error: 'Prodotto non trovato' }), { status: 404, headers: cors });
+      const id = productId(body.id);
+      if (!id) return json({ error: 'ID prodotto non valido' }, 400);
+
+      const current = await getProduct(env, id);
+      if (!current) return json({ error: 'Prodotto non trovato' }, 404);
+
+      const catId = body.category_id !== undefined
+        ? categoryId(body.category_id)
+        : current.category_id;
+      if (!catId || !(await getCategory(env, catId))) {
+        return json({ error: 'Categoria non trovata' }, 400);
       }
-      // category_id è un id testuale (es. "pizze-americane"): se arriva vuoto/mancante
-      // si tiene quello attuale, per non "orfanizzare" il prodotto (spariva dal menu).
+
+      const name = body.name === undefined ? current.name : cleanText(body.name, 180);
+      if (!name) return json({ error: 'Nome prodotto obbligatorio' }, 400);
+
       let pricing;
+      let optionsJson;
+      let multiOptionsJson;
       try {
-        pricing = menuPrices(price !== undefined ? price : current.price,
-          prezzi_json !== undefined ? prezzi_json : current.prezzi_json, prezzi_json !== undefined);
+        pricing = menuPrices(
+          body.price !== undefined ? body.price : current.price,
+          body.prezzi_json !== undefined ? body.prezzi_json : current.prezzi_json,
+          body.prezzi_json !== undefined,
+        );
+        optionsJson = jsonObjectText(
+          body.options_json,
+          current.options_json || '{}',
+        );
+        multiOptionsJson = jsonObjectText(
+          body.multi_options_json,
+          current.multi_options_json || '{}',
+        );
       } catch (err) {
-        return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 400, headers: cors });
+        return json({ error: err.message || 'Dati prodotto non validi' }, 400);
       }
-      const safeCategoryId = (category_id && String(category_id).trim()) ? category_id : current.category_id;
+
       await env.DB.prepare(`
-        UPDATE products SET category_id=?, name=?, description=?, price=?, image_url=?,
-          mandatory_choice=?, active=?, sort_order=?, prezzi_json=?, options_json=?, multi_options_json=?
+        UPDATE products SET
+          category_id=?, name=?, description=?, price=?, image_url=?,
+          mandatory_choice=?, active=?, sort_order=?, prezzi_json=?,
+          options_json=?, multi_options_json=?
         WHERE id=?
       `).bind(
-        safeCategoryId, name, description || '', pricing.price, image_url || '',
-        mandatory_choice !== undefined ? (mandatory_choice ? 1 : 0) : current.mandatory_choice,
-        active !== undefined ? active : 1,
-        sort_order !== undefined ? sort_order : current.sort_order,
+        catId,
+        name,
+        body.description !== undefined ? cleanText(body.description, 5000) : current.description,
+        pricing.price,
+        body.image_url !== undefined ? cleanText(body.image_url, 2000) : current.image_url,
+        body.mandatory_choice !== undefined ? flag(body.mandatory_choice, current.mandatory_choice) : current.mandatory_choice,
+        body.active !== undefined ? flag(body.active, current.active) : current.active,
+        body.sort_order !== undefined ? integerOr(body.sort_order, current.sort_order || 0) : (current.sort_order || 0),
         pricing.prezzi_json,
-        options_json !== undefined ? options_json : current.options_json,
-        multi_options_json !== undefined ? multi_options_json : current.multi_options_json,
-        id
+        optionsJson,
+        multiOptionsJson,
+        id,
       ).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+
+      return json({ ok: true, id });
     }
 
     if (action === 'delete_product') {
-      await env.DB.prepare('UPDATE products SET active = 0 WHERE id = ?').bind(body.id).run();
-      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+      const id = productId(body.id);
+      if (!id) return json({ error: 'ID prodotto non valido' }, 400);
+
+      const current = await getProduct(env, id);
+      if (!current) return json({ error: 'Prodotto non trovato' }, 404);
+
+      await env.DB.prepare('DELETE FROM products WHERE id = ?').bind(id).run();
+      return json({ ok: true, id, name: current.name });
     }
 
-    return new Response(JSON.stringify({ error: 'Azione non valida' }), { status: 400, headers: cors });
+    return json({ error: 'Azione non valida' }, 400);
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
+    console.error('Admin menu POST failed', err?.name, err?.message);
+    return json({ error: 'Operazione non riuscita' }, 500);
   }
 }
 

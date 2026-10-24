@@ -4,7 +4,7 @@ Existing account usernames and passwords are retained at the owner's request. Th
 
 ## Authentication
 
-Legacy HMAC cookies and the public development signing key are no longer accepted. Sessions now use 256-bit random tokens, stored only as SHA-256 digests in D1, with a server-enforced 12-hour lifetime. Logout deletes the server session. Staff status and role are read on every request. All administrative APIs use the same authorization helper; middleware also protects the route families.
+Legacy HMAC cookies and the public development signing key are no longer accepted. Sessions now use 256-bit random tokens, stored only as SHA-256 digests in D1, with a persistent trusted-device lifetime (365 days, automatically renewed on active devices). Logout deletes the server session. Staff status and role are read on every request. All administrative APIs use the same authorization helper; middleware also protects the route families.
 
 The existing administrator password is represented by a salted PBKDF2 verifier. Staff passwords migrate from the legacy format to salted PBKDF2 after a successful login, preserving the password. Web Crypto uses 100,000 PBKDF2-SHA256 iterations, compatible with the deployed Workers runtime. This is a runtime-compatible improvement, not a claim of meeting the higher current OWASP password-work-factor recommendation. Credential changes and MFA remain recommended separately.
 

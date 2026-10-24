@@ -327,18 +327,64 @@
     .chart-wrap { position: relative; height: 220px; }
 
     /* ── MENU SECTION ── */
-    .menu-layout { display: grid; grid-template-columns: 200px 1fr; gap: 16px; }
+    .menu-layout { display: grid; grid-template-columns: 220px 1fr; gap: 16px; }
     .cat-list { display: flex; flex-direction: column; gap: 4px; }
     .cat-item {
-      padding: 9px 12px; border-radius: 8px;
+      padding: 8px 9px; border-radius: 8px;
       font-size: .8rem; font-weight: 600;
       cursor: pointer; color: var(--muted);
       transition: background .2s, color .2s;
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; gap: 8px;
+      min-width: 0;
     }
     .cat-item:hover { background: rgba(255,255,255,.05); color: var(--text); }
     .cat-item.active { background: rgba(184,134,11,.12); color: var(--gold); }
+    .cat-item-name { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cat-item-actions { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; }
     .cat-item .count { font-size: .65rem; background: rgba(255,255,255,.08); padding: 2px 6px; border-radius: 999px; }
+    .cat-action {
+      width: 25px; height: 25px; padding: 0;
+      display: inline-flex; align-items: center; justify-content: center;
+      border: 1px solid var(--border); border-radius: 7px;
+      background: rgba(255,255,255,.04); color: var(--muted);
+      font-size: .67rem; transition: .2s;
+    }
+    .cat-action:hover { color: var(--text); background: rgba(255,255,255,.1); }
+    .cat-action.danger { color: #ef5350; border-color: rgba(211,47,47,.2); }
+    .cat-action.danger:hover { color: #fff; background: var(--red); border-color: var(--red); }
+
+    .variant-editor {
+      margin: 4px 0 14px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,.025);
+    }
+    .variant-editor-title {
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-bottom:10px;
+      font-size:.72rem; font-weight:800; text-transform:uppercase;
+      letter-spacing:.7px; color:var(--gold);
+    }
+    .variant-row {
+      display:grid; grid-template-columns:minmax(0,1fr) minmax(100px,140px) 34px;
+      gap:8px; align-items:end; margin-bottom:8px;
+    }
+    .variant-row.base { grid-template-columns:minmax(0,1fr); }
+    .variant-row .form-group { margin-bottom:0; }
+    .variant-remove {
+      height:38px; width:34px; padding:0;
+      border:1px solid rgba(211,47,47,.3); border-radius:8px;
+      background:rgba(211,47,47,.08); color:#ef5350;
+    }
+    .variant-remove:hover { background:var(--red); color:#fff; }
+    .variant-add { width:100%; justify-content:center; margin-top:3px; }
+    .variant-hint { font-size:.68rem; color:var(--muted); line-height:1.45; margin:4px 0 8px; }
+
+    @media(max-width:560px) {
+      .variant-row { grid-template-columns:1fr 105px 34px; }
+    }
+
 
     /* ── SETTINGS ── */
     .settings-section { margin-bottom: 28px; }
@@ -892,7 +938,7 @@ async function doLogin(e) {
   const errEl = document.getElementById('login-err');
   btn.textContent = 'Accesso…'; btn.disabled = true; errEl.textContent = '';
   try {
-    const res = await fetch('/admin/login', {
+    const res = await window.__nfarinatiAdminNativeFetch('/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -902,6 +948,7 @@ async function doLogin(e) {
     });
     const data = await res.json();
     if (res.ok && data.ok) {
+      try { localStorage.setItem('nfarinati_admin_trusted_v2', '1'); } catch {}
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       startApp();
@@ -916,17 +963,73 @@ async function doLogin(e) {
 }
 
 async function doLogout() {
-  await fetch('/admin/logout', { method: 'POST' });
-  location.reload();
+  try { localStorage.removeItem('nfarinati_admin_trusted_v2'); } catch {}
+  try {
+    await window.__nfarinatiAdminNativeFetch('/admin/logout', { method: 'POST' });
+  } finally {
+    location.reload();
+  }
 }
 
 async function checkAuth() {
+  let trusted = false;
+  try { trusted = localStorage.getItem('nfarinati_admin_trusted_v2') === '1'; } catch {}
   try {
-    const res = await fetch('/admin/check');
+    const res = await window.__nfarinatiAdminNativeFetch('/admin/check', { cache: 'no-store' });
     const data = await res.json();
-    return data.authenticated === true;
-  } catch { return false; }
+    if (data.authenticated === true) {
+      try { localStorage.setItem('nfarinati_admin_trusted_v2', '1'); } catch {}
+      return true;
+    }
+  } catch {}
+  if (trusted) {
+    const errEl = document.getElementById('login-err');
+    if (errEl) errEl.textContent = 'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  }
+  return false;
 }
+
+// NFARINATI_PERSISTENT_AUTH_V3
+window.__nfarinatiAdminNativeFetch = window.fetch.bind(window);
+let __adminExpiryHandling = false;
+
+function adminRequestPath(input) {
+  try {
+    const raw = input instanceof Request ? input.url : String(input || '');
+    return new URL(raw, location.href).pathname;
+  } catch {
+    return '';
+  }
+}
+
+async function forceAdminRelogin() {
+  if (__adminExpiryHandling) return;
+  __adminExpiryHandling = true;
+  try {
+    await window.__nfarinatiAdminNativeFetch('/admin/logout', { method: 'POST' });
+  } catch {}
+  const app = document.getElementById('app');
+  const login = document.getElementById('login-screen');
+  const err = document.getElementById('login-err');
+  if (app) app.style.display = 'none';
+  if (login) login.style.display = 'flex';
+  if (err) err.textContent = 'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  __adminExpiryHandling = false;
+}
+
+window.fetch = async (...args) => {
+  const res = await window.__nfarinatiAdminNativeFetch(...args);
+  const path = adminRequestPath(args[0]);
+  if (
+    res.status === 401 &&
+    path.startsWith('/admin/') &&
+    !['/admin/login', '/admin/check', '/admin/logout'].includes(path)
+  ) {
+    void forceAdminRelogin();
+  }
+  return res;
+};
+
 
 // ════════════════════════════════════════════════
 //  NAVIGATION
@@ -1224,49 +1327,89 @@ async function checkNewOrders() {
 // ════════════════════════════════════════════════
 //  MENU
 // ════════════════════════════════════════════════
+// NFARINATI_MENU_EDITOR_V3
 async function loadMenu() {
   try {
     const res = await fetch('/admin/menu', { cache: 'no-store' });
-    if (!res.ok) return;
-    const d = await res.json();
-    menuData = d;
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      notify(d.error || `Errore caricamento menù (${res.status})`, 'err');
+      return;
+    }
 
-    // Sidebar categories
+    menuData = {
+      categories: Array.isArray(d.categories) ? d.categories : [],
+      products: Array.isArray(d.products) ? d.products : []
+    };
+
+    if (
+      selectedCatId !== null &&
+      !menuData.categories.some(c => String(c.id) === String(selectedCatId))
+    ) selectedCatId = null;
+
     const catList = document.getElementById('cat-list');
-    catList.innerHTML = `<div class="cat-item ${selectedCatId===null?'active':''}" onclick="filterByCat(null)">Tutte <span class="count">${d.products.length}</span></div>`;
-    d.categories.forEach(c => {
-      const count = d.products.filter(p => p.category_id === c.id).length;
-      catList.innerHTML += `
-        <div class="cat-item ${selectedCatId===c.id?'active':''}" onclick="filterByCat(decodeURIComponent(this.dataset.categoryId))" data-category-id="${encodeURIComponent(c.id)}">
-          ${esc(c.name)} <span class="count">${count}</span>
-        </div>`;
+    catList.innerHTML = `
+      <div class="cat-item ${selectedCatId===null?'active':''}" onclick="filterByCat(null, this)">
+        <span class="cat-item-name">Tutte</span>
+        <span class="cat-item-actions"><span class="count">${menuData.products.length}</span></span>
+      </div>`;
+
+    menuData.categories.forEach(c => {
+      const encodedId = encodeURIComponent(String(c.id));
+      const count = menuData.products.filter(
+        p => String(p.category_id) === String(c.id)
+      ).length;
+      catList.insertAdjacentHTML('beforeend', `
+        <div class="cat-item ${String(selectedCatId)===String(c.id)?'active':''}"
+             onclick="filterByCat(decodeURIComponent(this.dataset.categoryId), this)"
+             data-category-id="${encodedId}">
+          <span class="cat-item-name">${esc(c.name)}</span>
+          <span class="cat-item-actions">
+            <span class="count">${count}</span>
+            <button type="button" class="cat-action" title="Modifica categoria"
+                    data-category-id="${encodedId}"
+                    onclick="event.stopPropagation(); openCatModal(decodeURIComponent(this.dataset.categoryId));">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button type="button" class="cat-action danger" title="Elimina categoria"
+                    data-category-id="${encodedId}"
+                    onclick="event.stopPropagation(); deleteCategory(decodeURIComponent(this.dataset.categoryId));">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </span>
+        </div>`);
     });
 
     renderProducts();
 
-    // Populate category select in product modal
     const sel = document.getElementById('pm-cat');
-    sel.innerHTML = d.categories.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
-  } catch(e) { console.error(e); }
+    sel.innerHTML = menuData.categories
+      .map(c => `<option value="${String(c.id).replace(/"/g, '&quot;')}">${esc(c.name)}</option>`)
+      .join('');
+  } catch(e) {
+    console.error(e);
+    notify('Errore di rete durante il caricamento del menù', 'err');
+  }
 }
 
-function filterByCat(catId) {
+function filterByCat(catId, element) {
   selectedCatId = catId;
   document.querySelectorAll('.cat-item').forEach(el => el.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  if (element) element.classList.add('active');
   document.getElementById('menu-cat-title').textContent = catId
-    ? (menuData.categories.find(c => c.id === catId)?.name || '')
+    ? (menuData.categories.find(c => String(c.id) === String(catId))?.name || '')
     : 'Tutti i prodotti';
   renderProducts();
 }
 
 function renderProducts() {
   const products = selectedCatId
-    ? menuData.products.filter(p => p.category_id === selectedCatId)
+    ? menuData.products.filter(p => String(p.category_id) === String(selectedCatId))
     : menuData.products;
+
   const tbody = document.querySelector('#menu-products-table tbody');
   tbody.innerHTML = products.map(p => {
-    const cat = menuData.categories.find(c => c.id === p.category_id);
+    const cat = menuData.categories.find(c => String(c.id) === String(p.category_id));
     const price = '€' + Number(p.price).toFixed(2);
     return `<tr>
       <td>${esc(p.name)}</td>
@@ -1274,8 +1417,14 @@ function renderProducts() {
       <td>${price}</td>
       <td><span class="badge ${p.active ? 'pronto' : 'consegnato'}">${p.active ? 'Sì' : 'No'}</span></td>
       <td style="display:flex;gap:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="editProduct(${p.id})"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn btn-red btn-sm" onclick="deleteProduct(${p.id})"><i class="fa-solid fa-trash"></i></button>
+        <button class="btn btn-ghost btn-sm" data-product-id="${esc(p.id)}"
+                onclick="editProduct(this.dataset.productId)" title="Modifica prodotto">
+          <i class="fa-solid fa-pen"></i>
+        </button>
+        <button class="btn btn-red btn-sm" data-product-id="${esc(p.id)}"
+                onclick="deleteProduct(this.dataset.productId)" title="Elimina prodotto">
+          <i class="fa-solid fa-trash"></i>
+        </button>
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Nessun prodotto</td></tr>';
@@ -1283,105 +1432,300 @@ function renderProducts() {
 
 let productPriceVariants = [];
 
+function editorVariantName(index) {
+  const el = document.getElementById('pm-variant-name-' + index);
+  return el ? el.value.trim() : String(productPriceVariants[index]?.variante || '').trim();
+}
+
+function editorVariantPrice(index) {
+  if (index === 0) {
+    const value = document.getElementById('pm-price').value.trim();
+    return value === '' ? NaN : Number(value.replace(',', '.'));
+  }
+  const el = document.getElementById('pm-variant-price-' + index);
+  if (!el || !el.value.trim()) return NaN;
+  return Number(el.value.trim().replace(',', '.'));
+}
+
+function renderVariantEditor() {
+  if (!productPriceVariants.length) productPriceVariants = [{ prezzo: '', variante: '' }];
+
+  const baseName = String(productPriceVariants[0]?.variante || '');
+  document.getElementById('pm-price-label').textContent =
+    baseName.trim() ? `Prezzo ${baseName.trim()} (€)` : 'Prezzo base (€)';
+
+  const box = document.getElementById('pm-variant-prices');
+  box.innerHTML = `
+    <div class="variant-editor">
+      <div class="variant-editor-title">
+        <span>Formati / variazioni articolo</span>
+        <span style="font-size:.62rem;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0">
+          puoi aggiungere o eliminare formati
+        </span>
+      </div>
+      <div class="variant-hint">
+        Esempio: per le Pizze Dessert puoi lasciare solo “Piccola” eliminando le altre righe.
+        Se c’è un solo formato il cliente non dovrà sceglierlo.
+      </div>
+      <div class="variant-row base">
+        <div class="form-group">
+          <label>Nome formato base (opzionale)</label>
+          <input type="text" id="pm-variant-name-0" maxlength="80"
+                 value="${esc(baseName)}"
+                 placeholder="Es. Piccola"
+                 oninput="productPriceVariants[0].variante=this.value; document.getElementById('pm-price-label').textContent=this.value.trim()?('Prezzo '+this.value.trim()+' (€)'):'Prezzo base (€)'">
+        </div>
+      </div>
+      ${productPriceVariants.slice(1).map((variant, offset) => {
+        const index = offset + 1;
+        const name = String(variant?.variante || '');
+        const price = Number(variant?.prezzo);
+        return `
+          <div class="variant-row">
+            <div class="form-group">
+              <label>Nome formato ${index + 1}</label>
+              <input type="text" id="pm-variant-name-${index}" maxlength="80"
+                     value="${esc(name)}" placeholder="Es. Familiare"
+                     oninput="productPriceVariants[${index}].variante=this.value">
+            </div>
+            <div class="form-group">
+              <label>Prezzo (€)</label>
+              <input type="number" id="pm-variant-price-${index}"
+                     step="0.01" min="0" inputmode="decimal"
+                     value="${Number.isFinite(price) ? price : ''}"
+                     oninput="productPriceVariants[${index}].prezzo=this.value">
+            </div>
+            <button type="button" class="variant-remove"
+                    title="Elimina questo formato"
+                    onclick="removeProductVariant(${index})">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>`;
+      }).join('')}
+      <button type="button" class="btn btn-ghost btn-sm variant-add"
+              onclick="addProductVariant()">
+        <i class="fa-solid fa-plus"></i> Aggiungi formato
+      </button>
+    </div>`;
+}
+
+function captureVariantEditor() {
+  if (!productPriceVariants.length) return;
+  productPriceVariants[0].variante = editorVariantName(0);
+  const basePrice = editorVariantPrice(0);
+  if (Number.isFinite(basePrice)) productPriceVariants[0].prezzo = basePrice;
+
+  for (let i = 1; i < productPriceVariants.length; i++) {
+    productPriceVariants[i].variante = editorVariantName(i);
+    const price = editorVariantPrice(i);
+    productPriceVariants[i].prezzo = Number.isFinite(price) ? price : '';
+  }
+}
+
 function setProductPrices(product) {
   let variants = [];
   try { variants = JSON.parse(product?.prezzi_json || '[]'); } catch {}
-  productPriceVariants = Array.isArray(variants) ? variants.filter(v => v && typeof v === 'object') : [];
-  document.getElementById('pm-price-label').textContent = productPriceVariants[0]?.variante
-    ? `Prezzo ${productPriceVariants[0].variante} (€)` : 'Prezzo base (€)';
+
+  productPriceVariants = Array.isArray(variants)
+    ? variants.filter(v => v && typeof v === 'object').map(v => ({...v}))
+    : [];
+
+  if (!productPriceVariants.length) {
+    productPriceVariants = [{
+      prezzo: product ? product.price : '',
+      variante: ''
+    }];
+  }
+
+  if (product && Number.isFinite(Number(product.price))) {
+    productPriceVariants[0].prezzo = Number(product.price);
+  }
+
   document.getElementById('pm-price').value = product ? product.price : '';
-  document.getElementById('pm-variant-prices').innerHTML = productPriceVariants.slice(1).map((variant,index) => `
-    <div class="form-group"><label for="pm-variant-${index + 1}">Prezzo ${esc(variant.variante || 'formato ' + (index + 2))} (€)</label>
-      <input type="number" id="pm-variant-${index + 1}" step="0.01" min="0" inputmode="decimal" value="${Number.isFinite(Number(variant.prezzo)) ? Number(variant.prezzo) : ''}"></div>`).join('');
+  renderVariantEditor();
+}
+
+function addProductVariant() {
+  captureVariantEditor();
+  productPriceVariants.push({ variante: '', prezzo: '' });
+  renderVariantEditor();
+}
+
+function removeProductVariant(index) {
+  if (index <= 0 || index >= productPriceVariants.length) return;
+  captureVariantEditor();
+  productPriceVariants.splice(index, 1);
+  renderVariantEditor();
 }
 
 function openProductModal(id) {
   document.getElementById('pm-id').value = '';
   document.getElementById('pm-name').value = '';
   document.getElementById('pm-desc').value = '';
-  setProductPrices(null);
   document.getElementById('pm-img').value = '';
   document.getElementById('pm-active').checked = true;
   document.getElementById('pm-img-preview').classList.remove('visible');
   document.getElementById('product-modal-title').textContent = 'Nuovo Prodotto';
+  setProductPrices(null);
   openModal('product-modal');
 }
 
 function editProduct(id) {
-  const p = menuData.products.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('pm-id').value = id;
+  const p = menuData.products.find(x => String(x.id) === String(id));
+  if (!p) {
+    notify('Prodotto non trovato. Ricarica il menù.', 'err');
+    return;
+  }
+
+  document.getElementById('pm-id').value = p.id;
   document.getElementById('pm-name').value = p.name || '';
   document.getElementById('pm-desc').value = p.description || '';
   document.getElementById('pm-cat').value = p.category_id || '';
-  setProductPrices(p);
   document.getElementById('pm-img').value = p.image_url || '';
   document.getElementById('pm-active').checked = !!p.active;
+  setProductPrices(p);
+
   const preview = document.getElementById('pm-img-preview');
   const finalEl = document.getElementById('pm-img-final');
   const errEl = document.getElementById('pm-img-error');
   const imgUrl = (p.image_url || '').toString().trim();
+
   if (imgUrl) {
     const final = normalizeImageUrl(imgUrl);
     finalEl.style.display = '';
     finalEl.textContent = final;
-    errEl.style.display = 'none'; errEl.textContent = '';
+    errEl.style.display = 'none';
+    errEl.textContent = '';
     preview.classList.remove('visible');
-    preview.onload = () => { preview.classList.add('visible'); errEl.style.display = 'none'; };
-    preview.onerror = () => { console.warn('Preview image failed to load:', final); preview.src = IMG_PLACEHOLDER; preview.classList.add('visible'); errEl.style.display = ''; errEl.textContent = 'Impossibile caricare l\'immagine (controlla URL/R2 Base)'; };
+    preview.onload = () => {
+      preview.classList.add('visible');
+      errEl.style.display = 'none';
+    };
+    preview.onerror = () => {
+      console.warn('Preview image failed to load:', final);
+      preview.src = IMG_PLACEHOLDER;
+      preview.classList.add('visible');
+      errEl.style.display = '';
+      errEl.textContent = 'Impossibile caricare l’immagine (controlla URL/R2 Base)';
+    };
     preview.src = final;
   } else {
     preview.classList.remove('visible');
     preview.removeAttribute('src');
-    if (finalEl) { finalEl.style.display = 'none'; finalEl.textContent = ''; }
-    if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+    finalEl.style.display = 'none';
+    finalEl.textContent = '';
+    errEl.style.display = 'none';
+    errEl.textContent = '';
   }
+
   document.getElementById('product-modal-title').textContent = 'Modifica Prodotto';
   openModal('product-modal');
 }
 
 async function saveProduct() {
+  captureVariantEditor();
+
   const id = document.getElementById('pm-id').value;
   const body = {
     action: id ? 'update_product' : 'create_product',
-    id: id ? parseInt(id) : undefined,
-    category_id: document.getElementById('pm-cat').value, // id testuale (es. "pizze-americane"), non numerico
+    id: id ? Number(id) : undefined,
+    category_id: document.getElementById('pm-cat').value,
     name: document.getElementById('pm-name').value.trim(),
     description: document.getElementById('pm-desc').value.trim(),
     price: Number(document.getElementById('pm-price').value.replace(',', '.')),
     image_url: normalizeImageUrl(document.getElementById('pm-img').value.trim()),
     active: document.getElementById('pm-active').checked ? 1 : 0
   };
-  if (!body.name) { notify('Nome obbligatorio', 'err'); return; }
+
+  if (!body.name) {
+    notify('Nome obbligatorio', 'err');
+    return;
+  }
+  if (!body.category_id) {
+    notify('Seleziona una categoria', 'err');
+    return;
+  }
+  if (id && (!Number.isInteger(body.id) || body.id <= 0)) {
+    notify('ID prodotto non valido. Ricarica il menù.', 'err');
+    return;
+  }
+
   const priceInput = document.getElementById('pm-price');
   if (!priceInput.value.trim() || !Number.isFinite(body.price) || body.price < 0) {
-    notify('Inserisci un prezzo valido, maggiore o uguale a zero', 'err'); return;
+    notify('Inserisci un prezzo valido, maggiore o uguale a zero', 'err');
+    return;
   }
-  const prices = productPriceVariants.length ? productPriceVariants.map(v => ({...v})) : [{prezzo:body.price}];
-  prices[0].prezzo = body.price;
-  for (let index = 1; index < prices.length; index++) {
-    const value = document.getElementById('pm-variant-' + index).value.trim();
-    const price = Number(value.replace(',', '.'));
-    if (!value || !Number.isFinite(price) || price < 0) {
-      notify('Inserisci un prezzo valido per ogni formato', 'err'); return;
+
+  const prices = [];
+  for (let index = 0; index < productPriceVariants.length; index++) {
+    const source = {...productPriceVariants[index]};
+    const name = editorVariantName(index);
+    const price = index === 0 ? body.price : editorVariantPrice(index);
+
+    if (!Number.isFinite(price) || price < 0) {
+      notify(`Inserisci un prezzo valido per il formato ${index + 1}`, 'err');
+      return;
     }
-    prices[index].prezzo = price;
+
+    if (productPriceVariants.length > 1 && !name) {
+      notify('Quando ci sono più formati, assegna un nome a ogni variazione', 'err');
+      return;
+    }
+
+    source.prezzo = price;
+    if (name) source.variante = name;
+    else delete source.variante;
+    prices.push(source);
   }
+
   body.prezzi_json = JSON.stringify(prices);
+
   try {
-    const res = await fetch('/admin/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (res.ok) { notify('Prodotto salvato', 'ok'); closeModal('product-modal'); loadMenu(); }
-    else { const d = await res.json(); notify(d.error || 'Errore', 'err'); }
-  } catch { notify('Errore di rete', 'err'); }
+    const res = await fetch('/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      notify('Prodotto salvato', 'ok');
+      closeModal('product-modal');
+      await loadMenu();
+    } else {
+      notify(d.error || `Errore salvataggio (${res.status})`, 'err');
+    }
+  } catch {
+    notify('Errore di rete durante il salvataggio', 'err');
+  }
 }
 
 async function deleteProduct(id) {
-  if (!confirm('Eliminare questo prodotto?')) return;
+  const p = menuData.products.find(x => String(x.id) === String(id));
+  if (!p) {
+    notify('Prodotto non trovato. Ricarica il menù.', 'err');
+    return;
+  }
+
+  if (!confirm(`Eliminare definitivamente "${p.name}" dal menù?`)) return;
+
   try {
-    const res = await fetch('/admin/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_product', id }) });
-    if (res.ok) { notify('Prodotto eliminato', 'ok'); loadMenu(); }
-    else notify('Errore eliminazione', 'err');
-  } catch { notify('Errore di rete', 'err'); }
+    const res = await fetch('/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete_product', id: Number(id) })
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (res.ok && d.ok) {
+      notify('Prodotto eliminato definitivamente', 'ok');
+      await loadMenu();
+    } else {
+      notify(d.error || `Errore eliminazione (${res.status})`, 'err');
+    }
+  } catch {
+    notify('Errore di rete durante l’eliminazione', 'err');
+  }
 }
 
 function openCatModal(id) {
@@ -1389,33 +1733,102 @@ function openCatModal(id) {
   document.getElementById('cm-name').value = '';
   document.getElementById('cm-order').value = 99;
   document.getElementById('cat-modal-title').textContent = 'Nuova Categoria';
+
   if (id) {
-    const c = menuData.categories.find(x => x.id === id);
+    const c = menuData.categories.find(x => String(x.id) === String(id));
     if (c) {
       document.getElementById('cm-id').value = c.id;
       document.getElementById('cm-name').value = c.name;
-      document.getElementById('cm-order').value = c.sort_order || 99;
+      document.getElementById('cm-order').value = c.sort_order ?? 99;
       document.getElementById('cat-modal-title').textContent = 'Modifica Categoria';
     }
   }
+
   openModal('cat-modal');
 }
 
 async function saveCat() {
-  const id = document.getElementById('cm-id').value;
+  const id = document.getElementById('cm-id').value.trim();
+  const orderValue = Number(document.getElementById('cm-order').value);
+
   const body = {
     action: id ? 'update_category' : 'create_category',
-    id: id ? parseInt(id) : undefined,
+    // categories.id è TEXT: non convertirlo con parseInt().
+    id: id || undefined,
     name: document.getElementById('cm-name').value.trim(),
-    sort_order: parseInt(document.getElementById('cm-order').value) || 99
+    sort_order: Number.isInteger(orderValue) ? orderValue : 99
   };
-  if (!body.name) { notify('Nome obbligatorio', 'err'); return; }
+
+  if (!body.name) {
+    notify('Nome obbligatorio', 'err');
+    return;
+  }
+
   try {
-    const res = await fetch('/admin/menu', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    if (res.ok) { notify('Categoria salvata', 'ok'); closeModal('cat-modal'); loadMenu(); }
-    else { const d = await res.json(); notify(d.error || 'Errore', 'err'); }
-  } catch { notify('Errore di rete', 'err'); }
+    const res = await fetch('/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (res.ok) {
+      notify('Categoria salvata', 'ok');
+      closeModal('cat-modal');
+      await loadMenu();
+    } else {
+      notify(d.error || `Errore salvataggio categoria (${res.status})`, 'err');
+    }
+  } catch {
+    notify('Errore di rete durante il salvataggio categoria', 'err');
+  }
 }
+
+async function deleteCategory(id) {
+  const c = menuData.categories.find(x => String(x.id) === String(id));
+  if (!c) {
+    notify('Categoria non trovata. Ricarica il menù.', 'err');
+    return;
+  }
+
+  const productCount = menuData.products.filter(
+    p => String(p.category_id) === String(c.id)
+  ).length;
+
+  const warning = productCount > 0
+    ? `Eliminare definitivamente la categoria "${c.name}" e tutti i ${productCount} prodotti contenuti?`
+    : `Eliminare definitivamente la categoria "${c.name}"?`;
+
+  if (!confirm(warning)) return;
+
+  try {
+    const res = await fetch('/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'delete_category',
+        id: String(c.id),
+        delete_products: productCount > 0
+      })
+    });
+    const d = await res.json().catch(() => ({}));
+
+    if (res.ok && d.ok) {
+      if (String(selectedCatId) === String(c.id)) selectedCatId = null;
+      const n = Number(d.deleted_products || 0);
+      notify(
+        n > 0 ? `Categoria eliminata insieme a ${n} prodotti` : 'Categoria eliminata',
+        'ok'
+      );
+      await loadMenu();
+    } else {
+      notify(d.error || `Errore eliminazione categoria (${res.status})`, 'err');
+    }
+  } catch {
+    notify('Errore di rete durante l’eliminazione categoria', 'err');
+  }
+}
+
 
 function previewImg(input) {
   const preview = document.getElementById('pm-img-preview');

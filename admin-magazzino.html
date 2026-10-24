@@ -434,55 +434,130 @@ let weekChart = null;
 let monthChart = null;
 
 // ── AUTH: riusa la sessione admin esistente ──
-async function checkAuth() {
+// NFARINATI_PERSISTENT_WAREHOUSE_AUTH_V3
+window.__nfarinatiWarehouseNativeFetch = window.fetch.bind(window);
+let __warehouseExpiryHandling = false;
+
+function warehouseRequestPath(input) {
   try {
-    const res = await fetch('/admin/check');
-    const data = await res.json();
-    if (data.authenticated) { showApp(); return; }
-  } catch (e) {}
+    const raw = input instanceof Request ? input.url : String(input || '');
+    return new URL(raw, location.href).pathname;
+  } catch {
+    return '';
+  }
+}
+
+async function forceWarehouseRelogin() {
+  if (__warehouseExpiryHandling) return;
+  __warehouseExpiryHandling = true;
+
+  // The warehouse accepts either the real admin session or a staff account
+  // with role=admin, so clear both cookies when the active identity is no longer valid.
+  try {
+    await Promise.allSettled([
+      window.__nfarinatiWarehouseNativeFetch('/admin/logout', { method: 'POST' }),
+      window.__nfarinatiWarehouseNativeFetch('/staff/logout', { method: 'POST' }),
+    ]);
+  } catch {}
+
+  document.getElementById('app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-err').textContent =
+    'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  __warehouseExpiryHandling = false;
+}
+
+window.fetch = async (...args) => {
+  const res = await window.__nfarinatiWarehouseNativeFetch(...args);
+  const path = warehouseRequestPath(args[0]);
+  if (
+    res.status === 401 &&
+    path.startsWith('/admin/') &&
+    !['/admin/login', '/admin/check', '/admin/logout'].includes(path)
+  ) {
+    void forceWarehouseRelogin();
+  }
+  return res;
+};
+
+async function checkAuth() {
+  let trusted = false;
+  try {
+    trusted =
+      localStorage.getItem('nfarinati_warehouse_trusted_v2') === '1' ||
+      localStorage.getItem('nfarinati_admin_trusted_v2') === '1' ||
+      localStorage.getItem('nfarinati_staff_trusted_v2') === '1';
+  } catch {}
+
+  try {
+    const res = await window.__nfarinatiWarehouseNativeFetch('/admin/check', { cache: 'no-store' });
+    const data = await res.json();
+    if (data.authenticated) {
+      try { localStorage.setItem('nfarinati_warehouse_trusted_v2', '1'); } catch {}
+      document.getElementById('login-screen').style.display = 'none';
+      showApp();
+      return;
+    }
+  } catch {}
+
+  document.getElementById('login-screen').style.display = 'flex';
+  if (trusted) {
+    document.getElementById('login-err').textContent =
+      'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  }
 }
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = document.getElementById('login-err');
   err.textContent = '';
+
   const creds = {
     username: document.getElementById('login-username').value,
     password: document.getElementById('login-password').value,
   };
+
   try {
-    const res = await fetch('/admin/login', {
+    const res = await window.__nfarinatiWarehouseNativeFetch('/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(creds),
     });
     const data = await res.json();
+
     if (data.ok) {
+      try {
+        localStorage.setItem('nfarinati_admin_trusted_v2', '1');
+        localStorage.setItem('nfarinati_warehouse_trusted_v2', '1');
+      } catch {}
       document.getElementById('login-screen').style.display = 'none';
       showApp();
       return;
     }
-    // Non sono credenziali admin: forse sono di un dipendente → prova il login staff
-    const resStaff = await fetch('/staff/login', {
+
+    const resStaff = await window.__nfarinatiWarehouseNativeFetch('/staff/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(creds),
     });
     const dataStaff = await resStaff.json();
+
     if (dataStaff.ok) {
+      try { localStorage.setItem('nfarinati_staff_trusted_v2', '1'); } catch {}
+
       if (dataStaff.user.role === 'admin') {
+        try { localStorage.setItem('nfarinati_warehouse_trusted_v2', '1'); } catch {}
         document.getElementById('login-screen').style.display = 'none';
         showApp();
       } else {
-        // Account dipendente: portalo alla sua pagina ordini
         err.textContent = 'Account dipendente: ti porto alla pagina ordini...';
         setTimeout(() => { location.href = 'staff.html'; }, 900);
       }
       return;
     }
-    err.textContent = data.error || 'Credenziali errate';
-  } catch (e2) {
+
+    err.textContent = data.error || dataStaff.error || 'Credenziali errate';
+  } catch {
     err.textContent = 'Errore di rete, riprova';
   }
 });
@@ -493,6 +568,7 @@ function showApp() {
   loadMaterialsCatalog();
   startAutoRefresh();
 }
+
 
 // ── AUTO-AGGIORNAMENTO: i nuovi ordini compaiono da soli, senza refresh ──
 let autoRefreshTimer = null;

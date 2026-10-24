@@ -1,16 +1,23 @@
 import { adminIdentity } from '../_lib/auth.js';
-// Gestione ordini admin — GET con filtri + PUT per cambiare status
-const COOKIE_NAME = 'nfarinati_admin_session';
 
-async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
+async function verifySession(request, env) {
+  return !!(await adminIdentity(env, request));
+}
 
-const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const cors = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'Access-Control-Allow-Origin': '*',
+};
+const json = (body, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: cors });
+
+const VALID_STATUSES = ['nuovo', 'preparazione', 'pronto', 'consegnato'];
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env;
-  if (!(await verifySession(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  if (!(await verifySession(request, env))) {
+    return json({ error: 'Non autorizzato' }, 401);
   }
 
   const url = new URL(request.url);
@@ -21,12 +28,18 @@ export async function onRequestGet(context) {
   const limit = Math.max(1, Math.min(200, parseInt(url.searchParams.get('limit') || '50') || 50));
   const offset = (page - 1) * limit;
 
+  if (status && !VALID_STATUSES.includes(status)) {
+    return json({ error: 'Status non valido' }, 400);
+  }
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return json({ error: 'Data non valida' }, 400);
+  }
+
   let where = '1=1';
   const params = [];
-
   if (status) { where += ' AND status = ?'; params.push(status); }
   if (date) { where += ' AND date(created_at) = ?'; params.push(date); }
-  if (since) { where += ' AND created_at > ?'; params.push(since); }
+  if (since) { where += ' AND created_at > ?'; params.push(since.slice(0, 30)); }
 
   try {
     const rows = await env.DB.prepare(
@@ -37,34 +50,47 @@ export async function onRequestGet(context) {
       `SELECT COUNT(*) as total FROM orders WHERE ${where}`
     ).bind(...params).first();
 
-    return new Response(JSON.stringify({
-      orders: rows.results,
-      total: countRow.total,
+    return json({
+      orders: rows.results || [],
+      total: Number(countRow?.total || 0),
       page,
       limit,
-    }), { status: 200, headers: cors });
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
+    console.error('Admin orders GET failed', err?.name, err?.message);
+    return json({ error: 'Operazione non riuscita' }, 500);
   }
 }
 
 export async function onRequestPut(context) {
   const { env, request } = context;
-  const secret = env;
-  if (!(await verifySession(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  if (!(await verifySession(request, env))) {
+    return json({ error: 'Non autorizzato' }, 401);
   }
 
   try {
     const { id, status } = await request.json();
-    const validStatuses = ['nuovo', 'preparazione', 'pronto', 'consegnato'];
-    if (!validStatuses.includes(status)) {
-      return new Response(JSON.stringify({ error: 'Status non valido' }), { status: 400, headers: cors });
+    const orderId = typeof id === 'string' ? id.trim() : String(id ?? '').trim();
+
+    if (!orderId || orderId.length > 160) {
+      return json({ error: 'ID ordine non valido' }, 400);
     }
-    await env.DB.prepare('UPDATE orders SET status = ? WHERE id = ?').bind(status, id).run();
-    return new Response(JSON.stringify({ ok: true }), { status: 200, headers: cors });
+    if (!VALID_STATUSES.includes(status)) {
+      return json({ error: 'Status non valido' }, 400);
+    }
+
+    const current = await env.DB.prepare(
+      'SELECT id FROM orders WHERE id = ?'
+    ).bind(orderId).first();
+    if (!current) return json({ error: 'Ordine non trovato' }, 404);
+
+    await env.DB.prepare('UPDATE orders SET status = ? WHERE id = ?')
+      .bind(status, orderId).run();
+
+    return json({ ok: true, id: orderId, status });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
+    console.error('Admin orders PUT failed', err?.name, err?.message);
+    return json({ error: 'Operazione non riuscita' }, 500);
   }
 }
 

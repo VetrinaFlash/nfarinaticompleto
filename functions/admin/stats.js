@@ -1,54 +1,62 @@
 import { adminIdentity } from '../_lib/auth.js';
-// Statistiche dashboard admin
-const COOKIE_NAME = 'nfarinati_admin_session';
 
-async function verifySession(request, env) { return !!(await adminIdentity(env, request)); }
+async function verifySession(request, env) {
+  return !!(await adminIdentity(env, request));
+}
 
-const cors = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+const cors = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'Access-Control-Allow-Origin': '*',
+};
+const json = (body, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: cors });
 
 export async function onRequestGet(context) {
   const { env, request } = context;
-  const secret = env;
-  if (!(await verifySession(request, secret))) {
-    return new Response(JSON.stringify({ error: 'Non autorizzato' }), { status: 401, headers: cors });
+  if (!(await verifySession(request, env))) {
+    return json({ error: 'Non autorizzato' }, 401);
   }
 
   try {
-    const today = new Date().toISOString().substring(0, 10);
-
-    // KPI oggi
+    // created_at is stored with datetime('now','localtime'), so "today" must
+    // use SQLite localtime too (not JavaScript UTC), otherwise late-evening
+    // orders can land on the wrong day in Italy.
     const todayStats = await env.DB.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(total),0) as revenue
-      FROM orders WHERE date(created_at) = ?
-    `).bind(today).first();
+      FROM orders
+      WHERE date(created_at) = date('now','localtime')
+    `).first();
 
-    // KPI totali
     const totalStats = await env.DB.prepare(`
       SELECT COUNT(*) as count, COALESCE(SUM(total),0) as revenue FROM orders
     `).first();
 
-    // Ordini ultimi 14 giorni per il grafico
     const daily = await env.DB.prepare(`
       SELECT date(created_at) as day, COUNT(*) as count, COALESCE(SUM(total),0) as revenue
       FROM orders
-      WHERE created_at >= date('now', '-13 days')
+      WHERE date(created_at) >= date('now','localtime','-13 days')
       GROUP BY date(created_at)
       ORDER BY day ASC
     `).all();
 
-    // Top 10 prodotti per quantità
     const allOrders = await env.DB.prepare('SELECT items_json FROM orders').all();
     const productCounts = Object.create(null);
-    for (const row of allOrders.results) {
+
+    for (const row of (allOrders.results || [])) {
       try {
         const items = JSON.parse(row.items_json || '[]');
+        if (!Array.isArray(items)) continue;
         for (const item of items) {
-          const name = item.name || 'Sconosciuto';
+          const name = String(item?.name || 'Sconosciuto').slice(0, 180);
           if (!productCounts[name]) productCounts[name] = { qty: 0, revenue: 0 };
-          const quantity = Number(item.qty || 1); if (!Number.isFinite(quantity) || quantity <= 0) continue;
+          const quantity = Number(item?.qty || 1);
+          if (!Number.isFinite(quantity) || quantity <= 0) continue;
           productCounts[name].qty += quantity;
-          const price = Number(item.price || 0);
-          if (Number.isFinite(price) && price >= 0) productCounts[name].revenue += price * quantity;
+          const price = Number(item?.price || 0);
+          if (Number.isFinite(price) && price >= 0) {
+            productCounts[name].revenue += price * quantity;
+          }
         }
       } catch {}
     }
@@ -58,20 +66,26 @@ export async function onRequestGet(context) {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 10);
 
-    // Conteggio ordini per status
-    const byStatus = await env.DB.prepare(`
-      SELECT status, COUNT(*) as count FROM orders GROUP BY status
-    `).all();
+    const byStatus = await env.DB.prepare(
+      'SELECT status, COUNT(*) as count FROM orders GROUP BY status'
+    ).all();
 
-    return new Response(JSON.stringify({
-      today: { orders: todayStats.count, revenue: todayStats.revenue },
-      total: { orders: totalStats.count, revenue: totalStats.revenue },
-      daily: daily.results,
+    return json({
+      today: {
+        orders: Number(todayStats?.count || 0),
+        revenue: Number(todayStats?.revenue || 0),
+      },
+      total: {
+        orders: Number(totalStats?.count || 0),
+        revenue: Number(totalStats?.revenue || 0),
+      },
+      daily: daily.results || [],
       topProducts,
-      byStatus: byStatus.results,
-    }), { status: 200, headers: cors });
+      byStatus: byStatus.results || [],
+    });
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Operazione non riuscita' }), { status: 500, headers: cors });
+    console.error('Admin stats failed', err?.name, err?.message);
+    return json({ error: 'Operazione non riuscita' }, 500);
   }
 }
 

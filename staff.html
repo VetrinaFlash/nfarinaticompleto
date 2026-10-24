@@ -266,23 +266,75 @@ function cartItems() {
 }
 
 // ── AUTH ──
-async function checkAuth() {
+// NFARINATI_PERSISTENT_STAFF_AUTH_V3
+window.__nfarinatiStaffNativeFetch = window.fetch.bind(window);
+let __staffExpiryHandling = false;
+
+function staffRequestPath(input) {
   try {
-    const res = await fetch('/staff/check');
+    const raw = input instanceof Request ? input.url : String(input || '');
+    return new URL(raw, location.href).pathname;
+  } catch {
+    return '';
+  }
+}
+
+async function forceStaffRelogin() {
+  if (__staffExpiryHandling) return;
+  __staffExpiryHandling = true;
+  try {
+    await window.__nfarinatiStaffNativeFetch('/staff/logout', { method: 'POST' });
+  } catch {}
+
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-err').textContent =
+    'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  __staffExpiryHandling = false;
+}
+
+window.fetch = async (...args) => {
+  const res = await window.__nfarinatiStaffNativeFetch(...args);
+  const path = staffRequestPath(args[0]);
+  if (
+    res.status === 401 &&
+    path.startsWith('/staff/') &&
+    !['/staff/login', '/staff/check', '/staff/logout'].includes(path)
+  ) {
+    void forceStaffRelogin();
+  }
+  return res;
+};
+
+async function checkAuth() {
+  let trusted = false;
+  try { trusted = localStorage.getItem('nfarinati_staff_trusted_v2') === '1'; } catch {}
+
+  try {
+    const res = await window.__nfarinatiStaffNativeFetch('/staff/check', { cache: 'no-store' });
     const data = await res.json();
     if (data.authenticated) {
+      try { localStorage.setItem('nfarinati_staff_trusted_v2', '1'); } catch {}
       currentUser = data.user;
       showApp();
+      return;
     }
-  } catch (e) {}
+  } catch {}
+
+  if (trusted) {
+    document.getElementById('login-err').textContent =
+      'Sessione scaduta o revocata. Effettua di nuovo l’accesso.';
+  }
 }
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const err = document.getElementById('login-err');
   err.textContent = '';
+
   try {
-    const res = await fetch('/staff/login', {
+    const res = await window.__nfarinatiStaffNativeFetch('/staff/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -291,17 +343,27 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       }),
     });
     const data = await res.json();
-    if (!data.ok) { err.textContent = data.error || 'Errore di accesso'; return; }
+
+    if (!data.ok) {
+      err.textContent = data.error || 'Errore di accesso';
+      return;
+    }
+
+    try { localStorage.setItem('nfarinati_staff_trusted_v2', '1'); } catch {}
     currentUser = data.user;
     showApp();
-  } catch (e2) {
+  } catch {
     err.textContent = 'Errore di rete, riprova';
   }
 });
 
 async function doLogout() {
-  await fetch('/staff/logout', { method: 'POST' });
-  location.reload();
+  try { localStorage.removeItem('nfarinati_staff_trusted_v2'); } catch {}
+  try {
+    await window.__nfarinatiStaffNativeFetch('/staff/logout', { method: 'POST' });
+  } finally {
+    location.reload();
+  }
 }
 
 async function showApp() {
@@ -310,6 +372,7 @@ async function showApp() {
   document.getElementById('who').textContent = `Ciao, ${currentUser.display_name}`;
   if (await loadMaterials()) await restoreDraft();
 }
+
 
 // Al login: riprende la bozza salvata sul server (o il carrello locale non salvato)
 async function restoreDraft() {
