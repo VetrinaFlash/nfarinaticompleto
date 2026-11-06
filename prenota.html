@@ -70,23 +70,37 @@ async function availability(){
  }catch(e){if(serial===loadSerial)status('availability-status',e.message,true)}
 }
 function availabilitySelected(times){renderTimes('times',times,selected,t=>{selected=t;availabilitySelected(times)});$('booking-form').classList.remove('hidden');$('submit-status').textContent='';}
+function romeAsUtc(date,time){
+  const [y,m,d]=date.split('-').map(Number),h=Number(time.slice(0,2)),minute=Number(time.slice(3));
+  const target=Date.UTC(y,m-1,d,h,minute),formatter=new Intl.DateTimeFormat('en-GB',{
+    timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+  let guess=target;
+  for(let i=0;i<3;i++){
+    const parts=Object.fromEntries(formatter.formatToParts(new Date(guess)).map(p=>[p.type,p.value]));
+    const observed=Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute);
+    if(observed===target)break;
+    guess+=target-observed;
+  }
+  return guess;
+}
+function icsStamp(timestamp){
+  return new Date(timestamp).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+}
 function localIcs(s){
- const start=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00';
- const endM=minutes(s.time)+(s.duration_min||90), endDay=endM>=1440;
- const endDate=endDay?new Date(s.date+'T12:00:00Z'):null;
- if(endDay)endDate.setUTCDate(endDate.getUTCDate()+1);
- const eDay=(endDay?endDate.toISOString().slice(0,10):s.date).replaceAll('-','');
- const end=eDay+'T'+pad(Math.floor(endM%1440/60))+pad(endM%60)+'00';
- const escape=x=>String(x).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n');
- const text=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NFar inati//Prenotazioni//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-TIMEZONE:Europe/Rome','BEGIN:VEVENT',
- 'UID:'+s.id+'@nfarinatimodernpizza.it','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),
- 'DTSTART;TZID=Europe/Rome:'+start,'DTEND;TZID=Europe/Rome:'+end,
- 'SUMMARY:'+escape("N'Farinati Modern Pizza - "+s.guests+" persone"),
- 'LOCATION:'+escape('Via P. Togliatti 8, Bagheria (PA)'),
- 'DESCRIPTION:'+escape('Prenotazione '+(s.code||'')+'. Tavolo riservato per '+(s.duration_min||90)+' minuti.'),
- 'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Promemoria prenotazione N Farinati','TRIGGER:-PT2H','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
- const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'text/calendar;charset=utf-8'}));
- a.href=url;a.download='nfarinati-prenotazione.ics';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+  const start=romeAsUtc(s.date,s.time),end=start+(s.duration_min||90)*60000;
+  const escape=x=>String(x).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n');
+  const text=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NFARINATI//Bookings//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT','UID:'+s.id+'@nfarinatimodernpizza.it','DTSTAMP:'+icsStamp(Date.now()),
+    'DTSTART:'+icsStamp(start),'DTEND:'+icsStamp(end),
+    'SUMMARY:'+escape("N'Farinati Modern Pizza · "+s.guests+" persone"),
+    'LOCATION:'+escape('Via P. Togliatti 8, Bagheria (PA)'),
+    'DESCRIPTION:'+escape('Prenotazione '+(s.code||'')+'. Tavolo riservato per '+(s.duration_min||90)+' minuti.'),
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Prenotazione domani da N Farinati','TRIGGER:-P1D','END:VALARM',
+    'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Prenotazione tra 2 ore da N Farinati','TRIGGER:-PT2H','END:VALARM',
+    'END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
+  const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'text/calendar;charset=utf-8'}));
+  a.href=url;a.download='nfarinati-prenotazione.ics';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 function googleUrl(s){
  const dt=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00',m=minutes(s.time)+(s.duration_min||90);
@@ -124,7 +138,12 @@ function updateManage(){
  const s=details;$('manage-status').textContent='Stato: '+({confirmed:'Confermata',arrived:'Cliente arrivato',seated:'Al tavolo',cancelled:'Cancellata',completed:'Completata',no_show:'Non presentato'}[s.status]||s.status);
  detailRender('manage-details',s);
  $('manage-ics').onclick=()=>localIcs(s);$('manage-google').href=googleUrl(s);
- if(!['confirmed','arrived','seated'].includes(s.status)){$('manage-actions').classList.add('hidden');return}
+ if(!['confirmed','arrived','seated'].includes(s.status)){
+   $('manage-actions').classList.add('hidden');$('manage-ics').disabled=true;
+   $('manage-google').classList.add('hidden');
+   return;
+ }
+ $('manage-ics').disabled=false;$('manage-google').classList.remove('hidden');
  $('manage-actions').classList.remove('hidden');$('change-date').value=s.date;$('change-date').min=nowRome();
  selectFill('change-guests',cfg.max_party);$('change-guests').value=String(s.guests);
  $('change-date').onchange=changeAvailability;$('change-guests').onchange=changeAvailability;
