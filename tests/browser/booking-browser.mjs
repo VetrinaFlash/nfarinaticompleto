@@ -62,6 +62,7 @@ for(const viewport of VIEWS){
  assert.ok(link.includes("token="+fixture.token));
  await page.goto(link,{waitUntil:"domcontentloaded"});
  await page.locator("#manage").waitFor({state:"visible"});
+ await page.waitForFunction(()=>document.querySelector("#manage-status").textContent.includes("Confermata"));
  assert.match(await page.locator("#manage-status").textContent(),/Confermata/);
  page.once("dialog",dialog=>dialog.accept());
  await page.locator("#cancel").click();
