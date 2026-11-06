@@ -31,7 +31,7 @@
 <div class="field"><label for="email">Email (facoltativa)</label><input id="email" type="email" maxlength="160" autocomplete="email" placeholder="nome@esempio.it"></div>
 <div class="field"><label for="notes">Richieste particolari (facoltative)</label><textarea id="notes" maxlength="500" placeholder="Seggiolone, accessibilità, occasione speciale…"></textarea></div>
 <div id="turnstile" class="hidden"></div>
-<label class="check"><input id="privacy" type="checkbox" required><span>Ho letto le informazioni sul trattamento dei dati. Nome e telefono verranno utilizzati solo per gestire la prenotazione. *</span></label>
+<label class="check"><input id="privacy" type="checkbox" required><span>Ho letto l’<a href="/privacy-prenotazioni.html" target="_blank" rel="noopener noreferrer">informativa privacy delle prenotazioni</a>. Nome e telefono servono per gestire la richiesta. *</span></label>
 <p class="status" id="submit-status" role="status" aria-live="polite"></p>
 <button class="primary" id="submit" type="submit">Conferma prenotazione →</button>
 </form>
@@ -45,7 +45,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let cfg=null,selected=null,details=null,personalToken=null,loadSerial=0,manageSlot=null;
-const nowRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-');
+const nowRome=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
 const pad=n=>String(n).padStart(2,'0');
 const dateText=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
 const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
