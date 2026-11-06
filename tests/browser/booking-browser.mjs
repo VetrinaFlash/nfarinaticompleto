@@ -13,6 +13,9 @@ const fixture={id:"12345678-1234-4123-9123-123456789abc",token:"a".repeat(64),co
 const times=["18:30","19:00","19:30","20:00","20:30","21:00","21:30"];
 const config={enabled:true,max_party:8,advance_days:60,duration_min:90,buffer_min:15,interval_min:30,turnstile_site_key:null};
 const actions=[];
+const mainAdminSource=await readFile("admin.html","utf8");
+assert.match(mainAdminSource,/href="admin-prenotazioni\.html#tables"/,
+  "The existing admin sidebar needs a direct Tavoli link");
 function agentError(page){const errors=[];page.on("pageerror",error=>errors.push(String(error)));return errors}
 async function clearOverflow(page,label) {
  const x=await page.evaluate(()=>({width:innerWidth,content:document.documentElement.scrollWidth}));
@@ -53,11 +56,22 @@ for(const viewport of VIEWS){
  await page.locator("#submit").click();
  await page.locator("#done").waitFor({state:"visible"});
  assert.equal(await page.locator("#done-details").getByText("20:30").count(),1);
+ assert.match(await page.locator("#done-duration-note").textContent(),/90 minuti.*75 minuti.*15 minuti/);
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-confirmation.png",fullPage:true});
- assert.ok((await page.locator("#google").getAttribute("href")).startsWith("https://calendar.google.com/"));
+ const googleUrl=await page.locator("#google").getAttribute("href");
+ assert.ok(googleUrl.startsWith("https://calendar.google.com/"));
+ assert.match(new URL(googleUrl).searchParams.get("dates"),/T203000\/.*T214500$/,
+   "Google Calendar must last only 75 dining minutes");
  const [download]=await Promise.all([page.waitForEvent("download"),page.locator("#ics").click()]);
  const ics=await readFile(await download.path(),"utf8");
  assert.match(ics,/BEGIN:VCALENDAR/);assert.match(ics,/TRIGGER:-P1D/);assert.match(ics,/TRIGGER:-PT2H/);
+ const startStamp=ics.match(/^DTSTART:(\d{8}T\d{6}Z)$/m)?.[1];
+ const endStamp=ics.match(/^DTEND:(\d{8}T\d{6}Z)$/m)?.[1];
+ assert.ok(startStamp&&endStamp);
+ const parseStamp=x=>Date.UTC(Number(x.slice(0,4)),Number(x.slice(4,6))-1,Number(x.slice(6,8)),
+   Number(x.slice(9,11)),Number(x.slice(11,13)),Number(x.slice(13,15)));
+ assert.equal((parseStamp(endStamp)-parseStamp(startStamp))/60000,75,
+   "Downloaded iCalendar event excludes the 15-minute cleaning time");
  const link=await page.locator("#manage-link").getAttribute("href");
  assert.ok(link.includes("token="+fixture.token));
  await page.goto(link,{waitUntil:"domcontentloaded"});
@@ -108,7 +122,16 @@ for(const viewport of VIEWS){
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-admin-agenda.png",fullPage:true});
  await page.getByRole("button",{name:/Capienza/}).click();
  assert.equal(await page.locator('input[name="capacity"]').inputValue(),"50");
+ assert.match(await page.locator("#booking-window-preview").textContent(),/90 minuti totali = 75 minuti al tavolo \+ 15 minuti/);
+ await page.locator('#config-form select[name="buffer_min"]').selectOption("30");
+ assert.match(await page.locator("#booking-window-preview").textContent(),/90 minuti totali = 60 minuti al tavolo \+ 30 minuti/);
+ await page.locator('#config-form select[name="buffer_min"]').selectOption("15");
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-admin-settings.png",fullPage:true});
+ await page.goto(ROOT+"/admin-prenotazioni.html#tables",{waitUntil:"domcontentloaded"});
+ await page.locator("#tables-tab").waitFor({state:"visible"});
+ assert.ok(await page.locator("#table-form").isVisible(),"Direct Tavoli link opens the actual table editor");
+ assert.ok(await page.locator("#tables-list").getByText("Sala 1").count()>=1);
+ await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-admin-tables.png",fullPage:true});
  await page.getByRole("button",{name:/Agenda/}).click();
  await page.locator("#new-booking").click();
  await page.locator('#booking-edit [name="name"]').fill("Cliente telefonico");
