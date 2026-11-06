@@ -135,3 +135,24 @@ test("admin endpoints require login and allow configuration with existing sessio
  assert.equal(saved.status,200);
  assert.equal((await bookingConfig(env)).capacity,40);
 });
+
+test("idempotent booking submissions never reserve the same places twice",async()=>{
+ const {db,env,req}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=2,holdback=0").run();
+ const request_token="c".repeat(64);
+ const first=await createBooking(env,{...req,request_token});
+ const repeat=await createBooking(env,{...req,request_token});
+ assert.equal(first.id,repeat.id);
+ assert.equal(first.token,repeat.token);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM booking_reservations").get().n,1);
+ assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,2);
+});
+test("calendar reminders use correct Rome summer/winter UTC offsets",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const source=readFileSync(new URL("../prenota.html",import.meta.url),"utf8");
+ const section=source.slice(source.indexOf("function romeAsUtc("),source.indexOf("function localIcs("));
+ const rome=new Function(section+";return romeAsUtc;")();
+ assert.equal(new Date(rome("2026-07-10","19:00")).toISOString(),"2026-07-10T17:00:00.000Z");
+ assert.equal(new Date(rome("2026-12-10","19:00")).toISOString(),"2026-12-10T18:00:00.000Z");
+ assert.match(source,/TRIGGER:-P1D/);assert.match(source,/TRIGGER:-PT2H/);
+});
