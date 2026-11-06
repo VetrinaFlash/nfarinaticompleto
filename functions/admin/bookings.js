@@ -1,5 +1,5 @@
 import {adminIdentity,json} from "../_lib/auth.js";
-import {ensureBookingSchema,bookingConfig,createBooking,updateBooking,changeStatus,bookingError,validDate,parseTime,timeText,italyNow,addDays} from "../_lib/booking.js";
+import {ensureBookingSchema,bookingConfig,createBooking,updateBooking,changeStatus,extendBooking,bookingError,validDate,parseTime,timeText,italyNow,addDays} from "../_lib/booking.js";
 
 async function admin(env,request) {
   const user=await adminIdentity(env,request);
@@ -108,6 +108,10 @@ export async function onRequestPost({env,request}) {
       case "edit": {
         if(typeof body.id!=="string" || body.id.length>80)return json({error:"ID non valido"},400);
         return json(await updateBooking(env,body.id,body));
+      }
+      case "extend": {
+        if(typeof body.id!=="string" || body.id.length>80)return json({error:"ID non valido"},400);
+        return json(await extendBooking(env,body.id,body.minutes));
       }
       case "status": {
         if(typeof body.id!=="string" || body.id.length>80)return json({error:"ID non valido"},400);
