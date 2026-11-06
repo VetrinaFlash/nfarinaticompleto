@@ -185,9 +185,11 @@ export async function validateSlot(env, config, date, time, guests, source="onli
   const h=await env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(weekday(date)).first();
   const opens=parseTime(h?.opens), closes=parseTime(h?.closes);
   if (!h?.enabled || opens===null || closes===null || start<opens ||
-      start+config.duration_min>closes || start+config.duration_min+config.buffer_min>1440)
+      config.buffer_min>=config.duration_min || start+config.duration_min>closes || start+config.duration_min>1440)
     throw Error("Orario non disponibile");
-  return {date,start,end:start+config.duration_min+config.buffer_min,guests};
+  // The configured duration is the entire blocked window: 90 minutes TOTAL,
+  // including the 15 minutes needed to clear and prepare the table.
+  return {date,start,end:start+config.duration_min,guests};
 }
 export async function tableCandidates(env,slot,tableMode,selectedId=null, excludeId=null) {
   if (!tableMode && !selectedId) return [null];
@@ -216,7 +218,7 @@ export async function isAvailable(env, config, slot, source="online", excludeId=
 }
 export async function availableTimes(env,date,guests) {
   const cfg=await bookingConfig(env),times=[];
-  if(!cfg.enabled || !validDate(date) || !Number.isInteger(guests) || guests<1 ||
+  if(!cfg.enabled || cfg.buffer_min>=cfg.duration_min || !validDate(date) || !Number.isInteger(guests) || guests<1 ||
      guests>cfg.max_party || guests>cfg.capacity-cfg.holdback)
     return {times,config:cfg};
   const now=italyNow();
@@ -230,7 +232,7 @@ export async function availableTimes(env,date,guests) {
   // A single snapshot is sufficient for browsing; the database triggers
   // re-check capacity atomically when the customer actually confirms.
   const inventory=await env.DB.prepare("SELECT minute,total,online FROM booking_slot_inventory WHERE date=? AND minute>=? AND minute<?")
-    .bind(date,opens,closes+cfg.buffer_min).all();
+    .bind(date,opens,closes).all();
   let tables=[],assigned=[];
   if(cfg.table_mode){
     const both=await Promise.all([
@@ -243,7 +245,8 @@ export async function availableTimes(env,date,guests) {
   for(let start=Math.ceil(opens/cfg.interval_min)*cfg.interval_min;start+cfg.duration_min<=closes;start+=cfg.interval_min) {
     const daysFromNow=Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(now.date+"T00:00:00Z"))/86400000);
     if(start%15!==0 || daysFromNow*1440+start < now.minute+cfg.notice_min)continue;
-    const end=start+cfg.duration_min+cfg.buffer_min;
+    // The cleanup margin is already INCLUDED in the total duration.
+    const end=start+cfg.duration_min;
     if(end>1440)continue;
     const full=(inventory.results||[]).some(r=>r.minute>=start && r.minute<end &&
       (r.total+guests>cfg.capacity || r.online+guests>cfg.capacity-cfg.holdback));
