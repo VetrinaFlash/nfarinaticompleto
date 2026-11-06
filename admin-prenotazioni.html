@@ -37,11 +37,11 @@
 <div class="field"><label>Ritardo di cortesia (min)</label><input type="number" name="grace_min" min="0" max="120"></div>
 </div><div class="tools"><label class="inline"><input type="checkbox" name="enabled"> Abilita prenotazioni online</label><label class="inline"><input type="checkbox" name="table_mode"> Assegna automaticamente singoli tavoli fisici</label></div><p class="note">Attenzione: attivare l'assegnazione fisica solo dopo aver inserito i tavoli e i posti reali. La modifica del massimale non annulla le prenotazioni già confermate.</p><button class="btn gold">Salva configurazione</button><p id="config-status" class="status"></p></form></section></div>
 <div id="hours-tab" class="hidden"><section class="panel"><h2>Disponibilità settimanale</h2><p class="muted">Il cliente potrà prenotare solo se i 90 minuti previsti terminano entro l'orario di chiusura. Il margine separa le prenotazioni consecutive.</p><form id="hours-form"><div id="hours-list"></div><button class="btn gold" style="margin-top:18px">Salva orari</button><p id="hours-status" class="status"></p></form></section></div>
-<div id="tables-tab" class="hidden"><section class="panel"><h2>Tavoli e zone</h2><p class="muted">L'assegnazione fisica è opzionale. Senza questa modalità, il sistema usa i posti contemporanei configurati.</p><div id="tables-list"></div><form id="table-form" class="tools"><div class="field"><label>Nome tavolo</label><input name="label" placeholder="Tavolo 1" maxlength="50" required></div><div class="field"><label>Posti</label><input name="seats" type="number" min="1" max="40" value="4" required></div><div class="field"><label>Zona</label><input name="zone" placeholder="Sala" value="Sala"></div><button class="btn gold">Aggiungi tavolo</button></form><p id="tables-status" class="status"></p></section></div>
+<div id="tables-tab" class="hidden"><section class="panel"><h2>Tavoli e zone</h2><p class="muted">L'assegnazione fisica è opzionale. Senza questa modalità, il sistema usa i posti contemporanei configurati.</p><div id="tables-list"></div><form id="table-form" class="tools"><input name="id" type="hidden"><input name="active" type="hidden" value="1"><div class="field"><label>Nome tavolo</label><input name="label" placeholder="Tavolo 1" maxlength="50" required></div><div class="field"><label>Posti</label><input name="seats" type="number" min="1" max="40" value="4" required></div><div class="field"><label>Zona</label><input name="zone" placeholder="Sala" value="Sala"></div><button class="btn gold" id="save-table">Aggiungi tavolo</button><button type="button" class="btn hidden" id="cancel-table-edit">Annulla modifica</button></form><p id="tables-status" class="status"></p></section></div>
 <div id="closures-tab" class="hidden"><section class="panel"><h2>Chiusure straordinarie</h2><p class="note">Bloccare una data impedisce nuove prenotazioni ma non cancella quelle già esistenti. Verifica l'agenda prima di chiudere.</p><form id="close-form" class="tools"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Motivo (facoltativo)</label><input name="reason" maxlength="140" placeholder="Festività / evento privato"></div><button class="btn gold">Blocca giorno</button></form><div id="closures-list"></div><p id="closures-status" class="status"></p></section></div>
 </div>
 </main>
-<div class="overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><div class="modal-head"><h2 id="modal-title">Prenotazione</h2><button class="btn small" id="close-modal">Chiudi ✕</button></div><form id="booking-edit"><input type="hidden" name="id"><div class="two"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Ora</label><input name="time" type="time" step="900" required></div></div><div class="two"><div class="field"><label>Nome cliente</label><input name="name" required maxlength="80"></div><div class="field"><label>Telefono</label><input name="phone" type="tel" required maxlength="22"></div></div><div class="two"><div class="field"><label>Numero persone</label><input name="guests" type="number" min="1" max="100" required></div><div class="field"><label>Email (facoltativa)</label><input name="email" type="email" maxlength="160"></div></div><div class="field"><label>Note</label><textarea name="notes" maxlength="500" rows="3"></textarea></div><p id="modal-status" class="status"></p><div class="actions-stack"><button class="btn gold" type="submit" id="save-booking">Salva prenotazione</button><button type="button" id="status-arrived" class="btn hidden">Arrivato</button><button type="button" id="status-seated" class="btn hidden">Al tavolo</button><button type="button" id="status-completed" class="btn hidden">Libera tavolo</button><button type="button" id="status-no_show" class="btn danger hidden">No-show</button><button type="button" id="status-cancelled" class="btn danger hidden">Cancella</button></div></form></div></div>
+<div class="overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><div class="modal-head"><h2 id="modal-title">Prenotazione</h2><button class="btn small" id="close-modal">Chiudi ✕</button></div><form id="booking-edit"><input type="hidden" name="id"><div class="two"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Ora</label><input name="time" type="time" step="900" required></div></div><div class="two"><div class="field"><label>Nome cliente</label><input name="name" required maxlength="80"></div><div class="field"><label>Telefono</label><input name="phone" type="tel" required maxlength="22"></div></div><div class="two"><div class="field"><label>Numero persone</label><input name="guests" type="number" min="1" max="100" required></div><div class="field"><label>Email (facoltativa)</label><input name="email" type="email" maxlength="160"></div></div><div class="field"><label>Note</label><textarea name="notes" maxlength="500" rows="3"></textarea></div><div class="field"><label>Assegna un tavolo (facoltativo)</label><select name="table_id" id="booking-table"><option value="">Assegnazione automatica</option></select></div><p id="modal-status" class="status"></p><div class="actions-stack"><button class="btn gold" type="submit" id="save-booking">Salva prenotazione</button><button type="button" id="status-arrived" class="btn hidden">Arrivato</button><button type="button" id="status-seated" class="btn hidden">Al tavolo</button><button type="button" id="status-completed" class="btn hidden">Libera tavolo</button><button type="button" id="status-no_show" class="btn danger hidden">No-show</button><button type="button" id="status-cancelled" class="btn danger hidden">Cancella</button></div></form></div></div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id),f=$('booking-edit');
@@ -60,7 +60,7 @@ function tab(key){document.querySelectorAll('.tab').forEach(b=>b.classList.toggl
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function tableRow(data) {
  const line=node('div',undefined,'booking'),time=node('time',hhmm(data.start_min));
- const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),node('small',data.phone+' · '+(data.source==='manual'?'Telefono/admin':'Online')+(data.table_id?' · Tavolo assegnato':'')),badges(data));
+ const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),node('small',data.phone+' · '+(data.source==='manual'?'Telefono/admin':'Online')+(data.table_id?' · '+(state.settings?.tables?.find(t=>t.id===data.table_id)?.label||'Tavolo assegnato'):'')),badges(data));
  const actions=node('div',undefined,'actions'),edit=node('button','Apri / modifica','btn small');edit.onclick=()=>openEdit(data);actions.append(edit);
  line.append(time,who,actions);return line
 }
@@ -105,17 +105,34 @@ $('hours-form').onsubmit=async e=>{
 function renderTables(rows){
  $('tables-list').replaceChildren();
  rows.forEach(t=>{
-  const line=node('div',undefined,'table');line.append(node('strong',t.label),node('span',t.seats+' posti'),node('span',t.zone+' · '+(t.active?'Attivo':'Disattivo'),'muted'));
-  const toggle=node('button',t.active?'Disattiva':'Attiva','btn small');toggle.onclick=async()=>{
-   try{await send('table',{...t,active:t.active?0:1});await loadSettings()}catch(e){message('tables-status',e.message,true)}
-  };line.append(toggle);$('tables-list').append(line)
+  const line=node('div',undefined,'table');
+  line.append(node('strong',t.label),node('span',t.seats+' posti'),node('span',t.zone+' · '+(t.active?'Attivo':'Disattivo'),'muted'));
+  const controls=node('div',undefined,'actions-stack');
+  const edit=node('button','Modifica','btn small');
+  edit.onclick=()=>{
+    const form=$('table-form');form.elements.id.value=t.id;form.elements.active.value=String(t.active);
+    form.elements.label.value=t.label;form.elements.seats.value=t.seats;form.elements.zone.value=t.zone;
+    $('save-table').textContent='Salva modifiche';$('cancel-table-edit').classList.remove('hidden');
+    form.scrollIntoView({behavior:'smooth',block:'center'});form.elements.label.focus();
+  };
+  const toggle=node('button',t.active?'Disattiva':'Attiva','btn small');
+  toggle.onclick=async()=>{try{await send('table',{...t,active:t.active?0:1});await loadSettings()}catch(e){message('tables-status',e.message,true)}};
+  controls.append(edit,toggle);line.append(controls);$('tables-list').append(line);
  })
 }
 $('table-form').onsubmit=async e=>{
- e.preventDefault();const f=e.currentTarget;
- try{await send('table',{label:f.elements.label.value,seats:Number(f.elements.seats.value),zone:f.elements.zone.value});f.elements.label.value='';await loadSettings();message('tables-status','Tavolo registrato')}
- catch(e){message('tables-status',e.message,true)}
+ e.preventDefault();const form=e.currentTarget;
+ try{
+  await send('table',{id:form.elements.id.value||undefined,label:form.elements.label.value,
+   seats:Number(form.elements.seats.value),zone:form.elements.zone.value,active:Number(form.elements.active.value)});
+  resetTableForm();await loadSettings();message('tables-status','Tavolo salvato correttamente');
+ }catch(e){message('tables-status',e.message,true)}
 };
+function resetTableForm(){
+ const form=$('table-form');form.reset();form.elements.id.value='';form.elements.active.value='1';
+ $('save-table').textContent='Aggiungi tavolo';$('cancel-table-edit').classList.add('hidden');
+}
+$('cancel-table-edit').onclick=resetTableForm;
 function renderClosures(rows){
  $('closures-list').replaceChildren();
  rows.forEach(c=>{
@@ -138,6 +155,9 @@ function openEdit(data=null){
  formSet(f,'id',data?.id||'');formSet(f,'date',data?.date||$('filter-date').value);
  formSet(f,'time',data?hhmm(data.start_min):'20:00');formSet(f,'guests',data?.guests||2);
  ['name','phone','email','notes'].forEach(k=>formSet(f,k,data?.[k]||''));
+ const picker=$('booking-table');picker.replaceChildren(new Option('Assegnazione automatica',''));
+ (state.settings?.tables||[]).filter(t=>t.active||t.id===data?.table_id).forEach(t=>picker.add(new Option(t.label+' · '+t.seats+' posti · '+t.zone,t.id)));
+ formSet(f,'table_id',data?.table_id||'');
  const active=data&&['confirmed','arrived','seated'].includes(data.status);
  ['arrived','seated','completed','no_show','cancelled'].forEach(k=>$('status-'+k).classList.toggle('hidden',!active));
  $('save-booking').disabled=!!data&&!active;
