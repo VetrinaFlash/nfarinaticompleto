@@ -47,7 +47,7 @@ test("capacity is guaranteed by triggers and reservation is auto-confirmed",asyn
  const row=db.prepare("SELECT COUNT(*) AS n, SUM(guests) AS people FROM booking_reservations").get();
  assert.equal(row.n,1);assert.equal(row.people,3);
  const occupied=db.prepare("SELECT COUNT(*) AS n FROM booking_slot_inventory WHERE total=3").get().n;
- assert.equal(occupied,7); // 90 minutes plus 15-minute buffer, 15-minute occupancy buckets
+ assert.equal(occupied,6); // 90 minutes total, INCLUDING 15 minutes of table reset
  const winner=[a,b].find(x=>x.status==="fulfilled").value;
  assert.equal(winner.duration_min,90);
  assert.equal((await fetchByToken(env,winner.id,winner.token)).id,winner.id);
@@ -57,13 +57,15 @@ test("capacity is guaranteed by triggers and reservation is auto-confirmed",asyn
  const fresh=await createBooking(env,{...req,guests:4});
  assert.equal(fresh.guests,4);
 });
-test("90-minute occupancy and 15-minute reset buffer prevent premature rebooking",async()=>{
+test("90-minute total including reset permits immediate next seating after 90 minutes",async()=>{
  const {db,env,req}=await fixture();
  db.prepare("UPDATE booking_config SET capacity=2,holdback=0").run();
  await createBooking(env,req);
- await assert.rejects(createBooking(env,{...req,time:"20:30"}),/Disponibilità terminata|Posti esauriti/);
- const free=await createBooking(env,{...req,time:"21:00"});
- assert.equal(free.time,"21:00");
+ await assert.rejects(createBooking(env,{...req,time:"20:00"}),/Disponibilità terminata|Posti esauriti/);
+ const free=await createBooking(env,{...req,time:"20:30"});
+ assert.equal(free.time,"20:30");
+ const row=await env.DB.prepare("SELECT end_min FROM booking_reservations WHERE id=?").bind(free.id).first();
+ assert.equal(row.end_min,1320); // 20:30 + 90 = 22:00
 });
 test("online holdback protects telephone slots but respects physical maximum",async()=>{
  const {db,env,req}=await fixture();
@@ -161,13 +163,13 @@ test("extending an occupied table cannot overlap a full later slot",async()=>{
  const {db,env,req}=await fixture();
  db.prepare("UPDATE booking_config SET capacity=2,holdback=0").run();
  const a=await createBooking(env,req);
- const b=await createBooking(env,{...req,time:"21:00"});
+ const b=await createBooking(env,{...req,time:"20:30"});
  await assert.rejects(extendBooking(env,a.id,30),/Impossibile prolungare/);
- assert.equal(db.prepare("SELECT end_min FROM booking_reservations WHERE id=?").get(a.id).end_min,1245);
+ assert.equal(db.prepare("SELECT end_min FROM booking_reservations WHERE id=?").get(a.id).end_min,1230);
  await changeStatus(env,b.id,"cancelled");
  const r=await extendBooking(env,a.id,30);
- assert.equal(r.end_min,1275);
- assert.equal(db.prepare("SELECT total FROM booking_slot_inventory WHERE minute=1260").get().total,2);
+ assert.equal(r.end_min,1260);
+ assert.equal(db.prepare("SELECT total FROM booking_slot_inventory WHERE minute=1245").get().total,2);
 });
 
 test("original 90-minute duration is preserved after future booking settings change",async()=>{
@@ -178,7 +180,7 @@ test("original 90-minute duration is preserved after future booking settings cha
  assert.equal(original.duration_min,90);assert.equal(original.buffer_min,15);
  await updateBooking(env,b.id,{time:"21:00"});
  const row=db.prepare("SELECT end_min,duration_min,buffer_min FROM booking_reservations WHERE id=?").get(b.id);
- assert.equal(row.end_min,1260+90+15);
+ assert.equal(row.end_min,1260+90);
  assert.equal(row.duration_min,90);
  assert.equal(row.buffer_min,15);
 });
@@ -235,8 +237,8 @@ test("late-night bookings with occupancy extending past midnight are not accepte
  db.prepare("UPDATE booking_config SET duration_min=120,buffer_min=60,interval_min=15").run();
  const times=(await availableTimes(env,date,2)).times;
  assert.ok(times.includes("20:00"));
- assert.ok(!times.includes("21:15"));
- await assert.rejects(createBooking(env,{...req,time:"21:15"}),/Orario non disponibile/);
+ assert.ok(!times.includes("22:00"));
+ await assert.rejects(createBooking(env,{...req,time:"22:00"}),/Orario non disponibile/);
 });
 test("a phone booking uses the same capacity pool and can be marked no-show manually",async()=>{
  const {db,env,req,date}=await fixture();
@@ -254,10 +256,10 @@ test("automatic time-based reuse doesn't require manual status completion",async
  const a=await createBooking(env,{...req,guests:4});
  await changeStatus(env,a.id,"seated");
  assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(a.id).status,"seated");
- assert.ok(!(await availableTimes(env,date,4)).times.includes("20:30"));
- assert.ok((await availableTimes(env,date,4)).times.includes("21:00")); // 90 minutes + 15 buffer
- const b=await createBooking(env,{...req,time:"21:00",guests:4,name:"Cliente secondo turno"});
- assert.equal(b.time,"21:00");
+ assert.ok(!(await availableTimes(env,date,4)).times.includes("20:00"));
+ assert.ok((await availableTimes(env,date,4)).times.includes("20:30")); // 75 minutes + 15 included
+ const b=await createBooking(env,{...req,time:"20:30",guests:4,name:"Cliente secondo turno"});
+ assert.equal(b.time,"20:30");
 });
 
 test("customer cannot free an occupied table after staff marks arrival",async()=>{
@@ -269,4 +271,25 @@ test("customer cannot free an occupied table after staff marks arrival",async()=
  assert.equal(response.status,409);
  assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(b.id).status,"arrived");
  assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,2);
+});
+
+test("settings refuse a reset time equal to or longer than the entire booking window",async()=>{
+ const {env}=await fixture(),cookie=await adminCookie(env);
+ const config={enabled:1,table_mode:0,capacity:40,holdback:4,max_party:8,
+   duration_min:60,buffer_min:60,interval_min:30,advance_days:60,notice_min:60,grace_min:15};
+ const res=await adminPost({env,request:request("/admin/bookings",{action:"settings",config},cookie)});
+ assert.equal(res.status,400);
+ assert.equal((await bookingConfig(env)).duration_min,90);
+ assert.equal((await bookingConfig(env)).buffer_min,15);
+});
+test("calendar event covers 75 dining minutes, not the 15-minute cleanup",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const source=readFileSync(new URL("../prenota.html",import.meta.url),"utf8");
+ const part=source.slice(source.indexOf("function diningMinutes("),source.indexOf("function localIcs("));
+ const stay=new Function(part+";return diningMinutes;")();
+ assert.equal(stay({duration_min:90,buffer_min:15}),75);
+ assert.equal(stay({duration_min:120,buffer_min:30}),90);
+ assert.equal(stay({duration_min:90,buffer_min:0}),90);
+ assert.ok(source.includes("start+diningMinutes(s)*60000"));
+ assert.ok(source.includes("m=minutes(s.time)+diningMinutes(s)"));
 });
