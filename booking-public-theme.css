@@ -231,3 +231,11 @@ footer{
   .aside::before{height:170px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* At 320px, keep the native date-picker fully readable (including its icon). */
+@media(max-width:370px){
+  .fields{grid-template-columns:minmax(0,1fr)}
+  .field{margin-bottom:13px}
+  .field input[type="date"]{min-width:0;width:100%}
+  .detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
