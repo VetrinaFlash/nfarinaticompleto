@@ -37,6 +37,8 @@ for(const viewport of VIEWS){
  });
  await page.goto(ROOT+"/prenota.html",{waitUntil:"domcontentloaded"});
  await page.locator(".time").first().waitFor();
+ await page.locator("#guests").selectOption("4");
+ await page.locator(".time").first().waitFor();
  assert.ok(await page.locator("body").evaluate(e=>getComputedStyle(e).fontFamily.includes("Poppins")));
  assert.equal(await page.locator("body").evaluate(e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)");
  await clearOverflow(page,viewport.label+" public");
