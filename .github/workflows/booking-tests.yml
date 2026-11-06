@@ -30,10 +30,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Install Chromium for visual and functional checks
+      - name: Prepare Playwright and system Chrome
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
-          npx playwright install --with-deps chromium
+          command -v google-chrome || command -v google-chrome-stable
       - name: Run responsive customer and admin browser flows
         run: |
           python3 -m http.server 8874 --bind 127.0.0.1 > /tmp/booking-preview.log 2>&1 &
