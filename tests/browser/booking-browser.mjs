@@ -74,7 +74,7 @@ const settings={config:{id:1,enabled:1,capacity:50,holdback:5,max_party:8,durati
  interval_min:30,advance_days:60,notice_min:0,grace_min:15,table_mode:1},
  hours:Array.from({length:7},(_,i)=>({weekday:i,enabled:i===1?0:1,opens:"18:30",closes:"23:30"})),
  closures:[],tables:[{id:"t1",label:"Sala 1",seats:4,zone:"Sala",active:1}]};
-for(const viewport of VIEWS.slice(0,2)){
+for(const viewport of VIEWS){
  const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height}});
  const page=await context.newPage(),errors=agentError(page);
  let manual={id:"99999999-1234-4123-9123-123456789abc",source:"manual",
@@ -99,6 +99,10 @@ for(const viewport of VIEWS.slice(0,2)){
  await page.locator("#filter-date").fill(date);
  await page.locator("#refresh").click();
  await clearOverflow(page,viewport.label+" admin");
+ if(viewport.width<=390){
+   const dateInput=await page.locator("#filter-date").boundingBox();
+   assert.ok(dateInput.width>=220,"admin date must remain readable at "+viewport.width+"px");
+ }
  assert.ok(await page.locator("body").evaluate(e=>getComputedStyle(e).fontFamily.includes("Poppins")));
  assert.equal(await page.locator("body").evaluate(e=>getComputedStyle(e).backgroundColor),"rgb(15, 15, 15)");
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-admin-agenda.png",fullPage:true});
