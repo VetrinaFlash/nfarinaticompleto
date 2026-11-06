@@ -278,6 +278,23 @@ export async function changeStatus(env,id,status) {
   await env.DB.prepare("UPDATE booking_reservations SET status=?,updated_at=datetime('now') WHERE id=? AND status IN('confirmed','arrived','seated')").bind(status,id).run();
   return {ok:true,status};
 }
+export async function extendBooking(env,id,minutes) {
+  await ensureBookingSchema(env);
+  if(![15,30,45,60].includes(Number(minutes))) throw Error("Prolungamento non valido");
+  const existing=await env.DB.prepare("SELECT * FROM booking_reservations WHERE id=?").bind(id).first();
+  if(!existing || !ACTIVE.includes(existing.status)) throw Error("Prenotazione non più modificabile");
+  const end=existing.end_min+Number(minutes);
+  if(end>1440) throw Error("Orario oltre la mezzanotte non supportato");
+  try {
+    const result=await env.DB.prepare("UPDATE booking_reservations SET end_min=?,updated_at=datetime('now') WHERE id=? AND status IN('confirmed','arrived','seated')")
+      .bind(end,id).run();
+    if(!result.meta?.changes) throw Error("Modifica non applicata");
+  } catch(e) {
+    throw Error("Impossibile prolungare: verificare capienza e successive prenotazioni");
+  }
+  return {ok:true,end_min:end};
+}
+
 export function bookingError(e) {
   const message=String(e?.message||"");
   if(/booking_full|booking capacity|table_unavailable|Disponibilità|Posti|tavol/i.test(message)) return json({error:"Posti terminati: scegli un altro orario"},409);
