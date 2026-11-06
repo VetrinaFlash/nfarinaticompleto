@@ -485,6 +485,10 @@
       <div class="nav-item active" data-section="dashboard" onclick="goTo('dashboard')">
         <i class="fa-solid fa-gauge-high"></i> Dashboard
       </div>
+      <a class="nav-item" href="admin-prenotazioni.html" style="text-decoration:none">
+        <i class="fa-solid fa-calendar-check"></i> Prenotazioni
+        <span class="badge" id="booking-badge" style="display:none">0</span>
+      </a>
       <div class="nav-item" data-section="orders" onclick="goTo('orders')">
         <i class="fa-solid fa-receipt"></i> Ordini
         <span class="badge" id="new-orders-badge" style="display:none">0</span>
@@ -2458,5 +2462,6 @@ async function repairMenuOptions() {
   document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => setTimeout(updateMagazzinoBadge, 400)));
 })();
 </script>
+<script src="/booking-admin-badge.js" defer></script>
 </body>
 </html>
