@@ -35,6 +35,9 @@ for(const viewport of VIEWS){
    const data=r.request().postDataJSON();actions.push({kind:"manage",data});
    return r.fulfill({json:data.action==="cancel"?{ok:true,status:"cancelled"}:{ok:true,date:data.date,time:data.time,guests:data.guests}});
  });
+ await page.goto(ROOT+"/index.html",{waitUntil:"domcontentloaded"});
+ await clearOverflow(page,viewport.label+" original homepage with reservation CTA");
+ assert.ok(await page.locator('a[href="prenota.html"]').count()>=2,"home and hero reservation links exist");
  await page.goto(ROOT+"/prenota.html",{waitUntil:"domcontentloaded"});
  await page.locator(".time").first().waitFor();
  await page.locator("#guests").selectOption("4");
