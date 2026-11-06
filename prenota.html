@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111116">
+<meta name="description" content="Prenota un tavolo da N'Farinati Modern Pizza a Bagheria, scegli orario e numero di persone. Conferma immediata, senza account.">
+<title>Prenota un tavolo | N'Farinati Modern Pizza</title>
+<link rel="icon" href="/images/logo.jpg" type="image/jpeg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#111116;--panel:#1b1b23;--border:#363440;--muted:#aaa8b2;--gold:#f1bb70;--red:#cf3035;--text:#f9f6f2}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 80% 0%,#3a2228 0%,#111116 55%);color:var(--text);font-family:'DM Sans',sans-serif;line-height:1.6;min-height:100dvh}a{color:inherit}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{opacity:.45;cursor:not-allowed}header{max-width:1150px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:21px 24px;gap:15px}.brand{display:flex;gap:12px;align-items:center;text-decoration:none}.brand img{width:52px;height:52px;border-radius:12px;object-fit:cover}.brand b{font:800 1rem Montserrat,sans-serif;letter-spacing:.03em}.brand span{font-size:.72rem;color:var(--muted);display:block;letter-spacing:.16em}.back{border:1px solid var(--border);border-radius:30px;text-decoration:none;padding:9px 18px;color:#ddd;font-size:.85rem;font-weight:700}.back:hover{border-color:var(--gold)}main{max-width:1150px;margin:12px auto 80px;padding:0 24px}.hero{text-align:center;margin:35px auto 35px;max-width:690px}.eyebrow{font:800 .7rem Montserrat,sans-serif;color:var(--gold);letter-spacing:.25em;text-transform:uppercase}.hero h1{font:900 clamp(2rem,5vw,3.55rem)/1.12 Montserrat,sans-serif;letter-spacing:-.045em;margin:14px 0}.hero h1 em{font-style:normal;color:var(--gold)}.hero p{color:var(--muted);font-size:1rem}.layout{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,.8fr);gap:25px;align-items:start}.panel{background:rgba(27,27,35,.96);border:1px solid #413741;border-radius:22px;padding:30px;box-shadow:0 20px 75px rgba(0,0,0,.23)}h2{font:800 1.25rem Montserrat,sans-serif;margin:0 0 6px}.sub{color:var(--muted);font-size:.87rem;margin:0 0 25px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:7px;margin-bottom:17px}label{font-size:.84rem;color:#e7e1de;font-weight:700}.field input,.field select,.field textarea{background:#121217;color:var(--text);width:100%;border:1px solid var(--border);outline:none;border-radius:12px;padding:13px 14px;min-height:48px}.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(241,187,112,.1)}.field textarea{resize:vertical;min-height:85px}.times{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:9px 0 22px}.time{padding:13px 4px;border-radius:10px;border:1px solid var(--border);background:#131319;color:var(--text);font-weight:800}.time:hover{border-color:var(--gold)}.time.active{background:var(--gold);color:#181117;border-color:var(--gold)}.time:focus-visible{outline:2px solid #fff}.tip{background:rgba(241,187,112,.08);border:1px solid rgba(241,187,112,.19);color:#ead1af;padding:13px 14px;border-radius:12px;font-size:.83rem;margin:12px 0 20px}.primary{border:0;border-radius:12px;background:linear-gradient(135deg,#f3ce91,#e6ab5b);color:#23180a;font-weight:900;padding:16px 20px;width:100%;min-height:54px;box-shadow:0 8px 22px rgba(223,163,86,.16)}.primary:hover:not(:disabled){filter:brightness(1.08)}.secondary{background:transparent;border:1px solid #62535b;color:var(--text);border-radius:12px;padding:11px 14px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}.secondary:hover{border-color:var(--gold)}.status{min-height:23px;font-size:.85rem;color:var(--muted);margin-bottom:12px}.error{color:#ff8d8d!important}.success{color:#9de7b4!important}.aside h3{font:800 1rem Montserrat,sans-serif;margin:0 0 12px;color:var(--gold)}.aside p,.aside li{color:var(--muted);font-size:.9rem}.aside ul{padding-left:18px}.aside li{margin-bottom:13px}.aside .address{padding:13px 0;border-top:1px solid var(--border);font-weight:700}.muted{color:var(--muted);font-size:.8rem}.hidden{display:none!important}.check{display:flex;gap:10px;align-items:flex-start;margin:8px 0 22px;font-size:.82rem;color:var(--muted)}.check input{width:19px;height:19px;accent-color:#f1bb70;flex-shrink:0;margin:1px 0 0}.done-icon{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:2rem;background:rgba(68,183,113,.15);color:#9de7b4;margin-bottom:18px}.detail{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:25px 0}.detail div{background:#14141a;border:1px solid var(--border);padding:13px;border-radius:12px}.detail small{display:block;color:var(--muted);font-size:.72rem}.detail strong{font-size:1rem}.actions{display:flex;flex-wrap:wrap;gap:10px;margin:20px 0}.pill{font-size:.75rem;border-radius:20px;background:#36303b;color:var(--gold);padding:4px 12px;display:inline-block;margin-bottom:12px}footer{text-align:center;padding:15px;color:var(--muted);font-size:.75rem}.help{margin:20px 0 0;color:var(--muted);font-size:.83rem}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.aside{order:2}.hero{margin:18px auto 25px}}@media(max-width:540px){header{padding:14px}.brand img{height:43px;width:43px}.brand b{font-size:.79rem}.brand span{font-size:.6rem}.back{font-size:.72rem;padding:8px 11px}main{padding:0 13px}.hero h1{font-size:2.05rem}.hero p{font-size:.89rem}.panel{padding:20px 17px;border-radius:17px}.times{grid-template-columns:repeat(3,1fr)}.fields{gap:10px}.detail{grid-template-columns:1fr 1fr}.actions .secondary{width:100%}}
+</style>
+</head>
+<body>
+<header><a class="brand" href="/"><img src="/images/logo.jpg" alt="Logo N'Farinati"><div><b>N'FARINATI</b><span>MODERN PIZZA</span></div></a><a class="back" href="/">← Torna al sito</a></header>
+<main>
+<section class="hero"><div class="eyebrow">Bagheria • Modern Pizza</div><h1>Il tuo tavolo<br><em>ti aspetta.</em></h1><p>Scegli quando venirci a trovare. Prenotazione gratuita con conferma immediata e senza registrazione.</p></section>
+<div class="layout">
+<section class="panel">
+<div id="booking-form-view">
+<h2>Prenota un tavolo</h2><p class="sub">Seleziona giorno, orario e persone. Ti mostriamo solo la disponibilità reale.</p>
+<div class="fields"><div class="field"><label for="date">Quando vuoi venire?</label><input type="date" id="date" required></div><div class="field"><label for="guests">Quante persone?</label><select id="guests" required></select></div></div>
+<label id="times-label">Seleziona un orario disponibile</label><div class="times" id="times"></div><p class="status" id="availability-status" role="status" aria-live="polite"></p>
+<form id="booking-form" class="hidden" novalidate>
+<div class="tip">✓ Il tavolo è riservato per <strong id="duration">90 minuti</strong>. Ti chiediamo di arrivare puntuale.</div>
+<div class="fields"><div class="field"><label for="name">Nome e cognome *</label><input id="name" maxlength="80" autocomplete="name" required placeholder="Mario Rossi"></div><div class="field"><label for="phone">Telefono *</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="22" required placeholder="+39 333 123 4567"></div></div>
+<div class="field"><label for="email">Email (facoltativa)</label><input id="email" type="email" maxlength="160" autocomplete="email" placeholder="nome@esempio.it"></div>
+<div class="field"><label for="notes">Richieste particolari (facoltative)</label><textarea id="notes" maxlength="500" placeholder="Seggiolone, accessibilità, occasione speciale…"></textarea></div>
+<div id="turnstile" class="hidden"></div>
+<label class="check"><input id="privacy" type="checkbox" required><span>Ho letto le informazioni sul trattamento dei dati. Nome e telefono verranno utilizzati solo per gestire la prenotazione. *</span></label>
+<p class="status" id="submit-status" role="status" aria-live="polite"></p>
+<button class="primary" id="submit" type="submit">Conferma prenotazione →</button>
+</form>
+</div>
+<div id="done" class="hidden" aria-live="polite"><div class="done-icon">✓</div><div class="pill" id="done-state">PRENOTAZIONE CONFERMATA</div><h2 id="done-title">Ti aspettiamo!</h2><p class="sub">La prenotazione è stata registrata. Non devi attendere altre conferme.</p><div class="detail" id="done-details"></div><p class="tip">📅 Salva l'appuntamento sul calendario del telefono: potrai ricevere un promemoria senza SMS, email o WhatsApp.</p><div class="actions"><button type="button" id="ics" class="secondary">📅 Scarica per Apple / Outlook</button><a id="google" class="secondary" rel="noopener noreferrer" target="_blank">Google Calendar ↗</a><button type="button" class="secondary" id="copy-link">Copia link prenotazione</button></div><a class="secondary" id="manage-link">Modifica o cancella prenotazione</a><p class="help">Conserva il link personale per gestire la prenotazione in autonomia.</p></div>
+<div id="manage" class="hidden"><h2>Gestisci la tua prenotazione</h2><p class="sub" id="manage-status"></p><div class="detail" id="manage-details"></div><div id="manage-actions"><div class="fields"><div class="field"><label for="change-date">Nuova data</label><input type="date" id="change-date"></div><div class="field"><label for="change-guests">Persone</label><select id="change-guests"></select></div></div><label>Nuovo orario</label><div class="times" id="change-times"></div><p class="status" id="change-status"></p><button class="primary" id="reschedule" type="button">Salva nuovo orario</button><p><button class="secondary" id="cancel" type="button">Cancella prenotazione</button></p></div><div class="actions"><button type="button" id="manage-ics" class="secondary">📅 Aggiungi al calendario</button><a id="manage-google" class="secondary" rel="noopener noreferrer" target="_blank">Google Calendar ↗</a></div></div>
+</section>
+<aside class="panel aside"><h3>Una serata da N'Farinati 🍕</h3><p>Un tavolo riservato, la nostra cucina, le tue persone preferite. Al resto pensiamo noi.</p><ul><li><strong>Conferma immediata</strong> senza telefonate e attesa.</li><li><strong>Nessun account</strong> e nessun costo di prenotazione.</li><li><strong>Promemoria calendario</strong> sul tuo telefono, se desideri aggiungerlo.</li><li><strong>Puoi modificare o cancellare</strong> con il link personale.</li></ul><div class="address">📍 Via P. Togliatti 8, Bagheria (PA)</div><div class="address">☎ <a href="tel:+390918432674">091 8432674</a></div><p class="muted">Per gruppi numerosi o richieste particolari puoi contattarci telefonicamente.</p></aside>
+</div></main><footer>© N'Farinati Modern Pizza · Prenotazione diretta e gratuita</footer>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+let cfg=null,selected=null,details=null,personalToken=null,loadSerial=0,manageSlot=null;
+const nowRome=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()).replaceAll('/','-');
+const pad=n=>String(n).padStart(2,'0');
+const dateText=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
+const minutes=s=>Number(s.slice(0,2))*60+Number(s.slice(3,5));
+const timeText=m=>pad(Math.floor(m/60))+':'+pad(m%60);
+const get = async url => {const r=await fetch(url,{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error||'Operazione non riuscita');return d};
+async function post(url,data){const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const d=await r.json();if(!r.ok)throw Error(d.error||'Operazione non riuscita');return d}
+function status(id,text,error=false){$(id).textContent=text;$(id).className='status'+(error?' error':'')}
+function selectFill(id,max){$(id).replaceChildren();for(let i=1;i<=max;i++){$(id).add(new Option(i+' '+(i===1?'persona':'persone'),i))}}
+function renderTimes(container,times,chosen,select){
+  const el=$(container);el.replaceChildren();
+  times.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='time'+(chosen===t?' active':'');b.textContent=t;b.setAttribute('aria-pressed',chosen===t?'true':'false');b.onclick=()=>select(t);el.appendChild(b)});
+}
+async function availability(){
+ const serial=++loadSerial;selected=null;$('booking-form').classList.add('hidden');status('availability-status','Controllo disponibilità…');
+ const date=$('date').value,guests=$('guests').value;
+ if(!date||!guests)return;
+ try{const result=await get('/api/bookings?date='+encodeURIComponent(date)+'&guests='+encodeURIComponent(guests));
+   if(serial!==loadSerial)return;
+   renderTimes('times',result.times,null,t=>{selected=t;renderTimes('times',result.times,t,s=>{selected=s;availabilitySelected(result.times)});availabilitySelected(result.times)});
+   if(!result.times.length)status('availability-status','Nessun orario disponibile in questa data: prova un altro giorno.');
+   else status('availability-status',result.times.length+' orari disponibili · scegli quello che preferisci');
+ }catch(e){if(serial===loadSerial)status('availability-status',e.message,true)}
+}
+function availabilitySelected(times){renderTimes('times',times,selected,t=>{selected=t;availabilitySelected(times)});$('booking-form').classList.remove('hidden');$('submit-status').textContent='';}
+function localIcs(s){
+ const start=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00';
+ const endM=minutes(s.time)+(s.duration_min||90), endDay=endM>=1440;
+ const endDate=endDay?new Date(s.date+'T12:00:00Z'):null;
+ if(endDay)endDate.setUTCDate(endDate.getUTCDate()+1);
+ const eDay=(endDay?endDate.toISOString().slice(0,10):s.date).replaceAll('-','');
+ const end=eDay+'T'+pad(Math.floor(endM%1440/60))+pad(endM%60)+'00';
+ const escape=x=>String(x).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n');
+ const text=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NFar inati//Prenotazioni//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH','X-WR-TIMEZONE:Europe/Rome','BEGIN:VEVENT',
+ 'UID:'+s.id+'@nfarinatimodernpizza.it','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),
+ 'DTSTART;TZID=Europe/Rome:'+start,'DTEND;TZID=Europe/Rome:'+end,
+ 'SUMMARY:'+escape("N'Farinati Modern Pizza - "+s.guests+" persone"),
+ 'LOCATION:'+escape('Via P. Togliatti 8, Bagheria (PA)'),
+ 'DESCRIPTION:'+escape('Prenotazione '+(s.code||'')+'. Tavolo riservato per '+(s.duration_min||90)+' minuti.'),
+ 'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Promemoria prenotazione N Farinati','TRIGGER:-PT2H','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
+ const a=document.createElement('a'),url=URL.createObjectURL(new Blob([text],{type:'text/calendar;charset=utf-8'}));
+ a.href=url;a.download='nfarinati-prenotazione.ics';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+function googleUrl(s){
+ const dt=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00',m=minutes(s.time)+(s.duration_min||90);
+ const d=new Date(s.date+'T12:00:00Z');if(m>=1440)d.setUTCDate(d.getUTCDate()+1);
+ const end=d.toISOString().slice(0,10).replaceAll('-','')+'T'+pad(Math.floor(m%1440/60))+pad(m%60)+'00';
+ return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent("N'Farinati Modern Pizza · "+s.guests+" persone")+
+ '&dates='+dt+'/'+end+'&ctz=Europe%2FRome&location='+encodeURIComponent('Via P. Togliatti 8, Bagheria (PA)')+
+ '&details='+encodeURIComponent('Prenotazione '+(s.code||'')+' · Durata '+(s.duration_min||90)+' minuti');
+}
+function detailRender(container,s){
+ const entries=[['Data',dateText(s.date)],['Orario',s.time],['Persone',s.guests],['Codice',s.code||'NF-'+s.id.slice(0,8).toUpperCase()]];
+ $(container).replaceChildren();
+ entries.forEach(([k,v])=>{const box=document.createElement('div'),label=document.createElement('small'),strong=document.createElement('strong');label.textContent=k;strong.textContent=v;box.append(label,strong);$(container).appendChild(box)});
+}
+function success(s,token){
+ details=s;personalToken=token;$('booking-form-view').classList.add('hidden');$('manage').classList.add('hidden');$('done').classList.remove('hidden');
+ detailRender('done-details',s);
+ $('google').href=googleUrl(s);
+ const link=location.origin+'/prenota.html?id='+encodeURIComponent(s.id)+'&token='+encodeURIComponent(token);
+ $('manage-link').href=link;
+ $('ics').onclick=()=>localIcs(s);
+ $('copy-link').onclick=async()=>{try{await navigator.clipboard.writeText(link);$('copy-link').textContent='Link copiato ✓'}catch{$('copy-link').textContent='Link disponibile nel pulsante Modifica'}};
+}
+async function loadManage(){
+ const query=new URLSearchParams(location.search),id=query.get('id'),token=query.get('token');
+ if(!id||!token)return false;
+ $('booking-form-view').classList.add('hidden');$('manage').classList.remove('hidden');
+ try{
+   const d=await get('/api/booking-manage?id='+encodeURIComponent(id)+'&token='+encodeURIComponent(token));
+   details=d.booking;personalToken=token;updateManage();
+ }catch(e){$('manage-status').textContent=e.message;$('manage-actions').classList.add('hidden')}
+ return true;
+}
+function updateManage(){
+ const s=details;$('manage-status').textContent='Stato: '+({confirmed:'Confermata',arrived:'Cliente arrivato',seated:'Al tavolo',cancelled:'Cancellata',completed:'Completata',no_show:'Non presentato'}[s.status]||s.status);
+ detailRender('manage-details',s);
+ $('manage-ics').onclick=()=>localIcs(s);$('manage-google').href=googleUrl(s);
+ if(!['confirmed','arrived','seated'].includes(s.status)){$('manage-actions').classList.add('hidden');return}
+ $('manage-actions').classList.remove('hidden');$('change-date').value=s.date;$('change-date').min=nowRome();
+ selectFill('change-guests',cfg.max_party);$('change-guests').value=String(s.guests);
+ $('change-date').onchange=changeAvailability;$('change-guests').onchange=changeAvailability;
+ changeAvailability();
+}
+async function changeAvailability(){
+ manageSlot=null;const date=$('change-date').value,guests=$('change-guests').value;
+ status('change-status','Caricamento orari…');
+ try{
+   const data=await get('/api/bookings?date='+encodeURIComponent(date)+'&guests='+encodeURIComponent(guests));
+   const candidate=[...new Set([...data.times,...(date===details.date&&Number(guests)===Number(details.guests)?[details.time]:[])])].sort();
+   renderTimes('change-times',candidate,null,t=>{manageSlot=t;renderTimes('change-times',candidate,t,x=>{manageSlot=x;changeSelection(candidate)});changeSelection(candidate)});
+   status('change-status',candidate.length?'Seleziona un nuovo orario':'Nessun orario disponibile');
+ }catch(e){status('change-status',e.message,true)}
+}
+function changeSelection(ts){renderTimes('change-times',ts,manageSlot,t=>{manageSlot=t;changeSelection(ts)});}
+$('reschedule').onclick=async()=>{
+ if(!manageSlot)return status('change-status','Scegli un orario',true);
+ $('reschedule').disabled=true;
+ try{await post('/api/booking-manage',{action:'reschedule',id:details.id,token:personalToken,
+   date:$('change-date').value,time:manageSlot,guests:Number($('change-guests').value)});
+   details={...details,date:$('change-date').value,time:manageSlot,guests:Number($('change-guests').value)};
+   updateManage();status('change-status','Prenotazione aggiornata ✓');
+ }catch(e){status('change-status',e.message,true)}finally{$('reschedule').disabled=false}
+};
+$('cancel').onclick=async()=>{
+ if(!confirm('Vuoi davvero cancellare questa prenotazione?'))return;
+ $('cancel').disabled=true;
+ try{await post('/api/booking-manage',{action:'cancel',id:details.id,token:personalToken});
+   details.status='cancelled';updateManage();
+ }catch(e){status('change-status',e.message,true)}finally{$('cancel').disabled=false}
+};
+$('booking-form').onsubmit=async e=>{
+ e.preventDefault();if(!selected)return;
+ if(!$('privacy').checked)return status('submit-status','Conferma la presa visione dell’informativa.',true);
+ const btn=$('submit');btn.disabled=true;status('submit-status','Conferma prenotazione in corso…');
+ try{
+  const body={date:$('date').value,time:selected,guests:Number($('guests').value),
+    name:$('name').value,phone:$('phone').value,email:$('email').value,notes:$('notes').value};
+  if(window.turnstile&&window.turnstileWidget!==undefined)body.turnstile_token=window.turnstile.getResponse(window.turnstileWidget);
+  const d=await post('/api/bookings',body);
+  success(d.booking,d.booking.token);history.replaceState(null,'','/prenota.html');
+ }catch(err){status('submit-status',err.message,true);if(window.turnstile&&window.turnstileWidget!==undefined)window.turnstile.reset(window.turnstileWidget)}
+ finally{btn.disabled=false}
+};
+async function init(){
+ try{
+  cfg=await get('/api/booking-config');
+  if(!cfg.enabled && !new URLSearchParams(location.search).has('id'))return status('availability-status','Prenotazioni temporaneamente sospese.',true);
+  selectFill('guests',cfg.max_party);$('guests').value='2';$('date').min=nowRome();$('date').max=new Date(new Date(nowRome()+'T12:00:00Z').getTime()+cfg.advance_days*86400000).toISOString().slice(0,10);
+  $('date').value=nowRome();$('date').onchange=availability;$('guests').onchange=availability;
+  $('duration').textContent=cfg.duration_min+' minuti';
+  if(cfg.turnstile_site_key){
+    $('turnstile').classList.remove('hidden');
+    window.turnstileReady=()=>{window.turnstileWidget=turnstile.render('#turnstile',{sitekey:cfg.turnstile_site_key})};
+    const sc=document.createElement('script');sc.src='https://challenges.cloudflare.com/turnstile/v0/api.js?onload=turnstileReady&render=explicit';sc.async=true;sc.defer=true;document.head.appendChild(sc);
+  }
+  if(!await loadManage())await availability();
+ }catch(e){status('availability-status',e.message,true)}
+}
+init();
+</script>
+</body></html>
