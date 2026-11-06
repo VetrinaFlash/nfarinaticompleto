@@ -8,7 +8,7 @@ Branch: `feature/prenotazioni-tavoli`. Creato da `main` (`da05952cc7d7ef60967a0f
 - Conferma visibile sul sito, codice prenotazione, link personale con token riservato.
 - `.ics` compatibile con calendari che importano iCalendar, con avvisi a 24 ore e 2 ore; link Google Calendar (avvisi secondo le impostazioni dell'utente). Nessun messaggio WhatsApp/SMS/email viene inviato.
 - `/admin-prenotazioni.html`: agenda per giorno e stato, prenotazioni telefoniche, modifiche, cancellazioni, arrivo, tavolo occupato, liberazione, no-show, prolungamento di 15/30 minuti.
-- Impostazioni: capienza contemporanea, quota riservata a prenotazioni non online, 90 minuti di durata predefinita, 15 minuti di margine, orari/chiusure settimanali e straordinarie, tavoli fisici opzionali, limitazioni di preavviso.
+- Impostazioni: capienza contemporanea, quota riservata a prenotazioni non online, 90 minuti di fascia TOTALE, compresi 75 minuti al tavolo e 15 minuti per il riassetto, orari/chiusure settimanali e straordinarie, tavoli fisici opzionali, limitazioni di preavviso.
 - Badge + notifica sonora nel pannello admin esistente, oltre alla sezione dedicata.
 - Concorrenza: inventario a scatti di 15 minuti, trigger SQLite per l'applicazione atomica delle quote, protezione dei tavoli assegnati, token per gestione cliente e ripetizioni idempotenti della stessa conferma.
 - Endpoint pubblici limitati per frequenza; Cloudflare Turnstile supportato opzionalmente.
@@ -28,9 +28,18 @@ Le **nuove** tabelle `booking_*` e i trigger vengono creati automaticamente in m
 
 Cloudflare Pages deve avere il binding D1 `DB` disponibile **anche nell'ambiente preview**. Verificare quale database D1 è associato alla preview prima di provarla: se preview e produzione condividono il binding, la prima visita alla preview creerà le nuove tabelle anche nel medesimo database (senza alterare tabelle esistenti). È preferibile usare un D1 di prova.
 
-**I valori iniziali sono solo tecnici**: 50 posti totali, quota telefonica 0, 8 persone max online, apertura serale dal martedì alla domenica, 90 minuti + 15 di margine. Il titolare deve inserire la capienza, i tavoli e gli orari reali dall'admin prima di aprire le prenotazioni al pubblico.
+**I valori iniziali sono solo tecnici**: 50 posti totali, quota telefonica 0, 8 persone max online, apertura serale dal martedì alla domenica, **90 minuti totali inclusi i 15 minuti di riassetto (75 + 15)**. Il titolare deve inserire la capienza, i tavoli e gli orari reali dall'admin prima di aprire le prenotazioni al pubblico.
 
 Per attivare Turnstile configurare insieme i binding `TURNSTILE_SITE_KEY` e `TURNSTILE_SECRET_KEY` nell'ambiente Workers/Pages. Se non configurati, resta il rate limit; i recapiti telefonici non sono verificati tramite OTP (nessun costo SMS/API).
+
+
+## Accesso ai tavoli e durata inclusiva
+
+Nel menu laterale di `admin.html` c'è una voce diretta **Tavoli**, che apre `admin-prenotazioni.html#tables`. Si possono aggiungere, nominare, assegnare alla zona, configurare i posti, attivare/disattivare e modificare i tavoli fisici. Se il titolare vuole assegnare automaticamente un preciso tavolo a ogni prenotazione, deve attivare **Assegna automaticamente singoli tavoli fisici** nella scheda Capienza. La prenotazione telefonica è disponibile da **+ Prenotazione telefonica**, con gestione manuale di arrivo, no-show, cancellazione e prolungamenti.
+
+La configurazione `duration_min` rappresenta la **fascia completa bloccata**, non il solo tempo al tavolo: `stay = duration_min - buffer_min`. Con `duration_min = 90` e `buffer_min = 15`, una prenotazione alle 20:00 prevede la permanenza 20:00–21:15, riassetto 21:15–21:30 e **prima nuova disponibilità alle 21:30**. Calendari iCal/Google includono soltanto la permanenza di 75 minuti e gli avvisi configurati. Non vengono aggiunti altri 15 minuti dopo le 21:30.
+
+Il cambiamento è applicato ai **nuovi inserimenti**. Eventuali prenotazioni già registrate nella preview con la regola precedente (90 + 15) conservano la propria disponibilità salvata, per non abbreviare di nascosto una prenotazione confermata. Per cancellarle o modificarle usare il pannello admin; non modificare i record direttamente senza verificare gli ospiti già prenotati.
 
 ## Verifiche e messa online
 
