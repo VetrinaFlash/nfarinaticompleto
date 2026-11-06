@@ -44,7 +44,7 @@
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
-let cfg=null,selected=null,details=null,personalToken=null,loadSerial=0,manageSlot=null;
+let cfg=null,selected=null,details=null,personalToken=null,loadSerial=0,manageSlot=null,requestToken=null;
 const nowRome=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
 const pad=n=>String(n).padStart(2,'0');
 const dateText=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
@@ -59,7 +59,7 @@ function renderTimes(container,times,chosen,select){
   times.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='time'+(chosen===t?' active':'');b.textContent=t;b.setAttribute('aria-pressed',chosen===t?'true':'false');b.onclick=()=>select(t);el.appendChild(b)});
 }
 async function availability(){
- const serial=++loadSerial;selected=null;$('booking-form').classList.add('hidden');status('availability-status','Controllo disponibilità…');
+ const serial=++loadSerial;selected=null;requestToken=null;$('booking-form').classList.add('hidden');status('availability-status','Controllo disponibilità…');
  const date=$('date').value,guests=$('guests').value;
  if(!date||!guests)return;
  try{const result=await get('/api/bookings?date='+encodeURIComponent(date)+'&guests='+encodeURIComponent(guests));
@@ -162,11 +162,13 @@ $('booking-form').onsubmit=async e=>{
  if(!$('privacy').checked)return status('submit-status','Conferma la presa visione dell’informativa.',true);
  const btn=$('submit');btn.disabled=true;status('submit-status','Conferma prenotazione in corso…');
  try{
+  if(!requestToken)requestToken=Array.from(crypto.getRandomValues(new Uint8Array(32)),n=>n.toString(16).padStart(2,'0')).join('');
   const body={date:$('date').value,time:selected,guests:Number($('guests').value),
-    name:$('name').value,phone:$('phone').value,email:$('email').value,notes:$('notes').value};
+    name:$('name').value,phone:$('phone').value,email:$('email').value,notes:$('notes').value,
+    request_token:requestToken};
   if(window.turnstile&&window.turnstileWidget!==undefined)body.turnstile_token=window.turnstile.getResponse(window.turnstileWidget);
   const d=await post('/api/bookings',body);
-  success(d.booking,d.booking.token);history.replaceState(null,'','/prenota.html');
+  success(d.booking,d.booking.token);requestToken=null;history.replaceState(null,'','/prenota.html');
  }catch(err){status('submit-status',err.message,true);if(window.turnstile&&window.turnstileWidget!==undefined)window.turnstile.reset(window.turnstileWidget)}
  finally{btn.disabled=false}
 };
