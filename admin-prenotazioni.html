@@ -41,7 +41,7 @@
 <div id="closures-tab" class="hidden"><section class="panel"><h2>Chiusure straordinarie</h2><p class="note">Bloccare una data impedisce nuove prenotazioni ma non cancella quelle già esistenti. Verifica l'agenda prima di chiudere.</p><form id="close-form" class="tools"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Motivo (facoltativo)</label><input name="reason" maxlength="140" placeholder="Festività / evento privato"></div><button class="btn gold">Blocca giorno</button></form><div id="closures-list"></div><p id="closures-status" class="status"></p></section></div>
 </div>
 </main>
-<div class="overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><div class="modal-head"><h2 id="modal-title">Prenotazione</h2><button class="btn small" id="close-modal">Chiudi ✕</button></div><form id="booking-edit"><input type="hidden" name="id"><div class="two"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Ora</label><input name="time" type="time" step="900" required></div></div><div class="two"><div class="field"><label>Nome cliente</label><input name="name" required maxlength="80"></div><div class="field"><label>Telefono</label><input name="phone" type="tel" required maxlength="22"></div></div><div class="two"><div class="field"><label>Numero persone</label><input name="guests" type="number" min="1" max="100" required></div><div class="field"><label>Email (facoltativa)</label><input name="email" type="email" maxlength="160"></div></div><div class="field"><label>Note</label><textarea name="notes" maxlength="500" rows="3"></textarea></div><div class="field"><label>Assegna un tavolo (facoltativo)</label><select name="table_id" id="booking-table"><option value="">Assegnazione automatica</option></select></div><p id="modal-status" class="status"></p><div class="actions-stack"><button class="btn gold" type="submit" id="save-booking">Salva prenotazione</button><button type="button" id="status-arrived" class="btn hidden">Arrivato</button><button type="button" id="status-seated" class="btn hidden">Al tavolo</button><button type="button" id="status-completed" class="btn hidden">Libera tavolo</button><button type="button" id="status-no_show" class="btn danger hidden">No-show</button><button type="button" id="status-cancelled" class="btn danger hidden">Cancella</button></div></form></div></div>
+<div class="overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><div class="modal-head"><h2 id="modal-title">Prenotazione</h2><button class="btn small" id="close-modal">Chiudi ✕</button></div><form id="booking-edit"><input type="hidden" name="id"><div class="two"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Ora</label><input name="time" type="time" step="900" required></div></div><div class="two"><div class="field"><label>Nome cliente</label><input name="name" required maxlength="80"></div><div class="field"><label>Telefono</label><input name="phone" type="tel" required maxlength="22"></div></div><div class="two"><div class="field"><label>Numero persone</label><input name="guests" type="number" min="1" max="100" required></div><div class="field"><label>Email (facoltativa)</label><input name="email" type="email" maxlength="160"></div></div><div class="field"><label>Note</label><textarea name="notes" maxlength="500" rows="3"></textarea></div><div class="field"><label>Assegna un tavolo (facoltativo)</label><select name="table_id" id="booking-table"><option value="">Assegnazione automatica</option></select></div><p id="modal-status" class="status"></p><div class="actions-stack"><button class="btn gold" type="submit" id="save-booking">Salva prenotazione</button><button type="button" id="extend15" class="btn hidden">+15 min</button><button type="button" id="extend30" class="btn hidden">+30 min</button><button type="button" id="status-arrived" class="btn hidden">Arrivato</button><button type="button" id="status-seated" class="btn hidden">Al tavolo</button><button type="button" id="status-completed" class="btn hidden">Libera tavolo</button><button type="button" id="status-no_show" class="btn danger hidden">No-show</button><button type="button" id="status-cancelled" class="btn danger hidden">Cancella</button></div></form></div></div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id),f=$('booking-edit');
@@ -160,6 +160,7 @@ function openEdit(data=null){
  formSet(f,'table_id',data?.table_id||'');
  const active=data&&['confirmed','arrived','seated'].includes(data.status);
  ['arrived','seated','completed','no_show','cancelled'].forEach(k=>$('status-'+k).classList.toggle('hidden',!active));
+ ['extend15','extend30'].forEach(k=>$(k).classList.toggle('hidden',!active));
  $('save-booking').disabled=!!data&&!active;
 }
 $('new-booking').onclick=()=>openEdit();$('close-modal').onclick=()=>$('modal').classList.add('hidden');
@@ -171,6 +172,13 @@ f.onsubmit=async e=>{
  try{await send(action,body);$('modal').classList.add('hidden');await loadAgenda()}
  catch(e){message('modal-status',e.message,true)}finally{$('save-booking').disabled=false}
 };
+[15,30].forEach(minutes=>{
+ $('extend'+minutes).onclick=async()=>{
+  const id=f.elements.id.value;if(!id)return;
+  try{await send('extend',{id,minutes});$('modal').classList.add('hidden');await loadAgenda()}
+  catch(e){message('modal-status',e.message,true)}
+ };
+});
 ['arrived','seated','completed','no_show','cancelled'].forEach(status=>{
  $('status-'+status).onclick=async()=>{
   const id=f.elements.id.value;if(!id)return;
