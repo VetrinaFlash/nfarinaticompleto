@@ -16,3 +16,10 @@
 
 /checkout-client.js
   Cache-Control: no-cache
+
+/admin-prenotazioni.html
+  Cache-Control: no-store
+/prenota.html
+  Cache-Control: no-cache
+/privacy-prenotazioni.html
+  Cache-Control: no-cache
