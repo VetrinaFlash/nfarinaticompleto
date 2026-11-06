@@ -297,7 +297,7 @@ export async function extendBooking(env,id,minutes) {
 
 export function bookingError(e) {
   const message=String(e?.message||"");
-  if(/booking_full|booking capacity|table_unavailable|Disponibilità|Posti|tavol/i.test(message)) return json({error:"Posti terminati: scegli un altro orario"},409);
+  if(/booking_full|booking capacity|table_unavailable|Disponibilità|Posti|tavol|Impossibile prolungare/i.test(message)) return json({error:"Posti terminati: scegli un altro orario"},409);
   const safe=/^(Data|Orario|Numero|Inserisci|Email|Note|Locale|Prenotazioni|Stato|Prenotazione|Nuovo|Ripristino)/.test(message);
   if(safe) return json({error:message},400);
   console.error("Booking error",e?.name,message.slice(0,100));
