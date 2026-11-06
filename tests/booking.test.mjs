@@ -169,3 +169,16 @@ test("extending an occupied table cannot overlap a full later slot",async()=>{
  assert.equal(r.end_min,1275);
  assert.equal(db.prepare("SELECT total FROM booking_slot_inventory WHERE minute=1260").get().total,2);
 });
+
+test("original 90-minute duration is preserved after future booking settings change",async()=>{
+ const {db,env,req}=await fixture();
+ const b=await createBooking(env,req);
+ db.prepare("UPDATE booking_config SET duration_min=120,buffer_min=30").run();
+ const original=await fetchByToken(env,b.id,b.token);
+ assert.equal(original.duration_min,90);assert.equal(original.buffer_min,15);
+ await updateBooking(env,b.id,{time:"21:00"});
+ const row=db.prepare("SELECT end_min,duration_min,buffer_min FROM booking_reservations WHERE id=?").get(b.id);
+ assert.equal(row.end_min,1260+90+15);
+ assert.equal(row.duration_min,90);
+ assert.equal(row.buffer_min,15);
+});
