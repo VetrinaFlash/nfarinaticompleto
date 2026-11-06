@@ -68,8 +68,8 @@ export async function onRequestPost({env,request}) {
       case "settings": {
         const c=settingsBody(body.config||{});
         const keys=Object.keys(c);
-        const result=await env.DB.prepare("UPDATE booking_config SET "+keys.map(k=>k+"=?").join(",")+" WHERE id=1").bind(...keys.map(k=>c[k])).run();
-        return json({ok:result.success===true});
+        await env.DB.prepare("UPDATE booking_config SET "+keys.map(k=>k+"=?").join(",")+" WHERE id=1").bind(...keys.map(k=>c[k])).run();
+        return json({ok:true});
       }
       case "hours": {
         if(!Array.isArray(body.hours) || body.hours.length!==7)return json({error:"Servono sette giorni"},400);
