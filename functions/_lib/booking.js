@@ -177,13 +177,16 @@ export async function validateSlot(env, config, date, time, guests, source="onli
   if (start===null || start%15!==0 || start%config.interval_min!==0) throw Error("Orario non valido");
   const now=italyNow();
   if (date < now.date || date > addDays(now.date,config.advance_days)) throw Error("Data non prenotabile");
-  if (date===now.date && start < now.minute+config.notice_min) throw Error("Orario troppo vicino");
+  const daysFromNow=Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(now.date+"T00:00:00Z"))/86400000);
+  if (daysFromNow*1440+start < now.minute+config.notice_min) throw Error("Orario troppo vicino");
   if (!config.enabled && source==="online") throw Error("Prenotazioni temporaneamente sospese");
   const closed=await env.DB.prepare("SELECT date FROM booking_closed_dates WHERE date=?").bind(date).first();
   if (closed) throw Error("Locale chiuso in questa data");
   const h=await env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(weekday(date)).first();
   const opens=parseTime(h?.opens), closes=parseTime(h?.closes);
-  if (!h?.enabled || opens===null || closes===null || start<opens || start+config.duration_min>closes) throw Error("Orario non disponibile");
+  if (!h?.enabled || opens===null || closes===null || start<opens ||
+      start+config.duration_min>closes || start+config.duration_min+config.buffer_min>1440)
+    throw Error("Orario non disponibile");
   return {date,start,end:start+config.duration_min+config.buffer_min,guests};
 }
 export async function tableCandidates(env,slot,tableMode,selectedId=null, excludeId=null) {
@@ -199,6 +202,7 @@ export async function tableCandidates(env,slot,tableMode,selectedId=null, exclud
   return candidates;
 }
 export async function isAvailable(env, config, slot, source="online", excludeId=null) {
+  if(slot.guests > config.capacity || (source==="online" && slot.guests>config.capacity-config.holdback)) return false;
   const rows=await env.DB.prepare("SELECT minute,total,online FROM booking_slot_inventory WHERE date=? AND minute>=? AND minute<?")
     .bind(slot.date,slot.start,slot.end).all();
   let old = null;
@@ -212,7 +216,8 @@ export async function isAvailable(env, config, slot, source="online", excludeId=
 }
 export async function availableTimes(env,date,guests) {
   const cfg=await bookingConfig(env),times=[];
-  if(!cfg.enabled || !validDate(date) || !Number.isInteger(guests) || guests<1 || guests>cfg.max_party)
+  if(!cfg.enabled || !validDate(date) || !Number.isInteger(guests) || guests<1 ||
+     guests>cfg.max_party || guests>cfg.capacity-cfg.holdback)
     return {times,config:cfg};
   const now=italyNow();
   if(date<now.date || date>addDays(now.date,cfg.advance_days)) return {times,config:cfg};
@@ -236,8 +241,10 @@ export async function availableTimes(env,date,guests) {
     if(!tables.length)return {times,config:cfg};
   }
   for(let start=Math.ceil(opens/cfg.interval_min)*cfg.interval_min;start+cfg.duration_min<=closes;start+=cfg.interval_min) {
-    if(start%15!==0 || (date===now.date && start<now.minute+cfg.notice_min))continue;
+    const daysFromNow=Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(now.date+"T00:00:00Z"))/86400000);
+    if(start%15!==0 || daysFromNow*1440+start < now.minute+cfg.notice_min)continue;
     const end=start+cfg.duration_min+cfg.buffer_min;
+    if(end>1440)continue;
     const full=(inventory.results||[]).some(r=>r.minute>=start && r.minute<end &&
       (r.total+guests>cfg.capacity || r.online+guests>cfg.capacity-cfg.holdback));
     if(full)continue;
