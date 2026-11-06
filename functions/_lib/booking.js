@@ -48,6 +48,7 @@ const schema = [
     id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, source TEXT NOT NULL CHECK(source IN('online','manual')),
     name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
     date TEXT NOT NULL, start_min INTEGER NOT NULL, end_min INTEGER NOT NULL,
+    duration_min INTEGER NOT NULL DEFAULT 90, buffer_min INTEGER NOT NULL DEFAULT 15,
     guests INTEGER NOT NULL CHECK(guests BETWEEN 1 AND 100),
     status TEXT NOT NULL DEFAULT 'confirmed' CHECK(status IN('confirmed','arrived','seated','completed','cancelled','no_show')),
     notes TEXT NOT NULL DEFAULT '', table_id TEXT,
@@ -117,6 +118,13 @@ export async function ensureBookingSchema(env) {
     // All statements are idempotent; no modifications to pre-existing order/customer/auth tables.
     // D1 batches execute atomically and avoid 20+ round trips on cold starts.
     await env.DB.batch(schema.map(statement=>env.DB.prepare(statement)));
+    // Online preview environments may already have the first schema revision.
+    // Upgrade additively without touching the existing order/auth/warehouse tables.
+    const cols=(await env.DB.prepare("PRAGMA table_info(booking_reservations)").all()).results||[];
+    if(!cols.some(c=>c.name==="duration_min"))
+      await env.DB.prepare("ALTER TABLE booking_reservations ADD COLUMN duration_min INTEGER NOT NULL DEFAULT 90").run();
+    if(!cols.some(c=>c.name==="buffer_min"))
+      await env.DB.prepare("ALTER TABLE booking_reservations ADD COLUMN buffer_min INTEGER NOT NULL DEFAULT 15").run();
     const seeds=[env.DB.prepare("INSERT OR IGNORE INTO booking_config(id) VALUES(1)")];
     for(let d=0;d<7;d++){
       seeds.push(env.DB.prepare("INSERT OR IGNORE INTO booking_hours(weekday,enabled,opens,closes) VALUES(?,?,?,?)")
@@ -208,10 +216,10 @@ export async function createBooking(env,body,source="online") {
   const token=typeof body.request_token==="string" && /^[a-f0-9]{64}$/.test(body.request_token)
     ? body.request_token : randomToken();
   const tokenHash=await sha256(token);
-  const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
+  const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name,duration_min,buffer_min FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
   if(prior) return {id:prior.id,token,code:"NF-"+prior.id.slice(0,8).toUpperCase(),
     date:prior.date,time:timeText(prior.start_min),guests:prior.guests,name:prior.name,
-    duration_min:cfg.duration_min,buffer_min:cfg.buffer_min};
+    duration_min:prior.duration_min,buffer_min:prior.buffer_min};
   if(!await isAvailable(env,cfg,slot,source)) throw Error("Posti esauriti per questo orario");
   const candidates=await tableCandidates(env,slot,cfg.table_mode,body.table_id||null);
   if(!candidates.length) throw Error("Non ci sono tavoli disponibili per questo gruppo");
@@ -220,17 +228,17 @@ export async function createBooking(env,body,source="online") {
   for(const tableId of candidates) {
     try {
       await env.DB.prepare(`INSERT INTO booking_reservations
-        (id,token_hash,source,name,phone,email,date,start_min,end_min,guests,notes,table_id)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
-      .bind(id,tokenHash,source,person.name,person.phone,person.email,slot.date,slot.start,slot.end,slot.guests,person.notes,tableId).run();
+        (id,token_hash,source,name,phone,email,date,start_min,end_min,duration_min,buffer_min,guests,notes,table_id)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .bind(id,tokenHash,source,person.name,person.phone,person.email,slot.date,slot.start,slot.end,cfg.duration_min,cfg.buffer_min,slot.guests,person.notes,tableId).run();
       return {id,token,code:"NF-"+id.slice(0,8).toUpperCase(),date:slot.date,time:timeText(slot.start),guests:slot.guests,duration_min:cfg.duration_min,buffer_min:cfg.buffer_min, name:person.name};
     } catch(e) {
       lastError=e;
       if(String(e?.message||"").includes("booking_reservations.token_hash")) {
-        const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
+        const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name,duration_min,buffer_min FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
         if(prior) return {id:prior.id,token,code:"NF-"+prior.id.slice(0,8).toUpperCase(),
           date:prior.date,time:timeText(prior.start_min),guests:prior.guests,name:prior.name,
-          duration_min:cfg.duration_min,buffer_min:cfg.buffer_min};
+          duration_min:prior.duration_min,buffer_min:prior.buffer_min};
       }
       if(!String(e?.message||"").includes("table_unavailable")) break;
     }
@@ -241,7 +249,7 @@ export async function createBooking(env,body,source="online") {
 export async function fetchByToken(env,id,token) {
   if(!/^[0-9a-f-]{36}$/.test(String(id||"")) || !/^[a-f0-9]{64}$/.test(String(token||""))) return null;
   await ensureBookingSchema(env);
-  return env.DB.prepare("SELECT id,name,phone,email,date,start_min,end_min,guests,status,notes,token_hash FROM booking_reservations WHERE id=? AND token_hash=?")
+  return env.DB.prepare("SELECT id,name,phone,email,date,start_min,end_min,duration_min,buffer_min,guests,status,notes,token_hash FROM booking_reservations WHERE id=? AND token_hash=?")
     .bind(id,await sha256(token)).first();
 }
 export async function updateBooking(env,id,changes) {
@@ -252,7 +260,7 @@ export async function updateBooking(env,id,changes) {
   const cfg=await bookingConfig(env);
   const date=changes.date||existing.date, time=changes.time||timeText(existing.start_min),
     guests=changes.guests===undefined?existing.guests:Number(changes.guests);
-  const slot=await validateSlot(env,cfg,date,time,guests,existing.source);
+  const slot=await validateSlot(env,{...cfg,duration_min:existing.duration_min,buffer_min:existing.buffer_min},date,time,guests,existing.source);
   if(!await isAvailable(env,cfg,slot,existing.source,id)) throw Error("Posti insufficienti nel nuovo orario");
   const tableIds=await tableCandidates(env,slot,cfg.table_mode,changes.table_id===undefined?existing.table_id:changes.table_id,id);
   if(!tableIds.length) throw Error("Nessun tavolo adatto disponibile");
