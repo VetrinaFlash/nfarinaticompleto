@@ -190,19 +190,38 @@ export async function isAvailable(env, config, slot, source="online", excludeId=
   return true;
 }
 export async function availableTimes(env,date,guests) {
-  const cfg=await bookingConfig(env);
-  const h=validDate(date)?await env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(weekday(date)).first():null;
+  const cfg=await bookingConfig(env),times=[];
+  if(!cfg.enabled || !validDate(date) || !Number.isInteger(guests) || guests<1 || guests>cfg.max_party)
+    return {times,config:cfg};
+  const now=italyNow();
+  if(date<now.date || date>addDays(now.date,cfg.advance_days)) return {times,config:cfg};
+  const [h,closed]=await Promise.all([
+    env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(weekday(date)).first(),
+    env.DB.prepare("SELECT date FROM booking_closed_dates WHERE date=?").bind(date).first()
+  ]);
   const opens=parseTime(h?.opens),closes=parseTime(h?.closes);
-  const times=[];
-  if(!h?.enabled || opens===null || closes===null) return {times,config:cfg};
-  for(let t=Math.ceil(opens/cfg.interval_min)*cfg.interval_min;t+cfg.duration_min<=closes;t+=cfg.interval_min) {
-    const time=timeText(t);
-    try {
-      const slot=await validateSlot(env,cfg,date,time,guests,"online");
-      if(!await isAvailable(env,cfg,slot)) continue;
-      if((await tableCandidates(env,slot,cfg.table_mode)).length===0) continue;
-      times.push(time);
-    } catch {}
+  if(!h?.enabled || closed || opens===null || closes===null || closes<=opens) return {times,config:cfg};
+  // A single snapshot is sufficient for browsing; the database triggers
+  // re-check capacity atomically when the customer actually confirms.
+  const inventory=await env.DB.prepare("SELECT minute,total,online FROM booking_slot_inventory WHERE date=? AND minute>=? AND minute<?")
+    .bind(date,opens,closes+cfg.buffer_min).all();
+  let tables=[],assigned=[];
+  if(cfg.table_mode){
+    const both=await Promise.all([
+      env.DB.prepare("SELECT id FROM booking_tables WHERE active=1 AND seats>=?").bind(guests).all(),
+      env.DB.prepare("SELECT table_id,start_min,end_min FROM booking_reservations WHERE date=? AND table_id IS NOT NULL AND status IN('confirmed','arrived','seated')").bind(date).all()
+    ]);
+    tables=both[0].results||[];assigned=both[1].results||[];
+    if(!tables.length)return {times,config:cfg};
+  }
+  for(let start=Math.ceil(opens/cfg.interval_min)*cfg.interval_min;start+cfg.duration_min<=closes;start+=cfg.interval_min) {
+    if(start%15!==0 || (date===now.date && start<now.minute+cfg.notice_min))continue;
+    const end=start+cfg.duration_min+cfg.buffer_min;
+    const full=(inventory.results||[]).some(r=>r.minute>=start && r.minute<end &&
+      (r.total+guests>cfg.capacity || r.online+guests>cfg.capacity-cfg.holdback));
+    if(full)continue;
+    if(cfg.table_mode && !tables.some(t=>!assigned.some(r=>r.table_id===t.id && start<r.end_min && end>r.start_min)))continue;
+    times.push(timeText(start));
   }
   return {times,config:cfg};
 }
