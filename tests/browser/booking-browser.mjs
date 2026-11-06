@@ -113,6 +113,7 @@ for(const viewport of VIEWS.slice(0,2)){
  await page.getByRole("button",{name:/Apri \/ modifica/}).click();
  page.once("dialog",dialog=>dialog.accept());
  await page.locator("#status-no_show").click();
+ await page.waitForFunction(()=>document.querySelector("#modal").classList.contains("hidden"));
  assert.ok(actions.some(x=>x.kind==="admin"&&x.data.action==="create"&&x.data.guests===3));
  assert.ok(actions.some(x=>x.kind==="admin"&&x.data.action==="status"&&x.data.status==="no_show"));
  assert.equal(errors.length,0,viewport.label+" admin page errors: "+errors.join(";"));
