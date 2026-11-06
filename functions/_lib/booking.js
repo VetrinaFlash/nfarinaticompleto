@@ -5,7 +5,7 @@ const ACTIVE = ["confirmed", "arrived", "seated"];
 export const TZ = "Europe/Rome";
 export const timeText = n => String(Math.floor(n / 60)).padStart(2, "0") + ":" + String(n % 60).padStart(2, "0");
 export const parseTime = value => /^\d\d:\d\d$/.test(String(value)) && +value.slice(0, 2) < 24 && +value.slice(3) < 60 ? +value.slice(0, 2) * 60 + +value.slice(3) : null;
-export const validDate = d => /^\d{4}-\d{2}-\d{2}$/.test(String(d)) && new Date(d + "T00:00:00Z").toISOString().slice(0,10) === d;
+export const validDate = d => { if(!/^\d{4}-\d{2}-\d{2}$/.test(String(d))) return false; const date=new Date(d+'T00:00:00Z'); return Number.isFinite(date.getTime()) && date.toISOString().slice(0,10)===d; };
 export function italyNow(now = new Date()) {
   const parts = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now).map(p => [p.type, p.value]));
   return { date: parts.year + "-" + parts.month + "-" + parts.day, minute: +parts.hour * 60 + +parts.minute };
@@ -13,7 +13,7 @@ export function italyNow(now = new Date()) {
 export const weekday = d => new Date(d + "T12:00:00Z").getUTCDay();
 export function addDays(d, count) { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + count); return x.toISOString().slice(0,10); }
 const schema = [
-  \`CREATE TABLE IF NOT EXISTS booking_config (
+  `CREATE TABLE IF NOT EXISTS booking_config (
     id INTEGER PRIMARY KEY CHECK(id=1), enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN(0,1)),
     capacity INTEGER NOT NULL DEFAULT 50 CHECK(capacity BETWEEN 1 AND 1000),
     holdback INTEGER NOT NULL DEFAULT 0 CHECK(holdback BETWEEN 0 AND 999),
@@ -26,25 +26,25 @@ const schema = [
     grace_min INTEGER NOT NULL DEFAULT 15 CHECK(grace_min BETWEEN 0 AND 120),
     table_mode INTEGER NOT NULL DEFAULT 0 CHECK(table_mode IN(0,1)),
     CHECK(holdback < capacity)
-  )\`,
-  \`CREATE TABLE IF NOT EXISTS booking_hours (
+  )`,
+  `CREATE TABLE IF NOT EXISTS booking_hours (
     weekday INTEGER PRIMARY KEY CHECK(weekday BETWEEN 0 AND 6),
     enabled INTEGER NOT NULL DEFAULT 0 CHECK(enabled IN(0,1)),
     opens TEXT NOT NULL DEFAULT '18:30', closes TEXT NOT NULL DEFAULT '23:30'
-  )\`,
-  \`CREATE TABLE IF NOT EXISTS booking_closed_dates (date TEXT PRIMARY KEY, reason TEXT NOT NULL DEFAULT '')\`,
-  \`CREATE TABLE IF NOT EXISTS booking_tables (
+  )`,
+  `CREATE TABLE IF NOT EXISTS booking_closed_dates (date TEXT PRIMARY KEY, reason TEXT NOT NULL DEFAULT '')`,
+  `CREATE TABLE IF NOT EXISTS booking_tables (
     id TEXT PRIMARY KEY, label TEXT NOT NULL, seats INTEGER NOT NULL CHECK(seats BETWEEN 1 AND 40),
     zone TEXT NOT NULL DEFAULT 'Sala', active INTEGER NOT NULL DEFAULT 1 CHECK(active IN(0,1))
-  )\`,
-  \`CREATE TABLE IF NOT EXISTS booking_ticks (n INTEGER PRIMARY KEY CHECK(n BETWEEN 0 AND 95))\`,
-  \`CREATE TABLE IF NOT EXISTS booking_slot_inventory (
+  )`,
+  `CREATE TABLE IF NOT EXISTS booking_ticks (n INTEGER PRIMARY KEY CHECK(n BETWEEN 0 AND 95))`,
+  `CREATE TABLE IF NOT EXISTS booking_slot_inventory (
     date TEXT NOT NULL, minute INTEGER NOT NULL,
     total INTEGER NOT NULL DEFAULT 0 CHECK(total>=0),
     online INTEGER NOT NULL DEFAULT 0 CHECK(online>=0),
     PRIMARY KEY(date,minute), CHECK(online<=total)
-  )\`,
-  \`CREATE TABLE IF NOT EXISTS booking_reservations (
+  )`,
+  `CREATE TABLE IF NOT EXISTS booking_reservations (
     id TEXT PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, source TEXT NOT NULL CHECK(source IN('online','manual')),
     name TEXT NOT NULL, phone TEXT NOT NULL, email TEXT NOT NULL DEFAULT '',
     date TEXT NOT NULL, start_min INTEGER NOT NULL, end_min INTEGER NOT NULL,
@@ -54,39 +54,39 @@ const schema = [
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY(table_id) REFERENCES booking_tables(id)
-  )\`,
-  \`CREATE INDEX IF NOT EXISTS booking_res_date_idx ON booking_reservations(date,start_min,status)\`,
-  \`CREATE INDEX IF NOT EXISTS booking_res_phone_idx ON booking_reservations(phone,date)\`,
-  \`CREATE TABLE IF NOT EXISTS booking_notifications (
+  )`,
+  `CREATE INDEX IF NOT EXISTS booking_res_date_idx ON booking_reservations(date,start_min,status)`,
+  `CREATE INDEX IF NOT EXISTS booking_res_phone_idx ON booking_reservations(phone,date)`,
+  `CREATE TABLE IF NOT EXISTS booking_notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT, reservation_id TEXT NOT NULL,
     kind TEXT NOT NULL, seen INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  )\`,
-  \`CREATE INDEX IF NOT EXISTS booking_notif_seen_idx ON booking_notifications(seen,id)\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_slot_insert_check BEFORE INSERT ON booking_slot_inventory
+  )`,
+  `CREATE INDEX IF NOT EXISTS booking_notif_seen_idx ON booking_notifications(seen,id)`,
+  `CREATE TRIGGER IF NOT EXISTS booking_slot_insert_check BEFORE INSERT ON booking_slot_inventory
     WHEN NEW.total < 0 OR NEW.online < 0 OR NEW.online > NEW.total
       OR NEW.total > (SELECT capacity FROM booking_config WHERE id=1)
       OR NEW.online > (SELECT capacity-holdback FROM booking_config WHERE id=1)
-    BEGIN SELECT RAISE(ABORT,'booking_full'); END\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_slot_update_check BEFORE UPDATE ON booking_slot_inventory
+    BEGIN SELECT RAISE(ABORT,'booking_full'); END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_slot_update_check BEFORE UPDATE ON booking_slot_inventory
     WHEN NEW.total < 0 OR NEW.online < 0 OR NEW.online > NEW.total
       OR NEW.total > (SELECT capacity FROM booking_config WHERE id=1)
       OR NEW.online > (SELECT capacity-holdback FROM booking_config WHERE id=1)
-    BEGIN SELECT RAISE(ABORT,'booking_full'); END\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_table_insert_check BEFORE INSERT ON booking_reservations
+    BEGIN SELECT RAISE(ABORT,'booking_full'); END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_table_insert_check BEFORE INSERT ON booking_reservations
     WHEN NEW.table_id IS NOT NULL AND NEW.status IN ('confirmed','arrived','seated')
     BEGIN SELECT RAISE(ABORT,'table_unavailable') WHERE EXISTS (
       SELECT 1 FROM booking_reservations r WHERE r.table_id=NEW.table_id AND r.date=NEW.date
       AND r.status IN ('confirmed','arrived','seated')
       AND NEW.start_min < r.end_min AND NEW.end_min > r.start_min
-    ); END\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_table_update_check BEFORE UPDATE ON booking_reservations
+    ); END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_table_update_check BEFORE UPDATE ON booking_reservations
     WHEN NEW.table_id IS NOT NULL AND NEW.status IN ('confirmed','arrived','seated')
     BEGIN SELECT RAISE(ABORT,'table_unavailable') WHERE EXISTS (
       SELECT 1 FROM booking_reservations r WHERE r.id<>NEW.id AND r.table_id=NEW.table_id AND r.date=NEW.date
       AND r.status IN ('confirmed','arrived','seated')
       AND NEW.start_min < r.end_min AND NEW.end_min > r.start_min
-    ); END\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_insert_inventory AFTER INSERT ON booking_reservations
+    ); END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_insert_inventory AFTER INSERT ON booking_reservations
     WHEN NEW.status IN ('confirmed','arrived','seated')
     BEGIN
       INSERT INTO booking_slot_inventory(date,minute,total,online)
@@ -95,8 +95,8 @@ const schema = [
       FROM booking_ticks t WHERE NEW.start_min+t.n*15 < NEW.end_min
       ON CONFLICT(date,minute) DO UPDATE SET total=total+excluded.total, online=online+excluded.online;
       INSERT INTO booking_notifications(reservation_id,kind) VALUES(NEW.id,'created');
-    END\`,
-  \`CREATE TRIGGER IF NOT EXISTS booking_update_inventory AFTER UPDATE OF date,start_min,end_min,guests,source,status ON booking_reservations
+    END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_update_inventory AFTER UPDATE OF date,start_min,end_min,guests,source,status ON booking_reservations
     BEGIN
       UPDATE booking_slot_inventory SET
         total=total-(CASE WHEN OLD.status IN ('confirmed','arrived','seated') THEN OLD.guests ELSE 0 END),
@@ -108,7 +108,7 @@ const schema = [
       FROM booking_ticks t WHERE NEW.status IN ('confirmed','arrived','seated') AND NEW.start_min+t.n*15 < NEW.end_min
       ON CONFLICT(date,minute) DO UPDATE SET total=total+excluded.total, online=online+excluded.online;
       INSERT INTO booking_notifications(reservation_id,kind) VALUES(NEW.id,'changed');
-    END\`
+    END`
 ];
 export async function ensureBookingSchema(env) {
   if (!env?.DB) throw Error("Database D1 non configurato");
@@ -208,9 +208,9 @@ export async function createBooking(env,body,source="online") {
   let lastError=null;
   for(const tableId of candidates) {
     try {
-      await env.DB.prepare(\`INSERT INTO booking_reservations
+      await env.DB.prepare(`INSERT INTO booking_reservations
         (id,token_hash,source,name,phone,email,date,start_min,end_min,guests,notes,table_id)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)\`)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(id,tokenHash,source,person.name,person.phone,person.email,slot.date,slot.start,slot.end,slot.guests,person.notes,tableId).run();
       return {id,token,code:"NF-"+id.slice(0,8).toUpperCase(),date:slot.date,time:timeText(slot.start),guests:slot.guests,duration_min:cfg.duration_min,buffer_min:cfg.buffer_min, name:person.name};
     } catch(e) {
