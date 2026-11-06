@@ -120,6 +120,9 @@ function detailRender(container,s){
 function success(s,token){
  details=s;personalToken=token;$('booking-form-view').classList.add('hidden');$('manage').classList.add('hidden');$('done').classList.remove('hidden');
  detailRender('done-details',s);
+ // On a phone the form is far down the page: return to the top so the
+ // success confirmation is visible immediately instead of off-screen.
+ window.scrollTo({top:0,behavior:'auto'});
  $('google').href=googleUrl(s);
  const link=location.origin+'/prenota.html?id='+encodeURIComponent(s.id)+'&token='+encodeURIComponent(token);
  $('manage-link').href=link;
