@@ -208,3 +208,54 @@ test("relocating an existing table reservation automatically picks another suita
  assert.equal(result.guests,4);
  assert.equal(db.prepare("SELECT table_id FROM booking_reservations WHERE id=?").get(a.id).table_id,"large");
 });
+
+test("empty service slots never advertise parties larger than the cap",async()=>{
+ const {db,env,date,req}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=4,holdback=1,max_party=8").run();
+ assert.deepEqual((await availableTimes(env,date,5)).times,[]);
+ assert.deepEqual((await availableTimes(env,date,4)).times,[]);
+ assert.ok((await availableTimes(env,date,3)).times.includes("19:00"));
+ await assert.rejects(createBooking(env,{...req,guests:4}),/Posti esauriti|Disponibilità/);
+ const b=await createBooking(env,{...req,guests:3});
+ assert.equal(b.guests,3);
+});
+test("minimum notice spans tomorrow and subsequent days",async()=>{
+ const {db,env,date,req}=await fixture();
+ db.prepare("UPDATE booking_config SET notice_min=10080").run(); // seven days
+ assert.deepEqual((await availableTimes(env,date,2)).times,[]);
+ await assert.rejects(createBooking(env,req),/troppo vicino/);
+ const ahead=addDays(italyNow().date,10);
+ let candidate=ahead;
+ while(weekday(candidate)===1)candidate=addDays(candidate,1);
+ assert.ok((await availableTimes(env,candidate,2)).times.includes("19:00"));
+});
+test("late-night bookings with occupancy extending past midnight are not accepted",async()=>{
+ const {db,env,date,req}=await fixture();
+ db.prepare("UPDATE booking_hours SET opens='20:00',closes='23:45' WHERE weekday=?").run(weekday(date));
+ db.prepare("UPDATE booking_config SET duration_min=120,buffer_min=60,interval_min=15").run();
+ const times=(await availableTimes(env,date,2)).times;
+ assert.ok(times.includes("20:00"));
+ assert.ok(!times.includes("21:00"));
+ await assert.rejects(createBooking(env,{...req,time:"21:00"}),/Orario non disponibile/);
+});
+test("a phone booking uses the same capacity pool and can be marked no-show manually",async()=>{
+ const {db,env,req,date}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=3,holdback=0,max_party=3").run();
+ const phone=await createBooking(env,{...req,name:"Cliente telefono",guests:3},"manual");
+ assert.deepEqual((await availableTimes(env,date,2)).times.filter(t=>t==="19:00"),[]);
+ const noshow=await changeStatus(env,phone.id,"no_show");
+ assert.equal(noshow.status,"no_show");
+ assert.ok((await availableTimes(env,date,2)).times.includes("19:00"));
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM booking_reservations WHERE status='no_show'").get().n,1);
+});
+test("automatic time-based reuse doesn't require manual status completion",async()=>{
+ const {db,env,req,date}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=4,holdback=0,max_party=4").run();
+ const a=await createBooking(env,{...req,guests:4});
+ await changeStatus(env,a.id,"seated");
+ assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(a.id).status,"seated");
+ assert.ok(!(await availableTimes(env,date,4)).times.includes("20:30"));
+ assert.ok((await availableTimes(env,date,4)).times.includes("21:00")); // 90 minutes + 15 buffer
+ const b=await createBooking(env,{...req,time:"21:00",guests:4,name:"Cliente secondo turno"});
+ assert.equal(b.time,"21:00");
+});
