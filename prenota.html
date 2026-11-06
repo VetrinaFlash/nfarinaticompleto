@@ -143,7 +143,7 @@ function updateManage(){
  const s=details;$('manage-status').textContent='Stato: '+({confirmed:'Confermata',arrived:'Cliente arrivato',seated:'Al tavolo',cancelled:'Cancellata',completed:'Completata',no_show:'Non presentato'}[s.status]||s.status);
  detailRender('manage-details',s);
  $('manage-ics').onclick=()=>localIcs(s);$('manage-google').href=googleUrl(s);
- if(!['confirmed','arrived','seated'].includes(s.status)){
+ if(s.can_manage===false || !['confirmed'].includes(s.status)){
    $('manage-actions').classList.add('hidden');$('manage-ics').disabled=true;
    $('manage-google').classList.add('hidden');
    return;
