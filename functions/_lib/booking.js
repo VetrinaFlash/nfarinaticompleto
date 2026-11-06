@@ -115,13 +115,15 @@ export async function ensureBookingSchema(env) {
   if (cache.has(env.DB)) return cache.get(env.DB);
   const task = (async () => {
     // All statements are idempotent; no modifications to pre-existing order/customer/auth tables.
-    for (const statement of schema) await env.DB.prepare(statement).run();
-    await env.DB.prepare("INSERT OR IGNORE INTO booking_config(id) VALUES(1)").run();
-    for (let d=0;d<7;d++) {
-      await env.DB.prepare("INSERT OR IGNORE INTO booking_hours(weekday,enabled,opens,closes) VALUES(?,?,?,?)")
-        .bind(d, d===1?0:1, d===6?"18:00":"18:30", d===6?"23:00":"23:30").run();
+    // D1 batches execute atomically and avoid 20+ round trips on cold starts.
+    await env.DB.batch(schema.map(statement=>env.DB.prepare(statement)));
+    const seeds=[env.DB.prepare("INSERT OR IGNORE INTO booking_config(id) VALUES(1)")];
+    for(let d=0;d<7;d++){
+      seeds.push(env.DB.prepare("INSERT OR IGNORE INTO booking_hours(weekday,enabled,opens,closes) VALUES(?,?,?,?)")
+        .bind(d,d===1?0:1,d===6?"18:00":"18:30",d===6?"23:00":"23:30"));
     }
-    await env.DB.prepare("INSERT OR IGNORE INTO booking_ticks(n) VALUES "+Array.from({length:96},(_,i)=>"("+i+")").join(",")).run();
+    seeds.push(env.DB.prepare("INSERT OR IGNORE INTO booking_ticks(n) VALUES "+Array.from({length:96},(_,i)=>"("+i+")").join(",")));
+    await env.DB.batch(seeds);
   })();
   cache.set(env.DB,task);
   try { await task; } catch(e) { cache.delete(env.DB); throw e; }
@@ -201,10 +203,19 @@ export async function createBooking(env,body,source="online") {
   const guests=Number(body.guests);
   const person=validatePerson(body.name,body.phone,body.email,body.notes);
   const slot=await validateSlot(env,cfg,body.date,body.time,guests,source);
+  // The client may supply a 256-bit random bearer token for safe retry after a lost response.
+  // Only its SHA-256 digest is stored; repeating the same token cannot create two bookings.
+  const token=typeof body.request_token==="string" && /^[a-f0-9]{64}$/.test(body.request_token)
+    ? body.request_token : randomToken();
+  const tokenHash=await sha256(token);
+  const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
+  if(prior) return {id:prior.id,token,code:"NF-"+prior.id.slice(0,8).toUpperCase(),
+    date:prior.date,time:timeText(prior.start_min),guests:prior.guests,name:prior.name,
+    duration_min:cfg.duration_min,buffer_min:cfg.buffer_min};
   if(!await isAvailable(env,cfg,slot,source)) throw Error("Posti esauriti per questo orario");
   const candidates=await tableCandidates(env,slot,cfg.table_mode,body.table_id||null);
   if(!candidates.length) throw Error("Non ci sono tavoli disponibili per questo gruppo");
-  const token=randomToken(), id=crypto.randomUUID(), tokenHash=await sha256(token);
+  const id=crypto.randomUUID();
   let lastError=null;
   for(const tableId of candidates) {
     try {
@@ -215,6 +226,12 @@ export async function createBooking(env,body,source="online") {
       return {id,token,code:"NF-"+id.slice(0,8).toUpperCase(),date:slot.date,time:timeText(slot.start),guests:slot.guests,duration_min:cfg.duration_min,buffer_min:cfg.buffer_min, name:person.name};
     } catch(e) {
       lastError=e;
+      if(String(e?.message||"").includes("booking_reservations.token_hash")) {
+        const prior=await env.DB.prepare("SELECT id,date,start_min,guests,name FROM booking_reservations WHERE token_hash=?").bind(tokenHash).first();
+        if(prior) return {id:prior.id,token,code:"NF-"+prior.id.slice(0,8).toUpperCase(),
+          date:prior.date,time:timeText(prior.start_min),guests:prior.guests,name:prior.name,
+          duration_min:cfg.duration_min,buffer_min:cfg.buffer_min};
+      }
       if(!String(e?.message||"").includes("table_unavailable")) break;
     }
   }
