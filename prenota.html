@@ -28,7 +28,7 @@
 <div class="fields"><div class="field"><label for="date">Quando vuoi venire?</label><input type="date" id="date" required></div><div class="field"><label for="guests">Quante persone?</label><select id="guests" required></select></div></div>
 <label id="times-label">Seleziona un orario disponibile</label><div class="times" id="times"></div><p class="status" id="availability-status" role="status" aria-live="polite"></p>
 <form id="booking-form" class="hidden">
-<div class="tip">✓ Il tavolo è riservato per <strong id="duration">90 minuti</strong>. Ti chiediamo di arrivare puntuale.</div>
+<div class="tip">✓ La fascia dura <strong id="duration">90 minuti</strong> complessivi: <strong id="dining-duration">75 minuti</strong> a tavola e <strong id="cleanup-duration">15 minuti</strong> di riassetto inclusi. Ti chiediamo di arrivare puntuale.</div>
 <div class="fields"><div class="field"><label for="name">Nome e cognome *</label><input id="name" minlength="2" maxlength="80" autocomplete="name" required placeholder="Mario Rossi"></div><div class="field"><label for="phone">Telefono *</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel" minlength="8" maxlength="22" pattern="[+0-9() -]{8,22}" required placeholder="+39 333 123 4567"></div></div>
 <div class="field"><label for="email">Email (facoltativa)</label><input id="email" type="email" maxlength="160" autocomplete="email" placeholder="nome@esempio.it"></div>
 <div class="field"><label for="notes">Richieste particolari (facoltative)</label><textarea id="notes" maxlength="500" placeholder="Seggiolone, accessibilità, occasione speciale…"></textarea></div>
@@ -38,7 +38,7 @@
 <button class="primary" id="submit" type="submit">Conferma prenotazione →</button>
 </form>
 </div>
-<div id="done" class="hidden" aria-live="polite"><div class="done-icon">✓</div><div class="pill" id="done-state">PRENOTAZIONE CONFERMATA</div><h2 id="done-title">Ti aspettiamo!</h2><p class="sub">La prenotazione è stata registrata. Non devi attendere altre conferme.</p><div class="detail" id="done-details"></div><p class="tip">📅 Salva l'appuntamento sul calendario del telefono: potrai ricevere un promemoria senza SMS, email o WhatsApp.</p><div class="actions"><button type="button" id="ics" class="secondary">📅 Aggiungi a calendario</button><a id="google" class="secondary" rel="noopener noreferrer" target="_blank">Google Calendar ↗</a><button type="button" class="secondary" id="copy-link">Copia link prenotazione</button></div><a class="secondary" id="manage-link">Modifica o cancella prenotazione</a><p class="help">Conserva il link personale per gestire la prenotazione in autonomia.</p></div>
+<div id="done" class="hidden" aria-live="polite"><div class="done-icon">✓</div><div class="pill" id="done-state">PRENOTAZIONE CONFERMATA</div><h2 id="done-title">Ti aspettiamo!</h2><p class="sub">La prenotazione è stata registrata. Non devi attendere altre conferme.</p><div class="detail" id="done-details"></div><p class="tip">✓ La prenotazione comprende il tempo al tavolo e il riassetto nella fascia totale di 90 minuti. 📅 Salva l'appuntamento sul calendario del telefono per ricevere un promemoria.</p><div class="actions"><button type="button" id="ics" class="secondary">📅 Aggiungi a calendario</button><a id="google" class="secondary" rel="noopener noreferrer" target="_blank">Google Calendar ↗</a><button type="button" class="secondary" id="copy-link">Copia link prenotazione</button></div><a class="secondary" id="manage-link">Modifica o cancella prenotazione</a><p class="help">Conserva il link personale per gestire la prenotazione in autonomia.</p></div>
 <div id="manage" class="hidden"><h2>Gestisci la tua prenotazione</h2><p class="sub" id="manage-status"></p><div class="detail" id="manage-details"></div><div id="manage-actions"><div class="fields"><div class="field"><label for="change-date">Nuova data</label><input type="date" id="change-date"></div><div class="field"><label for="change-guests">Persone</label><select id="change-guests"></select></div></div><label>Nuovo orario</label><div class="times" id="change-times"></div><p class="status" id="change-status"></p><button class="primary" id="reschedule" type="button">Salva nuovo orario</button><p><button class="secondary" id="cancel" type="button">Cancella prenotazione</button></p></div><div class="actions"><button type="button" id="manage-ics" class="secondary">📅 Aggiungi al calendario</button><a id="manage-google" class="secondary" rel="noopener noreferrer" target="_blank">Google Calendar ↗</a></div></div>
 </section>
 <aside class="panel aside"><h3>Una serata da N'Farinati 🍕</h3><p>Un tavolo riservato, la nostra cucina, le tue persone preferite. Al resto pensiamo noi.</p><ul><li><strong>Conferma immediata</strong> senza telefonate e attesa.</li><li><strong>Nessun account</strong> e nessun costo di prenotazione.</li><li><strong>Promemoria calendario</strong> sul tuo telefono, se desideri aggiungerlo.</li><li><strong>Puoi modificare o cancellare</strong> con il link personale.</li></ul><div class="address">📍 Via P. Togliatti 8, Bagheria (PA)</div><div class="address">☎ <a href="tel:+390918432674">091 8432674</a></div><p class="muted">Per gruppi numerosi o richieste particolari puoi contattarci telefonicamente.</p></aside>
@@ -88,15 +88,19 @@ function romeAsUtc(date,time){
 function icsStamp(timestamp){
   return new Date(timestamp).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
 }
+function diningMinutes(s){
+  const duration=Number(s.duration_min ?? 90),reset=Number(s.buffer_min ?? 15);
+  return Math.max(15,duration-reset);
+}
 function localIcs(s){
-  const start=romeAsUtc(s.date,s.time),end=start+(s.duration_min||90)*60000;
+  const start=romeAsUtc(s.date,s.time),end=start+diningMinutes(s)*60000;
   const escape=x=>String(x).replace(/\\/g,'\\\\').replace(/,/g,'\\,').replace(/;/g,'\\;').replace(/\n/g,'\\n');
   const text=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//NFARINATI//Bookings//IT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
     'BEGIN:VEVENT','UID:'+s.id+'@nfarinatimodernpizza.it','DTSTAMP:'+icsStamp(Date.now()),
     'DTSTART:'+icsStamp(start),'DTEND:'+icsStamp(end),
     'SUMMARY:'+escape("N'Farinati Modern Pizza · "+s.guests+" persone"),
     'LOCATION:'+escape('Via P. Togliatti 8, Bagheria (PA)'),
-    'DESCRIPTION:'+escape('Prenotazione '+(s.code||'')+'. Tavolo riservato per '+(s.duration_min||90)+' minuti.'),
+    'DESCRIPTION:'+escape('Prenotazione '+(s.code||'')+'. Permanenza prevista: '+diningMinutes(s)+' minuti, riassetto incluso nella fascia totale di '+(s.duration_min||90)+' minuti.'),
     'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Prenotazione domani da N Farinati','TRIGGER:-P1D','END:VALARM',
     'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:Prenotazione tra 2 ore da N Farinati','TRIGGER:-PT2H','END:VALARM',
     'END:VEVENT','END:VCALENDAR'].join('\r\n')+'\r\n';
@@ -105,12 +109,12 @@ function localIcs(s){
   setTimeout(()=>URL.revokeObjectURL(url),5000);
 }
 function googleUrl(s){
- const dt=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00',m=minutes(s.time)+(s.duration_min||90);
+ const dt=s.date.replaceAll('-','')+'T'+s.time.replace(':','')+'00',m=minutes(s.time)+diningMinutes(s);
  const d=new Date(s.date+'T12:00:00Z');if(m>=1440)d.setUTCDate(d.getUTCDate()+1);
  const end=d.toISOString().slice(0,10).replaceAll('-','')+'T'+pad(Math.floor(m%1440/60))+pad(m%60)+'00';
  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent("N'Farinati Modern Pizza · "+s.guests+" persone")+
  '&dates='+dt+'/'+end+'&ctz=Europe%2FRome&location='+encodeURIComponent('Via P. Togliatti 8, Bagheria (PA)')+
- '&details='+encodeURIComponent('Prenotazione '+(s.code||'')+' · Durata '+(s.duration_min||90)+' minuti');
+ '&details='+encodeURIComponent('Prenotazione '+(s.code||'')+' · Permanenza '+diningMinutes(s)+' min · Fascia totale '+(s.duration_min||90)+' min compreso riassetto');
 }
 function detailRender(container,s){
  const entries=[['Data',dateText(s.date)],['Orario',s.time],['Persone',s.guests],['Codice',s.code||'NF-'+s.id.slice(0,8).toUpperCase()]];
@@ -203,6 +207,8 @@ async function init(){
   selectFill('guests',cfg.max_party);$('guests').value='2';$('date').min=nowRome();$('date').max=new Date(new Date(nowRome()+'T12:00:00Z').getTime()+cfg.advance_days*86400000).toISOString().slice(0,10);
   $('date').value=nowRome();$('date').onchange=availability;$('guests').onchange=availability;
   $('duration').textContent=cfg.duration_min+' minuti';
+  $('dining-duration').textContent=(cfg.duration_min-cfg.buffer_min)+' minuti';
+  $('cleanup-duration').textContent=cfg.buffer_min+' minuti';
   if(cfg.turnstile_site_key){
     $('turnstile').classList.remove('hidden');
     window.turnstileReady=()=>{window.turnstileWidget=turnstile.render('#turnstile',{sitekey:cfg.turnstile_site_key})};
