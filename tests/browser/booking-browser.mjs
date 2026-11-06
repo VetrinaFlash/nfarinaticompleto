@@ -86,7 +86,7 @@ for(const viewport of VIEWS.slice(0,2)){
        capacity:50,page:1,limit:50,date}});
    }
    const data=r.request().postDataJSON();actions.push({kind:"admin",data});
-   if(data.action==="create")manual={...manual,...data,start_min:Number(data.time.slice(0,2))*60,source:"manual",status:"confirmed"};
+   if(data.action==="create")manual={...manual,...data,id:manual.id,start_min:Number(data.time.slice(0,2))*60,source:"manual",status:"confirmed"};
    if(data.action==="status")manual.status=data.status;
    return r.fulfill({json:{ok:true}});
  });
