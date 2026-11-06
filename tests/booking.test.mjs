@@ -259,3 +259,14 @@ test("automatic time-based reuse doesn't require manual status completion",async
  const b=await createBooking(env,{...req,time:"21:00",guests:4,name:"Cliente secondo turno"});
  assert.equal(b.time,"21:00");
 });
+
+test("customer cannot free an occupied table after staff marks arrival",async()=>{
+ const {db,env,req}=await fixture();
+ const b=await createBooking(env,req);
+ await changeStatus(env,b.id,"arrived");
+ const response=await publicManage({env,request:request("/api/booking-manage",
+    {action:"cancel",id:b.id,token:b.token})});
+ assert.equal(response.status,409);
+ assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(b.id).status,"arrived");
+ assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,2);
+});
