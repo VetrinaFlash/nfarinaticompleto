@@ -5,7 +5,7 @@ import { chromium } from "playwright";
 const ROOT="http://127.0.0.1:8874";
 const VIEWS=[{label:"desktop",width:1440,height:900},{label:"mobile",width:390,height:844},{label:"small",width:320,height:700}];
 await mkdir("artifacts/booking-browser",{recursive:true});
-const browser=await chromium.launch({headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
+const browser=await chromium.launch({channel:"chrome",headless:true,args:["--no-sandbox","--disable-dev-shm-usage"]});
 const date=new Date(Date.now()+7*86400000).toISOString().slice(0,10);
 const fixture={id:"12345678-1234-4123-9123-123456789abc",token:"a".repeat(64),code:"NF-12345678",
  name:"Mario Rossi",phone:"+393331234567",email:"",notes:"",date,time:"20:30",guests:4,
