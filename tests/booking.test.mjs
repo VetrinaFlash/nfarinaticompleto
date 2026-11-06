@@ -293,3 +293,33 @@ test("calendar event covers 75 dining minutes, not the 15-minute cleanup",async(
  assert.ok(source.includes("start+diningMinutes(s)*60000"));
  assert.ok(source.includes("m=minutes(s.time)+diningMinutes(s)"));
 });
+
+test("restaurant admin creates a physical table and books a telephone guest using the same 90-minute inventory",async()=>{
+ const {db,env,req,date}=await fixture();
+ const cookie=await adminCookie(env);
+ const cfg={enabled:1,table_mode:1,capacity:4,holdback:0,max_party:8,
+   duration_min:90,buffer_min:15,interval_min:30,advance_days:60,notice_min:60,grace_min:15};
+ const save=await adminPost({env,request:request("/admin/bookings",{action:"settings",config:cfg},cookie)});
+ assert.equal(save.status,200);
+ const add=await adminPost({env,request:request("/admin/bookings",
+   {action:"table",label:"Sala 1",seats:4,zone:"Sala",active:1},cookie)});
+ assert.equal(add.status,200);
+ const tableId=(await add.json()).id;
+ assert.equal(db.prepare("SELECT seats FROM booking_tables WHERE id=?").get(tableId).seats,4);
+ const phone=await adminPost({env,request:request("/admin/bookings",
+   {action:"create",...req,table_id:tableId,guests:4},cookie)});
+ assert.equal(phone.status,201);
+ const booking=(await phone.json()).booking;
+ assert.equal(booking.time,"19:00");
+ const stored=db.prepare("SELECT source,start_min,end_min,table_id FROM booking_reservations WHERE id=?").get(booking.id);
+ assert.equal(stored.source,"manual");
+ assert.equal(stored.end_min-stored.start_min,90);
+ assert.equal(stored.table_id,tableId);
+ assert.ok(!(await availableTimes(env,date,4)).times.includes("19:00"));
+ assert.ok((await availableTimes(env,date,4)).times.includes("20:30"));
+ const noshow=await adminPost({env,request:request("/admin/bookings",
+   {action:"status",id:booking.id,status:"no_show"},cookie)});
+ assert.equal(noshow.status,200);
+ assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(booking.id).status,"no_show");
+ assert.ok((await availableTimes(env,date,4)).times.includes("19:00"));
+});
