@@ -20,6 +20,8 @@ function settingsBody(body) {
     result[key]=v;
   }
   if(result.holdback>=result.capacity) throw Error("I posti riservati devono essere inferiori alla capienza");
+  if(result.buffer_min>=result.duration_min)
+    throw Error("I minuti per riassetto devono essere inferiori alla durata totale del tavolo");
   return result;
 }
 export async function onRequestGet({env,request}) {
