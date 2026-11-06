@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { d1, adminCookie } from "./helpers.mjs";
 import {
   ensureBookingSchema,bookingConfig,createBooking,changeStatus,fetchByToken,updateBooking,
-  availableTimes,italyNow,addDays,weekday,timeText,validDate
+  availableTimes,italyNow,addDays,weekday,timeText,validDate,extendBooking
 } from "../functions/_lib/booking.js";
 import {onRequestGet as adminGet,onRequestPost as adminPost} from "../functions/admin/bookings.js";
 import {onRequestPost as publicPost} from "../functions/api/bookings.js";
@@ -155,4 +155,17 @@ test("calendar reminders use correct Rome summer/winter UTC offsets",async()=>{
  assert.equal(new Date(rome("2026-07-10","19:00")).toISOString(),"2026-07-10T17:00:00.000Z");
  assert.equal(new Date(rome("2026-12-10","19:00")).toISOString(),"2026-12-10T18:00:00.000Z");
  assert.match(source,/TRIGGER:-P1D/);assert.match(source,/TRIGGER:-PT2H/);
+});
+
+test("extending an occupied table cannot overlap a full later slot",async()=>{
+ const {db,env,req}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=2,holdback=0").run();
+ const a=await createBooking(env,req);
+ const b=await createBooking(env,{...req,time:"21:00"});
+ await assert.rejects(extendBooking(env,a.id,30),/Impossibile prolungare/);
+ assert.equal(db.prepare("SELECT end_min FROM booking_reservations WHERE id=?").get(a.id).end_min,1245);
+ await changeStatus(env,b.id,"cancelled");
+ const r=await extendBooking(env,a.id,30);
+ assert.equal(r.end_min,1275);
+ assert.equal(db.prepare("SELECT total FROM booking_slot_inventory WHERE minute=1260").get().total,2);
 });
