@@ -3,6 +3,8 @@ import {bookingConfig,availableTimes,createBooking,bookingError,validDate} from 
 
 export async function onRequestGet({env,request}) {
   try {
+    if(!(await rateLimit(env,request,"booking_availability",90,300)))
+      return json({error:"Troppe richieste. Riprova tra qualche minuto."},429,{"Retry-After":"300"});
     const u=new URL(request.url), date=u.searchParams.get("date"), guests=Number(u.searchParams.get("guests")||2);
     const config=await bookingConfig(env);
     if (!date || !validDate(date) || !Number.isInteger(guests) || guests<1 || guests>config.max_party)
