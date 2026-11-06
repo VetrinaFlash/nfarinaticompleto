@@ -182,3 +182,29 @@ test("original 90-minute duration is preserved after future booking settings cha
  assert.equal(row.duration_min,90);
  assert.equal(row.buffer_min,15);
 });
+
+test("lowering the cap never traps existing bookings: arrival and cancellation remain possible",async()=>{
+ const {db,env,req}=await fixture();
+ db.prepare("UPDATE booking_config SET capacity=10,holdback=0").run();
+ const first=await createBooking(env,{...req,guests:5});
+ const second=await createBooking(env,{...req,name:"Luca Rossi",guests:5});
+ db.prepare("UPDATE booking_config SET capacity=4").run();
+ await changeStatus(env,first.id,"arrived");
+ assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,10);
+ await changeStatus(env,first.id,"cancelled");
+ assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,5);
+ await changeStatus(env,second.id,"cancelled");
+ assert.equal(db.prepare("SELECT MAX(total) AS n FROM booking_slot_inventory").get().n,0);
+ const fresh=await createBooking(env,{...req,guests:4});
+ assert.equal(fresh.guests,4);
+});
+test("relocating an existing table reservation automatically picks another suitable table",async()=>{
+ const {db,env,req}=await fixture();
+ db.prepare("UPDATE booking_config SET table_mode=1,capacity=12,holdback=0").run();
+ db.prepare("INSERT INTO booking_tables(id,label,seats) VALUES('small','2 posti',2),('large','4 posti',4)").run();
+ const a=await createBooking(env,req);
+ assert.equal(db.prepare("SELECT table_id FROM booking_reservations WHERE id=?").get(a.id).table_id,"small");
+ const result=await updateBooking(env,a.id,{guests:4});
+ assert.equal(result.guests,4);
+ assert.equal(db.prepare("SELECT table_id FROM booking_reservations WHERE id=?").get(a.id).table_id,"large");
+});
