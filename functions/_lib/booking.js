@@ -70,8 +70,8 @@ const schema = [
     BEGIN SELECT RAISE(ABORT,'booking_full'); END`,
   `CREATE TRIGGER IF NOT EXISTS booking_slot_update_check BEFORE UPDATE ON booking_slot_inventory
     WHEN NEW.total < 0 OR NEW.online < 0 OR NEW.online > NEW.total
-      OR NEW.total > (SELECT capacity FROM booking_config WHERE id=1)
-      OR NEW.online > (SELECT capacity-holdback FROM booking_config WHERE id=1)
+      OR (NEW.total > OLD.total AND NEW.total > (SELECT capacity FROM booking_config WHERE id=1))
+      OR (NEW.online > OLD.online AND NEW.online > (SELECT capacity-holdback FROM booking_config WHERE id=1))
     BEGIN SELECT RAISE(ABORT,'booking_full'); END`,
   `CREATE TRIGGER IF NOT EXISTS booking_table_insert_check BEFORE INSERT ON booking_reservations
     WHEN NEW.table_id IS NOT NULL AND NEW.status IN ('confirmed','arrived','seated')
@@ -98,6 +98,9 @@ const schema = [
       INSERT INTO booking_notifications(reservation_id,kind) VALUES(NEW.id,'created');
     END`,
   `CREATE TRIGGER IF NOT EXISTS booking_update_inventory AFTER UPDATE OF date,start_min,end_min,guests,source,status ON booking_reservations
+    WHEN (OLD.date != NEW.date OR OLD.start_min != NEW.start_min OR OLD.end_min != NEW.end_min
+      OR OLD.guests != NEW.guests OR OLD.source != NEW.source
+      OR (OLD.status IN ('confirmed','arrived','seated')) != (NEW.status IN ('confirmed','arrived','seated')))
     BEGIN
       UPDATE booking_slot_inventory SET
         total=total-(CASE WHEN OLD.status IN ('confirmed','arrived','seated') THEN OLD.guests ELSE 0 END),
@@ -109,7 +112,11 @@ const schema = [
       FROM booking_ticks t WHERE NEW.status IN ('confirmed','arrived','seated') AND NEW.start_min+t.n*15 < NEW.end_min
       ON CONFLICT(date,minute) DO UPDATE SET total=total+excluded.total, online=online+excluded.online;
       INSERT INTO booking_notifications(reservation_id,kind) VALUES(NEW.id,'changed');
-    END`
+    END`,
+  `CREATE TRIGGER IF NOT EXISTS booking_status_notification AFTER UPDATE OF status ON booking_reservations
+    WHEN OLD.status <> NEW.status
+      AND (OLD.status IN ('confirmed','arrived','seated')) = (NEW.status IN ('confirmed','arrived','seated'))
+    BEGIN INSERT INTO booking_notifications(reservation_id,kind) VALUES(NEW.id,'status'); END`
 ];
 export async function ensureBookingSchema(env) {
   if (!env?.DB) throw Error("Database D1 non configurato");
@@ -132,6 +139,20 @@ export async function ensureBookingSchema(env) {
     }
     seeds.push(env.DB.prepare("INSERT OR IGNORE INTO booking_ticks(n) VALUES "+Array.from({length:96},(_,i)=>"("+i+")").join(",")));
     await env.DB.batch(seeds);
+    // Rebuild old trigger definitions only once, allowing cancellations even if
+    // capacity was lowered below already booked occupancy. Existing reservations stay intact.
+    const migration=await env.DB.prepare("SELECT 1 AS ok FROM booking_schema_migrations WHERE version=2").first().catch(()=>null);
+    if(!migration) {
+      await env.DB.batch([
+        env.DB.prepare("CREATE TABLE IF NOT EXISTS booking_schema_migrations (version INTEGER PRIMARY KEY)"),
+        env.DB.prepare("DROP TRIGGER IF EXISTS booking_slot_update_check"),
+        env.DB.prepare("DROP TRIGGER IF EXISTS booking_update_inventory"),
+        env.DB.prepare(schema.find(x=>x.includes("CREATE TRIGGER IF NOT EXISTS booking_slot_update_check"))),
+        env.DB.prepare(schema.find(x=>x.includes("CREATE TRIGGER IF NOT EXISTS booking_update_inventory"))),
+        env.DB.prepare(schema.find(x=>x.includes("CREATE TRIGGER IF NOT EXISTS booking_status_notification"))),
+        env.DB.prepare("INSERT OR IGNORE INTO booking_schema_migrations(version) VALUES(2)")
+      ]);
+    }
   })();
   cache.set(env.DB,task);
   try { await task; } catch(e) { cache.delete(env.DB); throw e; }
@@ -281,7 +302,11 @@ export async function updateBooking(env,id,changes) {
     guests=changes.guests===undefined?existing.guests:Number(changes.guests);
   const slot=await validateSlot(env,{...cfg,duration_min:existing.duration_min,buffer_min:existing.buffer_min},date,time,guests,existing.source);
   if(!await isAvailable(env,cfg,slot,existing.source,id)) throw Error("Posti insufficienti nel nuovo orario");
-  const tableIds=await tableCandidates(env,slot,cfg.table_mode,changes.table_id===undefined?existing.table_id:changes.table_id,id);
+  // If no specific table is requested, retain the assigned one when suitable,
+  // but allow reassignment to another free table when it no longer fits.
+  let tableIds=await tableCandidates(env,slot,cfg.table_mode,changes.table_id===undefined?null:(changes.table_id||null),id);
+  if(existing.table_id && changes.table_id===undefined && tableIds.includes(existing.table_id))
+    tableIds=[existing.table_id,...tableIds.filter(id=>id!==existing.table_id)];
   if(!tableIds.length) throw Error("Nessun tavolo adatto disponibile");
   const tableId=tableIds[0];
   const name=changes.name===undefined?existing.name:changes.name;
