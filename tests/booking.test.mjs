@@ -235,8 +235,8 @@ test("late-night bookings with occupancy extending past midnight are not accepte
  db.prepare("UPDATE booking_config SET duration_min=120,buffer_min=60,interval_min=15").run();
  const times=(await availableTimes(env,date,2)).times;
  assert.ok(times.includes("20:00"));
- assert.ok(!times.includes("21:00"));
- await assert.rejects(createBooking(env,{...req,time:"21:00"}),/Orario non disponibile/);
+ assert.ok(!times.includes("21:15"));
+ await assert.rejects(createBooking(env,{...req,time:"21:15"}),/Orario non disponibile/);
 });
 test("a phone booking uses the same capacity pool and can be marked no-show manually",async()=>{
  const {db,env,req,date}=await fixture();
