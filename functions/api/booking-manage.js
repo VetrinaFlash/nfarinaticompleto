@@ -17,7 +17,7 @@ export async function onRequestGet({env,request}) {
     const b=r.booking,c=await bookingConfig(env);
     return json({booking:{id:b.id,code:"NF-"+b.id.slice(0,8).toUpperCase(),name:b.name,phone:b.phone,
       email:b.email,date:b.date,time:timeText(b.start_min),guests:b.guests,status:b.status,notes:b.notes,
-      duration_min:b.duration_min,can_manage:canCustomerManage(b)}});
+      duration_min:b.duration_min,buffer_min:b.buffer_min,can_manage:canCustomerManage(b)}});
   } catch(e){return bookingError(e);}
 }
 export async function onRequestPost({env,request}) {
