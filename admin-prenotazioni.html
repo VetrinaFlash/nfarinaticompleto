@@ -48,6 +48,18 @@
   <div id="service-slots" class="service-slots" aria-live="polite"></div>
   <small class="muted">I coperti disponibili sono calcolati per l'intera permanenza di 90 minuti, riassetto incluso. Le prenotazioni telefoniche rispettano sempre la capienza totale.</small>
 </section>
+<section class="panel table-schedule-panel" aria-label="Disponibilità dei tavoli per fascia oraria">
+  <div class="table-schedule-heading">
+    <div>
+      <span class="table-schedule-eyebrow">SALA · DISPONIBILITÀ</span>
+      <h2 id="table-schedule-title">Tavoli per fascia oraria</h2>
+      <p id="table-schedule-subtitle" class="muted">Scegli un orario per visualizzare i singoli tavoli.</p>
+    </div>
+    <button type="button" class="btn small" id="configure-sala">⚙ Gestisci tavoli</button>
+  </div>
+  <p id="table-schedule-note" class="muted" role="status"></p>
+  <div id="table-schedule-grid" class="table-schedule-grid" aria-live="polite"></div>
+</section>
 <section class="panel booking-panel">
 <div class="booking-toolbar"><div><h2 id="booking-view-title">Tutte le prenotazioni</h2><p class="muted" id="booking-view-description">Seleziona un orario per vedere solo i clienti di quella fascia.</p></div>
 <div class="booking-toolbar-actions">
@@ -112,6 +124,7 @@ function setSlotTurn(turn){
   button.setAttribute('aria-pressed',String(on));
  });
  renderSlotTiles();
+ renderTableSchedule();
 }
 document.querySelectorAll('[data-slot-turn]').forEach(button=>button.onclick=()=>setSlotTurn(button.dataset.slotTurn));
 function setSelectedTime(minute=null){
@@ -125,6 +138,7 @@ function setSelectedTime(minute=null){
  $('reset-slot').classList.toggle('hidden',minute===null);
  $('book-selected').textContent=time?'+ Prenota alle '+time:'+ Prenotazione telefonica';
  renderSlotTiles();
+ renderTableSchedule();
  loadAgenda();
 }
 $('reset-slot').onclick=()=>setSelectedTime(null);
@@ -168,6 +182,95 @@ function renderSlotTiles(){
  }
  if(!place.children.length)place.append(node('p','Nessuna fascia prevista per questo turno.','muted'));
 }
+function visibleServiceSlots(){
+ if(!slotData?.open)return [];
+ return (slotData.slots||[]).filter(r=>
+   slotTurn==='all'||(slotTurn==='first'?r.start<1230:r.start>=1230));
+}
+function showTableSlot(){
+ const slots=visibleServiceSlots();
+ if(!slots.length)return null;
+ const chosen=slots.find(s=>s.start===selectedMinute);
+ if(chosen)return chosen;
+ if($('slot-date').value===today()){
+   const now=minuteNowRome();
+   return slots.find(s=>s.start>=now)||slots.at(-1);
+ }
+ return slots.find(s=>s.start>=1140)||slots[0];
+}
+function renderTableSchedule(){
+ const area=$('table-schedule-grid'),title=$('table-schedule-title'),
+       subtitle=$('table-schedule-subtitle'),info=$('table-schedule-note');
+ area.replaceChildren();
+ const slot=showTableSlot();
+ if(!slot){
+   title.textContent='Tavoli per fascia oraria';
+   subtitle.textContent='Seleziona un giorno con orari aperti per vedere i tavoli.';
+   info.textContent='Nessuna fascia disponibile per questo turno.';
+   return;
+ }
+ title.textContent='Tavoli · '+slot.time+' – '+hhmm(slot.end);
+ subtitle.textContent='Disponibilità dei tavoli nella fascia selezionata, inclusi i minuti di riassetto.';
+ const tables=(slotData.tables||[]).filter(t=>t.active);
+ if(!tables.length){
+   info.textContent='Non hai ancora inserito i tavoli: apri “Gestisci tavoli” per aggiungerli con nome, zona e numero di posti.';
+   return;
+ }
+ const assigned=slotData.booked||[];
+ const unmatched=assigned.filter(r=>!r.table_id&&r.start_min<slot.end&&r.end_min>slot.start);
+ if(!slotData.table_mode){
+   info.textContent='La disponibilità dei singoli tavoli è indicativa perché l’assegnazione fisica non è attiva. Attivala in Capienza per evitare sovrapposizioni.';
+ }else{
+   info.textContent=unmatched.length
+     ?unmatched.length+' prenotazioni in questa fascia non hanno un tavolo fisico assegnato: verifica l’assegnazione.'
+     :'Seleziona un tavolo libero per inserire una prenotazione telefonica direttamente in quella fascia.';
+ }
+ const zones=new Map();
+ for(const t of tables){
+   const zone=String(t.zone||'Sala');
+   if(!zones.has(zone))zones.set(zone,[]);
+   zones.get(zone).push(t);
+ }
+ for(const [zone,items] of zones){
+   const wrap=node('section',undefined,'table-zone');
+   wrap.append(node('h3',zone));
+   const grid=node('div',undefined,'table-schedule-items');
+   for(const table of items){
+     const occupying=assigned.filter(r=>r.table_id===table.id && r.start_min<slot.end&&r.end_min>slot.start);
+     const occupied=occupying.length>0, knownFree=!occupied&&!!slotData.table_mode;
+     const tile=node('div',undefined,'schedule-table-card '+(occupied?'is-occupied':knownFree?'is-free':'is-unassigned'));
+     const top=node('div',undefined,'schedule-table-card-header');
+     top.append(node('strong',table.label),node('span',table.seats+' '+(table.seats===1?'posto':'posti'),'table-seats'));
+     const status=node('div',occupied?'● Prenotato':knownFree?'● Libero':'○ Da verificare','table-occupancy-status');
+     tile.append(top,status);
+     if(occupied){
+       for(const reservation of occupying){
+         const name=node('div',reservation.name+' · '+reservation.guests+' persone','table-guest-name');
+         const hours=node('small',hhmm(reservation.start_min)+' – '+hhmm(reservation.end_min)+' · '+(titles[reservation.status]||reservation.status),'table-guest-time');
+         tile.append(name,hours);
+       }
+     }else if(knownFree){
+       const action=node('button','+ Prenota qui','btn small schedule-table-action');
+       action.type='button';
+       action.onclick=()=>{
+         if(!state.settings?.tables?.some(t=>t.id===table.id)){
+           message('table-schedule-note','Caricamento configurazione tavoli, riprova fra un istante.',true);return;
+         }
+         openEdit();
+         formSet(f,'date',slotData.date);
+         formSet(f,'time',slot.time);
+         formSet(f,'table_id',table.id);
+       };
+       tile.append(action);
+     }else{
+       tile.append(node('small','Attiva assegnazione fisica in Capienza per conoscere i tavoli realmente liberi.','muted'));
+     }
+     grid.append(tile);
+   }
+   wrap.append(grid);area.append(wrap);
+ }
+}
+$('configure-sala').onclick=()=>tab('tables');
 async function loadSlots(){
  const seq=++slotFetch,date=$('slot-date').value;
  if(!date)return;
@@ -175,9 +278,13 @@ async function loadSlots(){
  try{
   const d=await api('/admin/bookings?mode=timeline&date='+encodeURIComponent(date));
   if(seq!==slotFetch)return;
-  slotData=d;renderSlotTiles();
+  slotData=d;renderSlotTiles();renderTableSchedule();
   message('slots-status',d.open?''+d.slots.length+' fasce disponibili nel calendario del locale':'Locale chiuso / prenotazioni sospese');
- }catch(e){if(seq===slotFetch)message('slots-status',e.message,true)}
+ }catch(e){
+    if(seq!==slotFetch)return;
+    slotData=null;renderSlotTiles();renderTableSchedule();
+    message('slots-status',e.message,true);
+  }
 }
 function shiftDate(days){
  const base=$('slot-date').value,origin=new Date(base+'T12:00:00Z');
