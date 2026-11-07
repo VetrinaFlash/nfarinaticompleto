@@ -22,11 +22,11 @@ test("confirmed cash orders enqueue a single durable push without changing check
  await finalizeIntent(env,intent,"https://preview.example.com");
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM orders").get().n,1);
  assert.equal(db.prepare("SELECT status FROM orders").get().status,"nuovo");
- assert.equal(db.prepare("SELECT kind,title,target FROM push_events").get().kind,"order");
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_events").get().n,1);
+ assert.equal(db.prepare("SELECT kind,title,target FROM nf_webpush_events").get().kind,"order");
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
  await finalizeIntent(env,{...intent,finalized_at:Date.now()},"https://preview.example.com");
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM orders").get().n,1);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_events").get().n,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
 });
 
 test("confirmed customer booking queues an admin push, idempotent customer retries do not duplicate it",async()=>{
@@ -40,12 +40,12 @@ test("confirmed customer booking queues an admin push, idempotent customer retri
  assert.equal(first.status,201);
  const result=await first.json();
  assert.ok(result.booking.id);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_events").get().n,1);
- const event=db.prepare("SELECT kind,target FROM push_events").get();
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
+ const event=db.prepare("SELECT kind,target FROM nf_webpush_events").get();
  assert.equal(event.kind,"booking");assert.ok(event.target.includes(date));
  const second=await bookingPost({env,request:makeRequest()});
  assert.equal(second.status,201);
  assert.equal((await second.json()).booking.id,result.booking.id);
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM booking_reservations").get().n,1);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_events").get().n,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
 });
