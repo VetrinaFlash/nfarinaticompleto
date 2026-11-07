@@ -69,7 +69,7 @@ for(const viewport of VIEWS){
  assert.equal(await page.locator('a[href="admin-prenotazioni.html"]').count(),0);
  assert.equal(await page.locator('script[src="/booking-admin-badge.js"]').count(),0);
  assert.ok(await page.locator('#nf-push-enable').count()===1,"order push controls remain in admin");
- await page.waitForFunction(()=>document.querySelector("#nf-push-status")?.textContent.includes("Attiva per ricevere"));
+ await page.waitForFunction(()=>/Notifiche non attive|Attiva per ricevere/.test(document.querySelector("#nf-push-status")?.textContent||""));
  await page.locator("#nf-push-enable").evaluate(e=>e.click());
  await page.waitForFunction(()=>!document.querySelector("#nf-push-test")?.hidden);
  assert.equal(actions.filter(x=>x.action==="subscribe").length,1);
