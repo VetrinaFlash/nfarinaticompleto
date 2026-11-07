@@ -53,7 +53,12 @@
     try{
       config=await api();
       if(!config.configured||!config.publicKey){
-        say("Configurazione richiesta: VAPID_PUBLIC_KEY e VAPID_PRIVATE_KEY nei secret Cloudflare.","error");
+        const states=config.keyStatus||{}, missing=[];
+        if(states.public!=="ok")missing.push("VAPID_PUBLIC_KEY: "+(states.public==="invalid"?"formato non valido":"non disponibile"));
+        if(states.private!=="ok")missing.push("VAPID_PRIVATE_KEY: "+(states.private==="invalid"?"formato non valido":"non disponibile"));
+        say("Questo deploy non sta leggendo correttamente i secret: "+(missing.join(" · ")||"stato sconosciuto")+
+          ". Verifica che siano associati a Preview e che il deploy sia successivo al salvataggio."+
+          (config.runtimeBranch?" Branch: "+config.runtimeBranch+".":""),"error");
         buttons(false,false);return;
       }
       if(Notification.permission==="denied"){
