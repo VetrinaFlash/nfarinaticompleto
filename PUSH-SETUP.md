@@ -36,6 +36,8 @@ Configurale per l'ambiente **Preview** se vuoi provarle sul branch, lasciando il
 
 Le chiavi devono rimanere stabili: se vengono cambiate i dispositivi possono dover disattivare e riattivare le notifiche. La preview `.pages.dev` e il dominio di produzione sono **origini differenti**: un dispositivo deve autorizzarle separatamente.
 
+**Fondamentale per le prove push**: usare l'**alias stabile del branch** mostrato da Cloudflare nella sezione dettagli del deploy, non l'URL casuale con hash (come `174b9a.*.pages.dev`). Cloudflare aggiorna l'alias del branch sui nuovi deploy: il browser mantiene così la stessa origine e la stessa registrazione push. Se usi il singolo URL con hash, passando a un nuovo deploy il permesso e la subscription possono restare legati al vecchio indirizzo.
+
 ## Come attivare le notifiche sul telefono
 
 1. Aprire il nuovo deploy preview **HTTPS** del branch.
