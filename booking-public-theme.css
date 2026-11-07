@@ -260,3 +260,8 @@ footer{
 @media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}}
 .booking-shifts{width:100%;overflow-x:auto;overscroll-behavior-x:contain}
 .slot-group-grid{min-width:0}
+
+/* All three TheFork-style filters visible together, even on 320px displays. */
+.booking-shifts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible;width:100%;margin-right:0}
+.shift-btn{min-width:0;white-space:nowrap;padding:10px 5px;font-size:.72rem;text-align:center}
+@media(max-width:370px){.shift-btn{font-size:.65rem;padding:9px 2px}}
