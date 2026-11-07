@@ -239,3 +239,18 @@ footer{
   .field input[type="date"]{min-width:0;width:100%}
   .detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
 }
+
+/* Intuitive two-turn booking: same white/red N'Farinati visual language. */
+.booking-step{display:flex;align-items:center;gap:10px;font:800 .81rem Montserrat,sans-serif;margin:15px 0 13px;color:#34402c}
+.step-number{display:inline-grid;place-items:center;background:#d32f2f;color:white;width:26px;height:26px;border-radius:50%;font-size:.78rem}
+.booking-shifts{display:flex;gap:8px;overflow-x:auto;padding:1px 0 11px;margin:0 0 6px;scrollbar-width:thin}
+.shift-btn{white-space:nowrap;border:1px solid #e2e6dd;border-radius:999px;background:#fff;color:#52614a;font:700 .78rem Montserrat,sans-serif;padding:11px 13px;min-height:44px;cursor:pointer}
+.shift-btn.active{color:white;background:#d32f2f;border-color:#d32f2f;box-shadow:0 4px 13px rgba(211,47,47,.13)}
+.times-caption{font:600 .78rem Poppins,sans-serif;color:#6b7a5d;margin:8px 0 11px}
+#times{display:flex;flex-direction:column;gap:13px;margin:0 0 10px}
+.slot-group{padding:14px;border:1px solid #e2e6dd;border-radius:14px;background:#f8f9f6}
+.slot-group h3{font:800 .92rem Montserrat,sans-serif;color:#2a3324;margin:0 0 2px}
+.slot-group small{display:block;font:.74rem Poppins,sans-serif;color:#6b7a5d;margin:0 0 13px}
+.slot-group-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.booking-selection{background:#f0f7ed;color:#28532b;border-left:4px solid #4c9e58;padding:12px 14px;font:700 .83rem Montserrat,sans-serif;border-radius:8px;margin-bottom:17px}
+@media(max-width:540px){.booking-shifts{margin-right:-5px}.shift-btn{padding:10px 12px;font-size:.73rem}.slot-group{padding:11px}.slot-group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.booking-step{font-size:.76rem}}
