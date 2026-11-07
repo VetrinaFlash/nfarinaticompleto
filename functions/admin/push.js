@@ -15,10 +15,14 @@ export async function onRequestGet({env,request}) {
     const data=await pushDiagnostics(env,origin);
     return json({...data,permissionRequired:true});
   }catch(e){
-    console.error("Push diagnostics failed",e?.name,String(e?.message||"").slice(0,240));
+    const stage=typeof e?.stage==="string" ? e.stage : "diagnostics-read";
+    const detail=String(e?.message||"Errore database non specificato")
+      .replace(/(?:https?:\\/\\/|Bearer\\s+)[^\\s]+/gi,"[dato riservato]").slice(0,180);
+    console.error("Push diagnostics failed",stage,e?.name,detail);
     return json({
-      error:"Impossibile inizializzare le tabelle push nel database D1. Verifica il binding DB e i log Cloudflare Pages Functions: aggiungere le chiavi VAPID da solo non risolve questo errore.",
-      code:"PUSH_D1_INIT_FAILED"
+      error:"Database D1: problema durante '"+stage+"'. "+detail+
+        " Controlla il binding DB di Preview e ripubblica il branch. Le chiavi VAPID non vanno reinserite.",
+      code:"PUSH_D1_STAGE_FAILED",stage
     },503);
   }
 }
