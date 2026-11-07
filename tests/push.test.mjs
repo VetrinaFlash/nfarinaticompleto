@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {DatabaseSync} from "node:sqlite";
 import {d1,adminCookie} from "./helpers.mjs";
 import {validateSubscription,isAllowedPushEndpoint,buildWebPushRequest,
-  ensurePushSchema,registerDevice,enqueuePushEvent,runPendingPush,pushDiagnostics
+  ensurePushSchema,registerDevice,enqueuePushEvent,runPendingPush,pushDiagnostics,sendPushTestToDevice
 } from "../functions/_lib/push.js";
 import {onRequestGet as getPush,onRequestPost as postPush} from "../functions/admin/push.js";
 
@@ -94,8 +94,8 @@ test("D1 outbox sends each event once and does not duplicate on retry",async()=>
 test("expired subscriptions are disabled without retrying them forever",async()=>{
  const {env,db,subscription}=await createFixture();
  await registerDevice(env,base,subscription);
- await enqueuePushEvent(env,base,{kind:"booking",id:"b1",title:"Prenotazione",body:"4 ospiti",
-    target:"/admin-prenotazioni.html?date=2026-11-08#agenda"});
+ await enqueuePushEvent(env,base,{kind:"order",id:"order-expired-sub",title:"Ordine",body:"4 pizze",
+    target:"/admin.html?section=orders"});
  const outcome=await runPendingPush(env,base,{fetcher:async()=>new Response(null,{status:410})});
  assert.equal(outcome.failed,0);
  assert.equal(db.prepare("SELECT active FROM nf_webpush_subscriptions").get().active,0);
@@ -134,18 +134,48 @@ test("push queue retries failed provider deliveries without losing a confirmed o
  assert.ok(db.prepare("SELECT delivered_ms FROM nf_webpush_events").get().delivered_ms);
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_deliveries").get().n,1);
 });
-test("a device can opt into bookings without receiving order alerts",async()=>{
- const {env,subscription}=await createFixture();
+test("only fresh confirmed orders leave D1: historical booking/test events are ignored",async()=>{
+ const {env,db,subscription}=await createFixture();
  await registerDevice(env,base,subscription,{orders:false,bookings:true});
- await enqueuePushEvent(env,base,{kind:"order",id:"o1",title:"Ordine",body:"Test",target:"/admin.html"});
- await enqueuePushEvent(env,base,{kind:"booking",id:"b1",title:"Tavolo",body:"Test",
-   target:"/admin-prenotazioni.html?date=2026-11-08#agenda"});
- let sent=0;
- const outcome=await runPendingPush(env,base,{fetcher:async()=>{sent++;return new Response(null,{status:201})}});
- assert.equal(outcome.processed,2);assert.equal(sent,1);
+ assert.equal(db.prepare("SELECT orders,bookings FROM nf_webpush_subscriptions").get().orders,1);
+ assert.equal(db.prepare("SELECT orders,bookings FROM nf_webpush_subscriptions").get().bookings,0);
+ await assert.rejects(()=>enqueuePushEvent(env,base,{kind:"booking",id:"b1",
+   title:"Tavolo",body:"Vecchio tavolo",target:"/admin-prenotazioni.html"}),/Evento/);
+ await assert.rejects(()=>enqueuePushEvent(env,base,{kind:"test",id:"test1",
+   title:"Test",body:"Test",target:"/admin.html"}),/Evento/);
+ const now=Date.now();
+ for(const kind of ["booking","test"]){
+   db.prepare("INSERT INTO nf_webpush_events(id,origin,kind,title,body,target,created_ms) VALUES(?,?,?,?,?,?,?)")
+     .run(kind+":old",base,kind,"Legacy "+kind,"old","/admin.html",now);
+ }
+ await enqueuePushEvent(env,base,{kind:"order",id:"neworder",title:"Ordine",body:"Confermato",
+   target:"/admin.html?section=orders"});
+ await enqueuePushEvent(env,base,{kind:"order",id:"stale",title:"Ordine vecchio",body:"Confermato",
+   target:"/admin.html?section=orders"},now-16*60000);
+ let attempts=0;
+ const result=await runPendingPush(env,base,{fetcher:async()=>{
+   attempts++;return new Response(null,{status:201});
+ }});
+ assert.equal(result.processed,1);
+ assert.equal(result.sent,1);
+ assert.equal(attempts,1,"no random legacy or old alert may be sent");
+ assert.equal(db.prepare("SELECT kind FROM nf_webpush_events WHERE delivered_ms IS NOT NULL").get().kind,"order");
 });
-
-
+test("an explicitly requested test targets one registered device, without entering the queue",async()=>{
+ const {env,db,subscription}=await createFixture();
+ await registerDevice(env,base,subscription);
+ const second={...subscription,endpoint:"https://fcm.googleapis.com/fcm/send/another-test-device"};
+ await registerDevice(env,base,second);
+ let called=[];
+ const result=await sendPushTestToDevice(env,base,subscription.endpoint,{
+   fetcher:async(url,opts)=>{called.push({url,opts});return new Response(null,{status:201})}
+ });
+ assert.equal(result.accepted,1);
+ assert.deepEqual(called.map(x=>x.url),[subscription.endpoint]);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,0);
+ await assert.rejects(()=>sendPushTestToDevice(env,base,"https://fcm.googleapis.com/fcm/send/unregistered"),/registrato/);
+ await assert.rejects(()=>sendPushTestToDevice(env,base+"/invalid",subscription.endpoint),/registrato/);
+});
 test("legacy push_subscriptions without origin remains untouched while new isolated Web Push works",async()=>{
  const {env,db,subscription}=await createFixture();
  db.exec("CREATE TABLE push_subscriptions(id TEXT PRIMARY KEY,endpoint TEXT,created_at TEXT)");
