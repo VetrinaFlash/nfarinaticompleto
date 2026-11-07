@@ -18,59 +18,86 @@
 <main>
 <div id="loading" class="panel">Verifica accesso e caricamento prenotazioni…</div>
 <div id="app" class="hidden">
-<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Tutte le prenotazioni, i turni e i tavoli in una schermata semplice.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold" id="new-booking">+ Prenotazione telefonica</button></div></div>
+<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Le prenotazioni raggruppate per orario. I tavoli disponibili hanno una scheda dedicata.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold hidden" id="new-booking" tabindex="-1" aria-hidden="true">+ Prenotazione telefonica</button></div></div>
 <div class="tabs">
-<button class="tab active" data-tab="agenda">📆 Agenda</button>
-<button class="tab" data-tab="tables">🪑 Tavoli</button>
+<button class="tab active" data-tab="agenda">📆 Prenotazioni</button>
+<button class="tab" data-tab="availability">🪑 Disponibilità tavoli</button>
+<button class="tab" data-tab="tables">⚙ Gestione tavoli</button>
 <button class="tab" data-tab="settings">⚙️ Capienza</button>
 <button class="tab" data-tab="hours">🕒 Orari</button>
 <button class="tab" data-tab="closures">🚫 Chiusure</button>
 </div>
-<div id="agenda-tab">
-<div class="grid agenda-summary" aria-label="Riepilogo della giornata">
-  <div class="stat"><strong id="total">—</strong><span>Prenotazioni del giorno</span></div>
-  <div class="stat"><strong id="guests">—</strong><span>Coperti prenotati</span></div>
-  <div class="stat"><strong id="capacity">—</strong><span>Capienza del locale</span></div>
+
+<div id="agenda-tab" class="fork-agenda">
+<section class="fork-agenda-head" aria-label="Agenda per orario">
+  <div class="fork-date-navigation">
+    <button class="fork-day-arrow" type="button" id="day-prev" aria-label="Giorno precedente">‹</button>
+    <label class="fork-date-label" for="slot-date">
+      <span>PRENOTAZIONI DI</span>
+      <input type="date" id="slot-date" aria-label="Seleziona giorno prenotazioni">
+    </label>
+    <button class="fork-day-arrow" type="button" id="day-next" aria-label="Giorno successivo">›</button>
+  </div>
+  <div class="fork-service-tabs" role="group" aria-label="Servizi">
+    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti i turni <span class="fork-cover-count" id="all-turn-covers">0p</span></button>
+    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">Primo turno <span class="fork-cover-count" id="first-turn-covers">0p</span></button>
+    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">Secondo turno <span class="fork-cover-count" id="second-turn-covers">0p</span></button>
+  </div>
+  <div class="fork-agenda-metrics" aria-label="Riepilogo del giorno">
+    <span><strong id="total">—</strong> prenotazioni</span>
+    <span><strong id="guests">—</strong> coperti</span>
+    <span><strong id="capacity">—</strong> capienza</span>
+  </div>
+  <div class="fork-view-controls">
+    <button class="fork-view-button" type="button" id="book-selected">＋ Nuova prenotazione</button>
+  </div>
+</section>
+<section class="fork-reservations-panel" aria-label="Prenotazioni raggruppate per orario">
+  <div class="fork-reservations-toolbar">
+    <div><h2 id="booking-view-title">Tutte le prenotazioni</h2>
+      <p class="muted" id="booking-view-description">Prenotazioni ordinate per ora di arrivo.</p></div>
+    <button type="button" class="btn small hidden" id="reset-slot">Tutte le fasce</button>
+  </div>
+  <div class="fork-filter-line">
+    <input type="date" id="filter-date" class="hidden" tabindex="-1" aria-hidden="true">
+    <label for="filter-status">Stato</label>
+    <select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select>
+    <button class="fork-refresh" type="button" id="refresh" aria-label="Aggiorna prenotazioni">↻ Aggiorna</button>
+  </div>
+  <div id="agenda-status" class="fork-agenda-status" role="status" aria-live="polite"></div>
+  <div id="booking-list" class="fork-booking-list"></div>
+  <div class="fork-paging"><button class="btn small" id="prev">← Precedenti</button>
+    <span class="muted" id="page-info"></span><button class="btn small" id="next">Successive →</button></div>
+</section>
 </div>
+<div id="availability-tab" class="hidden">
 <section class="panel slot-console">
-  <div class="slot-console-title"><div><h2>Scegli giorno e turno</h2><p class="muted">Tocca una fascia per vedere gli ospiti e gestire quel turno.</p></div>
-    <div class="slot-day-nav"><button class="btn small" type="button" id="day-prev" aria-label="Giorno precedente">←</button>
-      <input type="date" id="slot-date" aria-label="Data fasce orarie">
-      <button class="btn small" type="button" id="day-next" aria-label="Giorno successivo">→</button></div>
-  </div>
-  <div class="slot-turns" role="group" aria-label="Turni prenotazioni">
-    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti</button>
-    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">🌤 Primo turno</button>
-    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">🌙 Secondo turno</button>
-  </div>
+  <h2>Disponibilità per fascia</h2>
+  <p class="muted">Seleziona un orario per visualizzare disponibilità e tavoli occupati.</p>
   <div class="slot-key"><span><i class="slot-dot free"></i> Disponibile</span><span><i class="slot-dot nearly"></i> Quasi pieno</span><span><i class="slot-dot full"></i> Completo</span></div>
   <p class="status" id="slots-status" role="status"></p>
   <div id="service-slots" class="service-slots" aria-live="polite"></div>
-  <small class="muted">I coperti disponibili sono calcolati per l'intera permanenza di 90 minuti, riassetto incluso. Le prenotazioni telefoniche rispettano sempre la capienza totale.</small>
+  <small class="muted">I coperti disponibili comprendono i 90 minuti della fascia, riassetto incluso.</small>
 </section>
-<section class="panel table-schedule-panel" aria-label="Disponibilità dei tavoli per fascia oraria">
+<section class="panel table-schedule-panel" aria-label="Disponibilità fisica dei tavoli">
   <div class="table-schedule-heading">
     <div>
       <span class="table-schedule-eyebrow">SALA · DISPONIBILITÀ</span>
       <h2 id="table-schedule-title">Tavoli per fascia oraria</h2>
-      <p id="table-schedule-subtitle" class="muted">Scegli un orario per visualizzare i singoli tavoli.</p>
+      <p id="table-schedule-subtitle" class="muted">Seleziona una fascia per visualizzare i tavoli.</p>
     </div>
     <button type="button" class="btn small" id="configure-sala">⚙ Gestisci tavoli</button>
   </div>
   <p id="table-schedule-note" class="muted" role="status"></p>
   <div id="table-schedule-grid" class="table-schedule-grid" aria-live="polite"></div>
 </section>
-<section class="panel booking-panel">
-<div class="booking-toolbar"><div><h2 id="booking-view-title">Tutte le prenotazioni</h2><p class="muted" id="booking-view-description">Seleziona un orario per vedere solo i clienti di quella fascia.</p></div>
-<div class="booking-toolbar-actions">
-  <button type="button" class="btn small hidden" id="reset-slot">Mostra tutte</button>
-  <button type="button" class="btn gold" id="book-selected">+ Prenota</button>
-</div></div>
-<div class="tools booking-filters">
-<input type="date" id="filter-date" class="hidden" tabindex="-1" aria-hidden="true">
-<div class="field"><label for="filter-status">Filtra per stato</label><select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select></div><button class="btn" id="refresh">↻ Aggiorna</button></div><div id="agenda-status" class="status"></div><div id="booking-list" class="booking-list"></div><div class="tools"><button class="btn" id="prev">← Precedenti</button><span class="muted" id="page-info"></span><button class="btn" id="next">Successive →</button></div></section>
 </div>
-<div id="settings-tab" class="hidden"><section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
+<div id="settings-tab" class="hidden">
+<section class="panel"><h2>Notifiche push</h2>
+  <p class="muted">Qui puoi attivare o provare le notifiche di nuovi ordini e prenotazioni su questo dispositivo.</p>
+  <div class="sidebar-footer" id="booking-push-host"></div>
+</section>
+<section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
 <div class="field"><label>Capienza contemporanea</label><input name="capacity" type="number" min="1" max="1000" required></div>
 <div class="field"><label>Posti riservati fuori online</label><input name="holdback" type="number" min="0" max="999" required></div>
 <div class="field"><label>Massimo persone online</label><input name="max_party" type="number" min="1" max="100" required></div>
@@ -104,14 +131,16 @@ const isAutoFreed=r=>['confirmed','arrived','seated'].includes(r.status) &&
   (r.date<today() || (r.date===today() && minuteNowRome()>=r.end_min));
 let state={page:1,rows:[],settings:null,alertLast:0,initialized:false};
 let slotData=null,slotTurn='all',slotFetch=0,agendaFetch=0,selectedMinute=null;
+const expandedBookings=new Set(),collapsedTimes=new Set();
 async function api(url,opt){const response=await fetch(url,{cache:'no-store',...opt});const data=await response.json();if(!response.ok)throw Error(data.error||'Operazione non riuscita');return data}
 const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});
 function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
 const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!==undefined)el.textContent=value;if(className)el.className=className;return el};
 const badges=(r)=>node('span',titles[r.status]||r.status,'badge '+r.status);
-const bookingTabs=['agenda','settings','hours','tables','closures'];
+const bookingTabs=['agenda','availability','settings','hours','tables','closures'];
 function tab(key){
   if(!bookingTabs.includes(key))key='agenda';
+  if(key==='availability' && slotData)renderTableSchedule();
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
   bookingTabs.forEach(k=>$(k+'-tab').classList.toggle('hidden',key!==k));
   if(location.hash!=='#'+key)history.replaceState(null,'','#'+key);
@@ -284,6 +313,14 @@ function renderTableSchedule(){
  }
 }
 $('configure-sala').onclick=()=>tab('tables');
+function updateTurnBadges(){
+ const active=slotData?.booked||[];
+ const first=active.filter(r=>r.start_min<1230).reduce((n,r)=>n+Number(r.guests||0),0);
+ const second=active.filter(r=>r.start_min>=1230).reduce((n,r)=>n+Number(r.guests||0),0);
+ $('all-turn-covers').textContent=(first+second)+'p';
+ $('first-turn-covers').textContent=first+'p';
+ $('second-turn-covers').textContent=second+'p';
+}
 async function loadSlots(){
  const seq=++slotFetch,date=$('slot-date').value;
  if(!date)return;
@@ -291,11 +328,11 @@ async function loadSlots(){
  try{
   const d=await api('/admin/bookings?mode=timeline&date='+encodeURIComponent(date));
   if(seq!==slotFetch)return;
-  slotData=d;renderSlotTiles();renderTableSchedule();
+  slotData=d;renderSlotTiles();renderTableSchedule();updateTurnBadges();
   message('slots-status',d.open?''+d.slots.length+' fasce disponibili nel calendario del locale':'Locale chiuso / prenotazioni sospese');
  }catch(e){
     if(seq!==slotFetch)return;
-    slotData=null;renderSlotTiles();renderTableSchedule();
+    slotData=null;renderSlotTiles();renderTableSchedule();updateTurnBadges();
     message('slots-status',e.message,true);
   }
 }
@@ -318,38 +355,95 @@ $('slot-date').onchange=()=>{
  slotData=null;renderSlotTiles();renderTableSchedule();
  loadAgenda();loadSlots();
 };
-function tableRow(data) {
- const line=node('div',undefined,'booking'),time=node('time',hhmm(data.start_min));
- const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),
-   node('small',data.phone+' · '+(data.source==='manual'?'Telefono/admin':'Online')+
-     (data.table_id?' · '+(state.settings?.tables?.find(t=>t.id===data.table_id)?.label||'Tavolo assegnato'):'')),
-   node('small','Posti riutilizzabili dalle '+hhmm(data.end_min)+' (riassetto incluso)'),
-   badges(data));
- if(isAutoFreed(data))who.append(node('span','Disponibilità liberata automaticamente','badge completed'));
- const actions=node('div',undefined,'actions');
- const edit=node('button','Dettagli','btn small');edit.type='button';edit.onclick=()=>openEdit(data);
- actions.append(edit);
- if(['confirmed','arrived','seated'].includes(data.status)){
-   const buttons=data.status==='confirmed'?[['arrived','✓ Arrivato'],['no_show','No-show']]:
-     data.status==='arrived'?[['seated','Al tavolo'],['no_show','No-show']]:
-     [['completed','Libera tavolo']];
-   for(const [status,label] of buttons){
-     const btn=node('button',label,'btn small'+(status==='no_show'?' danger':''));
-     btn.type='button';
-     btn.onclick=async()=>{
-       if(status==='no_show' && !confirm('Segnare '+data.name+' come non presentato e liberare i posti?'))return;
-       if(status==='completed' && !confirm('Il tavolo è realmente libero?'))return;
-       btn.disabled=true;
-       try{
-         await send('status',{id:data.id,status});
-         await Promise.all([loadAgenda(),loadSlots(),alerts()]);
-       }catch(e){message('agenda-status',e.message,true)}
-       finally{btn.disabled=false}
-     };
-     actions.append(btn);
-   }
+function renderGroupedAgenda(rows){
+ const target=$('booking-list');target.replaceChildren();
+ if(!rows.length){
+   const empty=node('div',undefined,'fork-empty-agenda');
+   empty.append(node('strong','Nessuna prenotazione in questa fascia'),
+     node('p','Cambia giorno, turno o stato per consultare altre prenotazioni.','muted'));
+   target.append(empty);return;
  }
- line.append(time,who,actions);return line
+ const byMinute=new Map();
+ for(const r of rows){
+   if(!byMinute.has(r.start_min))byMinute.set(r.start_min,[]);
+   byMinute.get(r.start_min).push(r);
+ }
+ for(const [minute,items] of [...byMinute.entries()].sort((a,b)=>a[0]-b[0])){
+   const group=node('section',undefined,'fork-time-group');
+   const heading=node('button',undefined,'fork-time-head');
+   heading.type='button';
+   heading.setAttribute('aria-label','Prenotazioni delle '+hhmm(minute));
+   const chip=node('span',hhmm(minute),'fork-time-chip');
+   const icon=node('span','▤','fork-service-icon');icon.setAttribute('aria-hidden','true');
+   const count=node('span',String(items.length),'fork-service-bookings');
+   const people=node('span',items.reduce((sum,r)=>sum+r.guests,0)+'p','fork-service-people');
+   const arrow=node('span',collapsedTimes.has(minute)?'⌄':'⌃','fork-time-chevron');
+   heading.append(chip,icon,count,people,arrow);
+   const list=node('div',undefined,'fork-time-items');
+   list.hidden=collapsedTimes.has(minute);
+   heading.setAttribute('aria-expanded',String(!list.hidden));
+   heading.onclick=()=>{
+     list.hidden=!list.hidden;
+     if(list.hidden)collapsedTimes.add(minute);else collapsedTimes.delete(minute);
+     heading.setAttribute('aria-expanded',String(!list.hidden));
+     arrow.textContent=list.hidden?'⌄':'⌃';
+   };
+   for(const booking of items){
+     const item=node('article',undefined,'fork-reservation');
+     const summary=node('button',undefined,'fork-reservation-summary');
+     summary.type='button';
+     const left=node('span',undefined,'fork-reservation-namebox');
+     left.append(node('strong',booking.name,'fork-reservation-name'));
+     if(booking.table_id){
+       const physical=state.settings?.tables?.find(t=>t.id===booking.table_id);
+       if(physical)left.append(node('small',physical.label,'fork-reservation-table'));
+     }
+     const right=node('span',undefined,'fork-reservation-right');
+     right.append(node('strong',booking.guests+'p','fork-reservation-covers'));
+     const status=node('span',
+       booking.status==='confirmed'?'Prenotato':titles[booking.status]||booking.status,
+       'fork-reservation-status '+booking.status);
+     right.append(status);
+     summary.append(left,right);
+     const details=node('div',undefined,'fork-reservation-details');
+     const expanded=expandedBookings.has(booking.id);details.hidden=!expanded;
+     summary.setAttribute('aria-expanded',String(expanded));
+     summary.setAttribute('aria-label',booking.name+', '+booking.guests+' persone, '+status.textContent+'; mostra dettagli');
+     summary.onclick=()=>{
+       details.hidden=!details.hidden;
+       if(details.hidden)expandedBookings.delete(booking.id);else expandedBookings.add(booking.id);
+       summary.setAttribute('aria-expanded',String(!details.hidden));
+     };
+     details.append(node('p',
+       (booking.source==='manual'?'Prenotazione telefonica':'Prenotazione online')+
+       ' · '+booking.phone+' · '+hhmm(booking.start_min)+'–'+hhmm(booking.end_min),
+       'fork-reservation-meta'));
+     if(booking.notes)details.append(node('p',booking.notes,'fork-reservation-meta'));
+     const actions=node('div',undefined,'fork-reservation-actions');
+     const edit=node('button','Dettagli','btn small');
+     edit.type='button';edit.onclick=()=>openEdit(booking);actions.append(edit);
+     let opts=[];
+     if(booking.status==='confirmed')opts=[['arrived','✓ Arrivato'],['no_show','No-show']];
+     else if(booking.status==='arrived')opts=[['seated','Al tavolo'],['no_show','No-show']];
+     else if(booking.status==='seated')opts=[['completed','Libera tavolo']];
+     for(const [next,label] of opts){
+       const button=node('button',label,'btn small'+(next==='no_show'?' danger':''));
+       button.type='button';
+       button.onclick=async()=>{
+         if(next==='no_show'&&!confirm('Segnare '+booking.name+' come non presentato e liberare i posti?'))return;
+         if(next==='completed'&&!confirm('Il tavolo è realmente libero?'))return;
+         button.disabled=true;
+         try{await send('status',{id:booking.id,status:next});
+           await Promise.all([loadAgenda(),loadSlots(),alerts()]);}
+         catch(e){message('agenda-status',e.message,true)}
+         finally{button.disabled=false}
+       };
+       actions.append(button);
+     }
+     details.append(actions);item.append(summary,details);list.append(item);
+   }
+   group.append(heading,list);target.append(group);
+ }
 }
 async function loadAgenda(){
  const seq=++agendaFetch;
@@ -361,7 +455,7 @@ async function loadAgenda(){
   const d=await api('/admin/bookings?'+u);
   if(seq!==agendaFetch)return;
   state.rows=d.bookings;$('total').textContent=d.total;$('guests').textContent=d.booked;$('capacity').textContent=d.capacity;
-  $('booking-list').replaceChildren(...d.bookings.map(tableRow));if(!d.bookings.length)$('booking-list').append(node('p','Nessuna prenotazione per i filtri selezionati.','muted'));
+  renderGroupedAgenda(d.bookings);
   const showing=Number(d.filtered_total ?? d.total);
   $('page-info').textContent='Pagina '+state.page+' · '+showing+(selectedMinute!==null?' prenotazioni nella fascia':' prenotazioni');
   $('prev').disabled=state.page===1;$('next').disabled=state.page*d.limit>=showing;

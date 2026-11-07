@@ -284,3 +284,97 @@ button:disabled{opacity:.45;transform:none}
  .schedule-table-action{width:100%;font-size:.64rem}
 }
 @media(max-width:360px){.table-schedule-items{grid-template-columns:1fr}.schedule-table-card-header{display:flex}.table-seats{margin-top:0}}
+
+
+/* N'Farinati compact service register (inspired by the reference's visual
+   hierarchy, not a replica). The agenda is ONLY reservations: availability
+   and individual physical tables live in their dedicated tab. */
+.fork-agenda{max-width:100%;min-width:0}
+.fork-agenda-head{background:#1a1a1a;border:1px solid #353535;border-radius:14px 14px 0 0;padding:10px 15px 0}
+.fork-date-navigation{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 12px}
+.fork-day-arrow{flex:0 0 42px;height:43px;border:1px solid #4a4a4a;border-radius:9px;background:#292929;color:#f0f0f0;font-size:1.75rem;line-height:1}
+.fork-date-label{display:flex;align-items:center;justify-content:center;gap:12px;flex:0 1 235px;min-width:0}
+.fork-date-label span{display:none}
+.fork-date-label input[type="date"]{width:100%;min-width:0;background:#212121;border:1px solid #49413a;color:#f8f8f8;font:800 .94rem Montserrat,sans-serif;text-align:center}
+.fork-service-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border-bottom:1px solid #414141}
+.fork-service-tabs .slot-turn{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:#bfbfbf;margin:0;padding:12px 6px 10px;font:700 .85rem Montserrat,sans-serif;white-space:normal;text-align:center}
+.fork-service-tabs .slot-turn.active{background:transparent;color:#f0d39b;border-color:#d4a017}
+.fork-cover-count{background:#26483e;color:#9eedd2;border-radius:999px;padding:3px 7px;font:800 .7rem Poppins,sans-serif;white-space:nowrap}
+.fork-agenda-metrics{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px 20px;color:#c7c6c2;font-size:.76rem;padding:11px 0}
+.fork-agenda-metrics strong{color:#eebe79;font-weight:900;font-size:.9rem}
+.fork-view-controls{display:flex;justify-content:center;gap:8px;padding:0 0 12px}
+.fork-view-button{border:1px solid #b8860b;background:#a77c12;border-radius:9px;color:#161512;min-height:40px;padding:8px 16px;font:800 .8rem Montserrat,sans-serif}
+.fork-reservations-panel{border:1px solid #353535;border-top:0;border-radius:0 0 14px 14px;background:#202020;overflow:hidden}
+.fork-reservations-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px 8px}
+.fork-reservations-toolbar h2{font-size:1.03rem;margin:0 0 2px;color:#f1f0ed}
+.fork-reservations-toolbar p{margin:0;font-size:.73rem}
+.fork-filter-line{display:flex;gap:9px;align-items:center;justify-content:flex-start;padding:6px 15px 11px;border-bottom:1px solid #3b3b3b}
+.fork-filter-line label{font-size:.78rem;color:#d2d1cf;white-space:nowrap}
+.fork-filter-line select{max-width:215px;min-width:0;flex:1;padding:8px;min-height:38px;font-size:.84rem}
+.fork-refresh{border:1px solid #484848;color:#ded8cc;border-radius:8px;background:#292929;min-height:38px;padding:7px 13px;font:700 .76rem Poppins,sans-serif}
+.fork-agenda-status{font-size:.71rem;min-height:0;padding:5px 16px;color:#9a9a99}
+.fork-agenda-status.error{color:#ee9e9e}
+.fork-booking-list{display:block;min-width:0}
+.fork-time-group{border-top:1px solid #424242}
+.fork-time-head{display:flex;width:100%;align-items:center;gap:9px;min-height:44px;padding:7px 16px;background:#292929;border:0;color:#f5f5f5;text-align:left}
+.fork-time-head:hover{background:#333333}
+.fork-time-chip{display:inline-block;border-radius:999px;background:#151d22;color:#f2f7ff;padding:5px 10px;font:800 .78rem Montserrat,sans-serif}
+.fork-service-icon{color:#a2a9a5;font-size:1rem}
+.fork-service-bookings,.fork-service-people{color:#c2c5c2;font:700 .76rem Poppins,sans-serif}
+.fork-service-bookings::after{content:' pren.'}
+.fork-time-chevron{margin-left:auto;color:#d4bb79;font-size:1.3rem;line-height:1}
+.fork-time-items[hidden],.fork-reservation-details[hidden]{display:none!important}
+.fork-reservation{background:#202020;border-top:1px solid #393939}
+.fork-reservation-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:65px;padding:9px 17px;background:transparent;color:#f6f6f5;border:0;text-align:left}
+.fork-reservation-summary:hover,.fork-reservation-summary[aria-expanded="true"]{background:#282728}
+.fork-reservation-namebox{min-width:0;display:flex;flex-direction:column;gap:2px;flex:1}
+.fork-reservation-name{font:700 .95rem Montserrat,sans-serif;overflow-wrap:anywhere}
+.fork-reservation-table{font-size:.7rem;color:#bfbab1}
+.fork-reservation-right{flex:none;display:flex;align-items:flex-end;flex-direction:column;gap:5px}
+.fork-reservation-covers{font:800 .85rem Montserrat,sans-serif;color:#f2eeea}
+.fork-reservation-status{display:inline-block;padding:5px 10px;border-radius:7px;background:#f5d665;color:#211909;font:800 .67rem Montserrat,sans-serif;white-space:nowrap}
+.fork-reservation-status.arrived,.fork-reservation-status.seated{background:#a8d6f4;color:#193447}
+.fork-reservation-status.completed{background:#505650;color:#f1f2ef}
+.fork-reservation-status.cancelled,.fork-reservation-status.no_show{background:#6a3737;color:#ffdfd9}
+.fork-reservation-details{padding:12px 16px 13px;background:#2a2728;border-top:1px solid #393735}
+.fork-reservation-meta{margin:0 0 7px;font-size:.78rem;color:#d5d0c7;overflow-wrap:anywhere}
+.fork-reservation-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fork-reservation-actions button{flex:0 0 auto;min-height:36px;font-size:.73rem}
+.fork-empty-agenda{padding:27px 16px;text-align:center;color:#f3f3ed}
+.fork-empty-agenda p{margin:4px 0 0}
+.fork-paging{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;border-top:1px solid #393939}
+.fork-paging .muted{font-size:.69rem}
+#availability-tab{min-width:0}
+#availability-tab .slot-console,#availability-tab .table-schedule-panel{max-width:100%}
+@media(max-width:600px){
+ .fork-agenda-head{padding:9px 8px 0}
+ .fork-date-navigation{gap:6px}
+ .fork-day-arrow{flex-basis:35px;height:41px}
+ .fork-date-label{flex:1 1 auto;max-width:220px}
+ .fork-date-label input[type=date]{padding:9px 5px;font-size:.83rem}
+ .fork-service-tabs .slot-turn{font-size:.68rem;padding:9px 1px 10px;gap:4px}
+ .fork-cover-count{font-size:.61rem;padding:3px 5px}
+ .fork-agenda-metrics{gap:8px 13px;font-size:.69rem}
+ .fork-reservations-toolbar{padding:12px 10px 7px}
+ .fork-reservations-toolbar h2{font-size:.92rem}
+ .fork-filter-line{padding:6px 10px 10px;gap:7px}
+ .fork-filter-line label{font-size:.69rem}
+ .fork-filter-line select{font-size:.77rem}
+ .fork-refresh{padding:6px 8px;font-size:.67rem}
+ .fork-time-head{padding:7px 10px;gap:7px}
+ .fork-time-chip{padding:5px 8px;font-size:.76rem}
+ .fork-service-bookings,.fork-service-people{font-size:.71rem}
+ .fork-reservation-summary{padding:9px 11px;min-height:63px}
+ .fork-reservation-name{font-size:.83rem}
+ .fork-reservation-status{font-size:.61rem;padding:5px 7px}
+ .fork-reservation-covers{font-size:.78rem}
+ .fork-reservation-details{padding:11px}
+ .fork-reservation-actions button{min-width:0}
+ .fork-paging{padding:11px 10px}
+}
+@media(max-width:360px){
+ .fork-service-tabs .slot-turn{font-size:.63rem;flex-wrap:wrap}
+ .fork-cover-count{font-size:.57rem}
+ .fork-reservation-name{font-size:.78rem}
+ .fork-filter-line label{display:none}
+}

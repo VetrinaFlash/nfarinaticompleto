@@ -6,6 +6,7 @@ on:
       - main
       - feature/prenotazioni-tavoli
       - fix/fasce-tavoli-admin-20261107
+      - fix/agenda-oraria-compatta-20261107
   workflow_dispatch:
 
 permissions:
