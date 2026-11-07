@@ -33,12 +33,14 @@
     box.innerHTML='<strong>🔔 Notifiche ordini e tavoli</strong>'+
       '<button id="nf-push-enable" type="button">Attiva push su questo dispositivo</button>'+
       '<button id="nf-push-test" type="button" hidden>Invia una prova</button>'+
+      '<button id="nf-push-reconnect" type="button" hidden>↻ Riattiva push</button>'+
       '<button id="nf-push-disable" type="button" hidden>Disattiva</button>'+
       '<small role="status" aria-live="polite" id="nf-push-status">Verifica disponibilità...</small>';
     if(parent.classList.contains("sidebar-footer"))parent.prepend(box);else parent.append(box);
     $("nf-push-enable").addEventListener("click",enable);
     $("nf-push-disable").addEventListener("click",disable);
     $("nf-push-test").addEventListener("click",test);
+    $("nf-push-reconnect").addEventListener("click",()=>enable(true));
   }
   const available=()=>window.isSecureContext&&"serviceWorker" in navigator&&
     "PushManager" in window&&"Notification" in window;
@@ -52,12 +54,14 @@
     }
   };
   function buttons(active,configured){
-    const e=$("nf-push-enable"),t=$("nf-push-test"),d=$("nf-push-disable");
+    const e=$("nf-push-enable"),t=$("nf-push-test"),d=$("nf-push-disable"),
+      reconnect=$("nf-push-reconnect");
     const blocked=available()&&Notification.permission==="denied";
     if(e){
       e.hidden=active;e.disabled=busy||!configured||blocked;
       t.hidden=!active;t.disabled=busy;
       d.hidden=!active;d.disabled=busy;
+      reconnect.hidden=!active;reconnect.disabled=busy;
     }
     const quickEnable=$("nf-push-quick-enable"),quickTest=$("nf-push-quick-test"),
       quickSettings=$("nf-push-quick-settings");
@@ -112,7 +116,7 @@
         active?"success":"",active?"Push attive":"Push non attive");
     }catch(e){say(e.message||"Controllo push non disponibile","error","Controlla le push");buttons(false,false)}
   }
-  async function enable(){
+  async function enable(replaceExisting=false){
     if(busy)return;
     busy=true;say("Richiesta di autorizzazione...","","Attivazione push…");buttons(false,!!config?.configured);
     try{
@@ -125,6 +129,7 @@
       const registration=await navigator.serviceWorker.register("/push-sw.js",{scope:"/",updateViaCache:"none"});
       await navigator.serviceWorker.ready;
       let sub=await registration.pushManager.getSubscription();
+      if(sub&&replaceExisting){await sub.unsubscribe();sub=null}
       if(sub&&sub.options?.applicationServerKey){
         const old=new Uint8Array(sub.options.applicationServerKey),next=decode(config.publicKey);
         if(old.length!==next.length||old.some((n,i)=>n!==next[i])){await sub.unsubscribe();sub=null}
