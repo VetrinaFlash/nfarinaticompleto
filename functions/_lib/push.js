@@ -163,8 +163,8 @@ export async function ensurePushSchema(env) {
             "ALTER TABLE "+table+" ADD COLUMN "+col+" "+definition);
       }
     }
-    await exec("subscriptions-index","CREATE INDEX IF NOT EXISTS nf_webnf_webpush_subscriptions_active_idx ON nf_webpush_subscriptions(origin,active)");
-    await exec("events-index","CREATE INDEX IF NOT EXISTS nf_webnf_webpush_events_queue_idx ON nf_webpush_events(origin,delivered_ms,next_attempt_ms,created_ms)");
+    await exec("subscriptions-index","CREATE INDEX IF NOT EXISTS nf_webpush_subscriptions_active_idx ON nf_webpush_subscriptions(origin,active)");
+    await exec("events-index","CREATE INDEX IF NOT EXISTS nf_webpush_events_queue_idx ON nf_webpush_events(origin,delivered_ms,next_attempt_ms,created_ms)");
   })();
   init.set(env.DB,promise);
   try {await promise} catch(e){init.delete(env.DB);throw e;}
