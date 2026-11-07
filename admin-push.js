@@ -110,43 +110,46 @@
     if(busy||checking||!$("nf-push-enable"))return;
     checking=true;
     const settings=$("nf-push-quick-settings");
-    if(settings)settings.hidden=false; // Never leave only a spinning label.
+    if(settings)settings.hidden=false;
     say("Verifica stato notifiche in corso...","","Verifica push…");
     try{
-    if(!available()){
-      say("Browser non compatibile. Su iPhone aggiungi il sito alla schermata Home prima di attivare le push.","error","Push non supportate");
-      buttons(false,false);return;
-    }
-    try{
+      if(!available()){
+        say("Browser non compatibile. Su iPhone aggiungi il sito alla schermata Home prima di attivare le push.","error","Push non supportate");
+        buttons(false,false);return;
+      }
       config=await api();
       if(!config.configured||!config.publicKey){
-        const states=config.keyStatus||{}, missing=[];
-        if(states.public!=="ok")missing.push("VAPID_PUBLIC_KEY: "+(states.public==="invalid"?"formato non valido":"non disponibile"));
-        if(states.private!=="ok")missing.push("VAPID_PRIVATE_KEY: "+(states.private==="invalid"?"formato non valido":"non disponibile"));
-        say("Questo deploy non sta leggendo correttamente i secret: "+(missing.join(" · ")||"stato sconosciuto")+
-          ". Verifica che siano associati a Preview e che il deploy sia successivo al salvataggio."+
-          (config.runtimeBranch?" Branch: "+config.runtimeBranch+".":""),"error","Push da verificare");
+        const states=config.keyStatus||{},missing=[];
+        if(states.public!=="ok")missing.push("VAPID_PUBLIC_KEY: "+(states.public==="invalid"?"formato non valido":"assente"));
+        if(states.private!=="ok")missing.push("VAPID_PRIVATE_KEY: "+(states.private==="invalid"?"formato non valido":"assente"));
+        const envName=config.runtimeBranch==="main"?"Production":"Preview";
+        say("Questo deploy non legge le chiavi Web Push correttamente ("+envName+"): "+
+          (missing.join(" · ")||"verifica configurazione")+
+          ". Apri le impostazioni Cloudflare e ridistribuisci il sito dopo aver salvato i secret.",
+          "error","Chiavi push da verificare");
         buttons(false,false);return;
       }
       if(Notification.permission==="denied"){
-        say("Permesso negato: abilita le notifiche nelle impostazioni di questo sito.","error","Push bloccate");
+        say("Permesso notifiche negato. Abilitalo nelle impostazioni del browser.","error","Push bloccate");
         buttons(false,true);return;
       }
-      const reg=await deadline(()=>navigator.serviceWorker.getRegistration("/"));
-      const sub=reg?await deadline(()=>reg.pushManager.getSubscription()):null;
+      const registration=await deadline(()=>navigator.serviceWorker.getRegistration("/"));
+      const sub=registration?await deadline(()=>registration.pushManager.getSubscription()):null;
       const active=Notification.permission==="granted"&&!!sub;
       buttons(active,true);
-      say(active?"Push abilitate su questo telefono · Dispositivi attivi: "+config.activeDevices+
-        " · In attesa: "+config.pending+".":"Attiva per ricevere ordini e prenotazioni anche a pannello chiuso.",
+      say(active?"Push attive su questo dispositivo · "+config.activeDevices+
+        " dispositivi registrati · "+config.pending+" notifiche in attesa.":
+        "Notifiche non attive su questo dispositivo. Tocca Attiva push per registrarlo.",
         active?"success":"",active?"Push attive":"Push non attive");
     }catch(e){
-      say("Stato push non disponibile: "+(e.message||"errore sconosciuto")+
-        ". Puoi riprovare da Impostazioni, senza toccare gli ordini.","error","Push non disponibili");
+      say("Controllo push non riuscito: "+String(e?.message||"Errore sconosciuto")+
+        ". Tocca Verifica push per riprovare, oppure controlla i log Cloudflare.",
+        "error","Push non disponibili");
       buttons(false,false);
-    }finally{checking=false}
-    }catch(e){
-      say("Errore controllo notifiche: "+String(e?.message||"errore"),"error","Controlla push");
-      buttons(false,false);checking=false;
+    }finally{
+      checking=false;
+      // A failed API call must never strand the quick panel in "Controllo push".
+      if(settings && !config?.configured)settings.hidden=false;
     }
   }
   async function enable(replaceExisting=false){
