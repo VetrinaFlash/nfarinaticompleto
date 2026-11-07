@@ -143,7 +143,8 @@ for(const viewport of VIEWS){
  assert.ok(await page.getByRole("button",{name:"Dettagli",exact:true}).isVisible());
  await page.locator(".fork-reservation-summary").first().click();
  assert.ok(!await page.locator(".fork-reservation-details").first().isVisible());
- assert.ok(await page.locator("#nf-push-widget").isVisible());
+ assert.equal(await page.locator("#nf-push-widget").count(),1);
+ assert.ok(!await page.locator("#nf-push-widget").isVisible(),"push settings must not clutter the booking agenda");
  await page.locator('[data-slot-turn="first"]').click();
  assert.ok((await page.locator("#booking-view-title").textContent()).includes("Primo turno"));
  await page.locator('[data-slot-turn="second"]').click();
@@ -179,6 +180,8 @@ for(const viewport of VIEWS){
  await page.locator("#agenda-tab").waitFor({state:"visible"});
  await page.locator("#reset-slot").click();
  await page.getByRole("button",{name:/Capienza/}).click();
+ assert.ok(await page.locator("#nf-push-widget").isVisible(),
+   "push activation is preserved in the settings tab");
  assert.equal(await page.locator('input[name="capacity"]').inputValue(),"50");
  assert.match(await page.locator("#booking-window-preview").textContent(),/90 minuti totali = 75 minuti al tavolo \+ 15 minuti/);
  await page.locator('#config-form select[name="buffer_min"]').selectOption("30");
