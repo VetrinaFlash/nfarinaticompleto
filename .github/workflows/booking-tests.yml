@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/prenotazioni-tavoli
+      - fix/fasce-tavoli-admin-20261107
   workflow_dispatch:
 
 permissions:
