@@ -293,6 +293,9 @@ for(const viewport of VIEWS){
  });
  await page.goto(ROOT+"/admin-prenotazioni.html",{waitUntil:"domcontentloaded"});
  await page.locator("#app").waitFor({state:"visible"});
+ assert.equal(await page.locator("#nf-push-runtime-inline").count(),1,
+   "Push handler must be embedded; external JS may be blocked or unavailable");
+ assert.equal(await page.locator('script[src="/admin-push.js"]').count(),0);
  await page.locator("#nf-push-quick-enable").waitFor({state:"visible"});
  assert.equal(await page.locator("#nf-push-quick-test").isVisible(),false,
    "test is available only after notifications have been activated");
@@ -310,6 +313,45 @@ for(const viewport of VIEWS){
    "recovery control renews the server registration");
  assert.equal(await page.locator("#nf-push-quick-enable").isVisible(),false);
  await ctx.close();
+}
+
+
+// A hung Service Worker API must never leave "Controllo push" on screen.
+{
+ const context=await browser.newContext({viewport:{width:390,height:844}});
+ await context.addInitScript(()=>{
+   Object.defineProperty(window,"PushManager",{configurable:true,value:class FakePushManager{}});
+   Object.defineProperty(window,"Notification",{configurable:true,value:{
+      permission:"default",requestPermission:async()=>"granted"
+   }});
+   Object.defineProperty(navigator,"serviceWorker",{configurable:true,value:{
+      getRegistration:()=>new Promise(()=>{}),register:()=>new Promise(()=>{}),
+      ready:new Promise(()=>{})
+   }});
+ });
+ const page=await context.newPage();
+ await page.route("**/admin/check",r=>r.fulfill({json:{authenticated:true}}));
+ await page.route("**/admin/push",r=>r.fulfill({json:{configured:true,
+   publicKey:"BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+   activeDevices:0,pending:0}}));
+ await page.route(/\/admin\/bookings(?:\?|$)/,r=>{
+   const mode=new URL(r.request().url()).searchParams.get("mode");
+   if(mode==="settings")return r.fulfill({json:settings});
+   if(mode==="alerts")return r.fulfill({json:{unread:0,last_id:0,recent:[]}});
+   if(mode==="timeline")return r.fulfill({json:{date,open:true,slots:[],capacity:50,holdback:5,
+     table_mode:true,tables:settings.tables,booked:[]}});
+   return r.fulfill({json:{bookings:[],total:0,filtered_total:0,booked:0,
+      capacity:50,page:1,limit:50,date}});
+ });
+ await page.goto(ROOT+"/admin-prenotazioni.html",{waitUntil:"domcontentloaded"});
+ await page.locator("#nf-push-quick-settings").waitFor({state:"visible",timeout:10000});
+ await page.waitForFunction(()=>{
+   const text=document.querySelector("#nf-push-quick-status")?.textContent||"";
+   return text==="Push non disponibili";
+ },null,{timeout:14000});
+ assert.ok(!(await page.locator("#nf-push-quick-status").textContent()).includes("Controllo push"),
+   "timeout must replace perpetual push check with actionable error");
+ await context.close();
 }
 
 await browser.close();
