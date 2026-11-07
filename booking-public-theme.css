@@ -254,3 +254,9 @@ footer{
 .slot-group-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .booking-selection{background:#f0f7ed;color:#28532b;border-left:4px solid #4c9e58;padding:12px 14px;font:700 .83rem Montserrat,sans-serif;border-radius:8px;margin-bottom:17px}
 @media(max-width:540px){.booking-shifts{margin-right:-5px}.shift-btn{padding:10px 12px;font-size:.73rem}.slot-group{padding:11px}.slot-group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.booking-step{font-size:.76rem}}
+
+/* The booking turn selector must scroll INSIDE the card, never enlarge its grid track. */
+.layout,.layout > .panel,.booking-shifts,#times,.slot-group{min-width:0;max-width:100%}
+@media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}}
+.booking-shifts{width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+.slot-group-grid{min-width:0}
