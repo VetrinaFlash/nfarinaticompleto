@@ -83,29 +83,84 @@ export async function buildWebPushRequest(message,subscription,env,now=Date.now(
     },body
   }};
 }
+/*
+ * D1 schema bootstrap must survive interrupted deploys. All steps are
+ * idempotent and label the exact failing D1 operation for diagnostics.
+ */
 export async function ensurePushSchema(env) {
-  if(!env?.DB)throw Error("D1 non configurato");
+  if(!env?.DB) {
+    const error=new Error("Binding D1 DB assente");
+    error.stage="binding";throw error;
+  }
   if(init.has(env.DB))return init.get(env.DB);
-  const promise=env.DB.batch([
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+  const promise=(async()=>{
+    const exec=async(stage,sql)=>{
+      try {return await env.DB.prepare(sql).run();}
+      catch(e){
+        const error=new Error(String(e?.message||"Errore D1"));
+        error.name="PushSchemaError";error.stage=stage;
+        throw error;
+      }
+    };
+    await exec("subscriptions-table",`CREATE TABLE IF NOT EXISTS push_subscriptions (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,endpoint TEXT NOT NULL,p256dh TEXT NOT NULL,auth TEXT NOT NULL,
       orders INTEGER NOT NULL DEFAULT 1,bookings INTEGER NOT NULL DEFAULT 1,active INTEGER NOT NULL DEFAULT 1,
       created_ms INTEGER NOT NULL,updated_ms INTEGER NOT NULL,last_error TEXT NOT NULL DEFAULT ''
-    )`),
-    env.DB.prepare("CREATE INDEX IF NOT EXISTS push_subscriptions_active_idx ON push_subscriptions(origin,active)"),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_events (
+    )`);
+    await exec("events-table",`CREATE TABLE IF NOT EXISTS push_events (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,kind TEXT NOT NULL,title TEXT NOT NULL,body TEXT NOT NULL,
       target TEXT NOT NULL,created_ms INTEGER NOT NULL,delivered_ms INTEGER,attempts INTEGER NOT NULL DEFAULT 0,
       next_attempt_ms INTEGER NOT NULL DEFAULT 0,claim_until_ms INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT ''
-    )`),
-    env.DB.prepare("CREATE INDEX IF NOT EXISTS push_events_queue_idx ON push_events(origin,delivered_ms,next_attempt_ms,created_ms)"),
-    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_deliveries (
+    )`);
+    await exec("deliveries-table",`CREATE TABLE IF NOT EXISTS push_deliveries (
       event_id TEXT NOT NULL,subscription_id TEXT NOT NULL,sent_ms INTEGER NOT NULL,
       PRIMARY KEY(event_id,subscription_id)
-    )`)
-  ]);
+    )`);
+    // Additive migration: do not delete subscriptions or pending alerts.
+    const optional={
+      push_subscriptions:{
+        orders:"INTEGER NOT NULL DEFAULT 1",bookings:"INTEGER NOT NULL DEFAULT 1",
+        active:"INTEGER NOT NULL DEFAULT 1",created_ms:"INTEGER NOT NULL DEFAULT 0",
+        updated_ms:"INTEGER NOT NULL DEFAULT 0",last_error:"TEXT NOT NULL DEFAULT ''"
+      },
+      push_events:{
+        delivered_ms:"INTEGER",attempts:"INTEGER NOT NULL DEFAULT 0",
+        next_attempt_ms:"INTEGER NOT NULL DEFAULT 0",claim_until_ms:"INTEGER NOT NULL DEFAULT 0",
+        last_error:"TEXT NOT NULL DEFAULT ''"
+      }
+    };
+    const required={
+      push_subscriptions:["id","origin","endpoint","p256dh","auth"],
+      push_events:["id","origin","kind","title","body","target","created_ms"],
+      push_deliveries:["event_id","subscription_id","sent_ms"]
+    };
+    for(const table of ["push_subscriptions","push_events","push_deliveries"]){
+      let columns;
+      try {
+        const response=await env.DB.prepare("PRAGMA table_info("+table+")").all();
+        columns=new Set((response.results||[]).map(row=>String(row.name)));
+      }catch(e){
+        const error=new Error(String(e?.message||"Errore PRAGMA"));
+        error.name="PushSchemaError";error.stage="inspect-"+table;throw error;
+      }
+      for(const col of required[table]){
+        if(!columns.has(col)){
+          const error=new Error("La tabella push preesistente non contiene la colonna "+col+
+            ". Migrazione manuale necessaria; nessuna informazione è stata cancellata.");
+          error.name="PushSchemaError";error.stage="legacy-"+table;throw error;
+        }
+      }
+      for(const [col,definition] of Object.entries(optional[table]||{})){
+        if(!columns.has(col))
+          await exec("upgrade-"+table+"-"+col,
+            "ALTER TABLE "+table+" ADD COLUMN "+col+" "+definition);
+      }
+    }
+    await exec("subscriptions-index","CREATE INDEX IF NOT EXISTS push_subscriptions_active_idx ON push_subscriptions(origin,active)");
+    await exec("events-index","CREATE INDEX IF NOT EXISTS push_events_queue_idx ON push_events(origin,delivered_ms,next_attempt_ms,created_ms)");
+  })();
   init.set(env.DB,promise);
-  try{await promise}catch(e){init.delete(env.DB);throw e;}
+  try {await promise} catch(e){init.delete(env.DB);throw e;}
 }
 export async function registerDevice(env,origin,raw,category={orders:true,bookings:true}){
   const sub=validateSubscription(raw);await ensurePushSchema(env);
