@@ -126,6 +126,7 @@ const isAutoFreed=r=>['confirmed','arrived','seated'].includes(r.status) &&
   (r.date<today() || (r.date===today() && minuteNowRome()>=r.end_min));
 let state={page:1,rows:[],settings:null,alertLast:0,initialized:false};
 let slotData=null,slotTurn='all',slotFetch=0,agendaFetch=0,selectedMinute=null;
+const expandedBookings=new Set(),collapsedTimes=new Set();
 async function api(url,opt){const response=await fetch(url,{cache:'no-store',...opt});const data=await response.json();if(!response.ok)throw Error(data.error||'Operazione non riuscita');return data}
 const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});
 function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
@@ -341,38 +342,95 @@ $('slot-date').onchange=()=>{
  slotData=null;renderSlotTiles();renderTableSchedule();
  loadAgenda();loadSlots();
 };
-function tableRow(data) {
- const line=node('div',undefined,'booking'),time=node('time',hhmm(data.start_min));
- const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),
-   node('small',data.phone+' · '+(data.source==='manual'?'Telefono/admin':'Online')+
-     (data.table_id?' · '+(state.settings?.tables?.find(t=>t.id===data.table_id)?.label||'Tavolo assegnato'):'')),
-   node('small','Posti riutilizzabili dalle '+hhmm(data.end_min)+' (riassetto incluso)'),
-   badges(data));
- if(isAutoFreed(data))who.append(node('span','Disponibilità liberata automaticamente','badge completed'));
- const actions=node('div',undefined,'actions');
- const edit=node('button','Dettagli','btn small');edit.type='button';edit.onclick=()=>openEdit(data);
- actions.append(edit);
- if(['confirmed','arrived','seated'].includes(data.status)){
-   const buttons=data.status==='confirmed'?[['arrived','✓ Arrivato'],['no_show','No-show']]:
-     data.status==='arrived'?[['seated','Al tavolo'],['no_show','No-show']]:
-     [['completed','Libera tavolo']];
-   for(const [status,label] of buttons){
-     const btn=node('button',label,'btn small'+(status==='no_show'?' danger':''));
-     btn.type='button';
-     btn.onclick=async()=>{
-       if(status==='no_show' && !confirm('Segnare '+data.name+' come non presentato e liberare i posti?'))return;
-       if(status==='completed' && !confirm('Il tavolo è realmente libero?'))return;
-       btn.disabled=true;
-       try{
-         await send('status',{id:data.id,status});
-         await Promise.all([loadAgenda(),loadSlots(),alerts()]);
-       }catch(e){message('agenda-status',e.message,true)}
-       finally{btn.disabled=false}
-     };
-     actions.append(btn);
-   }
+function renderGroupedAgenda(rows){
+ const target=$('booking-list');target.replaceChildren();
+ if(!rows.length){
+   const empty=node('div',undefined,'fork-empty-agenda');
+   empty.append(node('strong','Nessuna prenotazione in questa fascia'),
+     node('p','Cambia giorno, turno o stato per consultare altre prenotazioni.','muted'));
+   target.append(empty);return;
  }
- line.append(time,who,actions);return line
+ const byMinute=new Map();
+ for(const r of rows){
+   if(!byMinute.has(r.start_min))byMinute.set(r.start_min,[]);
+   byMinute.get(r.start_min).push(r);
+ }
+ for(const [minute,items] of [...byMinute.entries()].sort((a,b)=>a[0]-b[0])){
+   const group=node('section',undefined,'fork-time-group');
+   const heading=node('button',undefined,'fork-time-head');
+   heading.type='button';
+   heading.setAttribute('aria-label','Prenotazioni delle '+hhmm(minute));
+   const chip=node('span',hhmm(minute),'fork-time-chip');
+   const icon=node('span','▤','fork-service-icon');icon.setAttribute('aria-hidden','true');
+   const count=node('span',String(items.length),'fork-service-bookings');
+   const people=node('span',items.reduce((sum,r)=>sum+r.guests,0)+'p','fork-service-people');
+   const arrow=node('span',collapsedTimes.has(minute)?'⌄':'⌃','fork-time-chevron');
+   heading.append(chip,icon,count,people,arrow);
+   const list=node('div',undefined,'fork-time-items');
+   list.hidden=collapsedTimes.has(minute);
+   heading.setAttribute('aria-expanded',String(!list.hidden));
+   heading.onclick=()=>{
+     list.hidden=!list.hidden;
+     if(list.hidden)collapsedTimes.add(minute);else collapsedTimes.delete(minute);
+     heading.setAttribute('aria-expanded',String(!list.hidden));
+     arrow.textContent=list.hidden?'⌄':'⌃';
+   };
+   for(const booking of items){
+     const item=node('article',undefined,'fork-reservation');
+     const summary=node('button',undefined,'fork-reservation-summary');
+     summary.type='button';
+     const left=node('span',undefined,'fork-reservation-namebox');
+     left.append(node('strong',booking.name,'fork-reservation-name'));
+     if(booking.table_id){
+       const physical=state.settings?.tables?.find(t=>t.id===booking.table_id);
+       if(physical)left.append(node('small',physical.label,'fork-reservation-table'));
+     }
+     const right=node('span',undefined,'fork-reservation-right');
+     right.append(node('strong',booking.guests+'p','fork-reservation-covers'));
+     const status=node('span',
+       booking.status==='confirmed'?'Prenotato':titles[booking.status]||booking.status,
+       'fork-reservation-status '+booking.status);
+     right.append(status);
+     summary.append(left,right);
+     const details=node('div',undefined,'fork-reservation-details');
+     const expanded=expandedBookings.has(booking.id);details.hidden=!expanded;
+     summary.setAttribute('aria-expanded',String(expanded));
+     summary.setAttribute('aria-label',booking.name+', '+booking.guests+' persone, '+status.textContent+'; mostra dettagli');
+     summary.onclick=()=>{
+       details.hidden=!details.hidden;
+       if(details.hidden)expandedBookings.delete(booking.id);else expandedBookings.add(booking.id);
+       summary.setAttribute('aria-expanded',String(!details.hidden));
+     };
+     details.append(node('p',
+       (booking.source==='manual'?'Prenotazione telefonica':'Prenotazione online')+
+       ' · '+booking.phone+' · '+hhmm(booking.start_min)+'–'+hhmm(booking.end_min),
+       'fork-reservation-meta'));
+     if(booking.notes)details.append(node('p',booking.notes,'fork-reservation-meta'));
+     const actions=node('div',undefined,'fork-reservation-actions');
+     const edit=node('button','Dettagli','btn small');
+     edit.type='button';edit.onclick=()=>openEdit(booking);actions.append(edit);
+     let opts=[];
+     if(booking.status==='confirmed')opts=[['arrived','✓ Arrivato'],['no_show','No-show']];
+     else if(booking.status==='arrived')opts=[['seated','Al tavolo'],['no_show','No-show']];
+     else if(booking.status==='seated')opts=[['completed','Libera tavolo']];
+     for(const [next,label] of opts){
+       const button=node('button',label,'btn small'+(next==='no_show'?' danger':''));
+       button.type='button';
+       button.onclick=async()=>{
+         if(next==='no_show'&&!confirm('Segnare '+booking.name+' come non presentato e liberare i posti?'))return;
+         if(next==='completed'&&!confirm('Il tavolo è realmente libero?'))return;
+         button.disabled=true;
+         try{await send('status',{id:booking.id,status:next});
+           await Promise.all([loadAgenda(),loadSlots(),alerts()]);}
+         catch(e){message('agenda-status',e.message,true)}
+         finally{button.disabled=false}
+       };
+       actions.append(button);
+     }
+     details.append(actions);item.append(summary,details);list.append(item);
+   }
+   group.append(heading,list);target.append(group);
+ }
 }
 async function loadAgenda(){
  const seq=++agendaFetch;
@@ -384,7 +442,7 @@ async function loadAgenda(){
   const d=await api('/admin/bookings?'+u);
   if(seq!==agendaFetch)return;
   state.rows=d.bookings;$('total').textContent=d.total;$('guests').textContent=d.booked;$('capacity').textContent=d.capacity;
-  $('booking-list').replaceChildren(...d.bookings.map(tableRow));if(!d.bookings.length)$('booking-list').append(node('p','Nessuna prenotazione per i filtri selezionati.','muted'));
+  renderGroupedAgenda(d.bookings);
   const showing=Number(d.filtered_total ?? d.total);
   $('page-info').textContent='Pagina '+state.page+' · '+showing+(selectedMinute!==null?' prenotazioni nella fascia':' prenotazioni');
   $('prev').disabled=state.page===1;$('next').disabled=state.page*d.limit>=showing;
