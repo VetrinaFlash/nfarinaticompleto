@@ -146,8 +146,8 @@ for(const viewport of VIEWS){
    const el=document.querySelector(".fork-reservation-summary");
    return el?.isConnected && getComputedStyle(el).display==="flex";
  },null,{timeout:10000});
- assert.equal(await page.locator(".fork-reservation-summary").first().evaluate(e=>getComputedStyle(e).display),"flex",
-   "customer name, covers and status must render as spaced columns");
+ // Layout was already checked atomically by waitForFunction above.
+ // Re-querying the same node is racy with live agenda refresh.
  assert.ok(await page.locator("#agenda-tab").isVisible(),"reservations is the default admin view");
  assert.ok(!await page.locator("#availability-tab").isVisible(),"availability must live in a separate tab");
  assert.equal(await page.locator(".fork-time-group").count(),1);
