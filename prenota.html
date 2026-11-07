@@ -84,7 +84,7 @@ function renderPublicTimes(){
    const options=document.createElement('div');options.className='slot-group-grid';
    for(const t of times){
      const b=document.createElement('button');b.type='button';b.className='time'+(selected===t?' active':'');
-     b.textContent=t;b.setAttribute('aria-label','Prenota alle '+t);
+     b.textContent=t;b.setAttribute('aria-label',t);b.title='Prenota alle '+t;
      b.setAttribute('aria-pressed',String(selected===t));
      b.onclick=()=>{
        selected=t;requestToken=null;
