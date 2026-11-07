@@ -190,7 +190,7 @@ for(const viewport of VIEWS){
  assert.ok(await page.locator("#table-form").isVisible(),"Direct Tavoli link opens the actual table editor");
  assert.ok(await page.locator("#tables-list").getByText("Sala 1").count()>=1);
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-admin-tables.png",fullPage:true});
- await page.getByRole("button",{name:/Agenda/}).click();
+ await page.locator('[data-tab="agenda"]').click();
  await page.locator("#book-selected").click();
  await page.locator('#booking-edit [name="name"]').fill("Cliente telefonico");
  await page.locator('#booking-edit [name="phone"]').fill("+393331231234");
