@@ -118,25 +118,38 @@ function tab(key){
 }
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 window.addEventListener('hashchange',()=>tab(location.hash.slice(1)));
+function updateBookingListHeading(){
+ const time=selectedMinute===null?'':hhmm(selectedMinute);
+ const heading=time?'Ospiti delle '+time:
+   slotTurn==='first'?'Prenotazioni · Primo turno':
+   slotTurn==='second'?'Prenotazioni · Secondo turno':'Tutte le prenotazioni';
+ $('booking-view-title').textContent=heading;
+ $('booking-view-description').textContent=time
+   ?'Ospiti previsti a quest’ora. Segna l’arrivo o il no-show con un tocco.'
+   :slotTurn==='all'?'Tutte le prenotazioni del giorno, ordinate per orario.'
+    :'Prenotazioni del turno selezionato. Tocca una fascia per restringere la vista.';
+ $('reset-slot').classList.toggle('hidden',selectedMinute===null);
+ $('book-selected').textContent=time?'+ Prenota alle '+time:'+ Prenotazione telefonica';
+}
 function setSlotTurn(turn){
- slotTurn=turn;document.querySelectorAll('[data-slot-turn]').forEach(button=>{
+ if(!['all','first','second'].includes(turn))return;
+ slotTurn=turn;
+ if(selectedMinute!==null && ((turn==='first'&&selectedMinute>=1230)||
+   (turn==='second'&&selectedMinute<1230)))selectedMinute=null;
+ state.page=1;
+ document.querySelectorAll('[data-slot-turn]').forEach(button=>{
   const on=button.dataset.slotTurn===turn;button.classList.toggle('active',on);
   button.setAttribute('aria-pressed',String(on));
  });
+ updateBookingListHeading();
  renderSlotTiles();
  renderTableSchedule();
+ loadAgenda();
 }
 document.querySelectorAll('[data-slot-turn]').forEach(button=>button.onclick=()=>setSlotTurn(button.dataset.slotTurn));
 function setSelectedTime(minute=null){
- selectedMinute=minute;
- state.page=1;
- const time=minute===null?'':hhmm(minute);
- $('booking-view-title').textContent=time?'Ospiti delle '+time:'Tutte le prenotazioni';
- $('booking-view-description').textContent=time
-   ?'Ospiti in arrivo alle '+time+'. Puoi confermare l’arrivo o segnalare un no-show direttamente qui.'
-   :'Seleziona una fascia qui sopra per vedere i clienti previsti a quell’orario.';
- $('reset-slot').classList.toggle('hidden',minute===null);
- $('book-selected').textContent=time?'+ Prenota alle '+time:'+ Prenotazione telefonica';
+ selectedMinute=minute;state.page=1;
+ updateBookingListHeading();
  renderSlotTiles();
  renderTableSchedule();
  loadAgenda();
@@ -292,10 +305,8 @@ function shiftDate(days){
  const next=origin.toISOString().slice(0,10);
  $('slot-date').value=next;$('filter-date').value=next;state.page=1;
  selectedMinute=null;
- $('booking-view-title').textContent='Tutte le prenotazioni';
- $('booking-view-description').textContent='Scegli una fascia oraria per vedere i relativi ospiti.';
- $('reset-slot').classList.add('hidden');
- $('book-selected').textContent='+ Prenotazione telefonica';
+ updateBookingListHeading();
+ slotData=null;renderSlotTiles();renderTableSchedule();
  loadAgenda();loadSlots();
 }
 $('day-prev').onclick=()=>shiftDate(-1);
@@ -303,10 +314,8 @@ $('day-next').onclick=()=>shiftDate(1);
 $('slot-date').onchange=()=>{
  $('filter-date').value=$('slot-date').value;state.page=1;
  selectedMinute=null;
- $('booking-view-title').textContent='Tutte le prenotazioni';
- $('booking-view-description').textContent='Scegli una fascia oraria per vedere i relativi ospiti.';
- $('reset-slot').classList.add('hidden');
- $('book-selected').textContent='+ Prenotazione telefonica';
+ updateBookingListHeading();
+ slotData=null;renderSlotTiles();renderTableSchedule();
  loadAgenda();loadSlots();
 };
 function tableRow(data) {
@@ -347,6 +356,7 @@ async function loadAgenda(){
   const u=new URLSearchParams({date:$('filter-date').value,page:String(state.page)});
   if($('filter-status').value)u.set('status',$('filter-status').value);
   if(selectedMinute!==null)u.set('time',hhmm(selectedMinute));
+  else if(slotTurn!=='all')u.set('turn',slotTurn);
   const d=await api('/admin/bookings?'+u);
   state.rows=d.bookings;$('total').textContent=d.total;$('guests').textContent=d.booked;$('capacity').textContent=d.capacity;
   $('booking-list').replaceChildren(...d.bookings.map(tableRow));if(!d.bookings.length)$('booking-list').append(node('p','Nessuna prenotazione per i filtri selezionati.','muted'));
