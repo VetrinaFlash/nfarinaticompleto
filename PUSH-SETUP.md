@@ -16,6 +16,12 @@ Ora il branch comprende:
 - Coda eventi in D1 (nuove tabelle `push_*`) con deduplicazione, registro degli invii, disattivazione delle subscription scadute, ritentativi e invio in `waitUntil`.
 - Web Push standard con **VAPID + AES128GCM**, senza servizi a pagamento di SMS/WhatsApp. L'invio al provider non equivale alla garanzia di visualizzazione sul telefono.
 
+## Compatibilità con vecchie tabelle push D1
+
+Se il database ha già una tabella `push_subscriptions` di un vecchio gestionale (ad esempio senza la colonna `origin`), **non cancellarla e non eseguire ALTER TABLE manuali**. La nuova implementazione usa esclusivamente le nuove tabelle `nf_webpush_subscriptions`, `nf_webpush_events`, `nf_webpush_deliveries`, create automaticamente al primo utilizzo. Le tabelle storiche e tutti i loro record restano intatti.
+
+Le chiavi VAPID precedentemente configurate **non devono essere cambiate**. Dopo l'aggiornamento della preview aprire `admin.html` e attivare (o, se necessario, disattivare e riattivare) il dispositivo: le vecchie iscrizioni non possono essere importate automaticamente perché non contengono un'origine verificabile, che è necessaria per non inviare notifiche al sito sbagliato.
+
 ## Passaggio indispensabile: creare le chiavi VAPID una sola volta
 
 Dal repository, in ambiente locale sicuro:
