@@ -224,3 +224,20 @@ button:disabled{opacity:.45;transform:none}
  .booking .actions .btn{flex:1;font-size:.69rem;min-width:76px}
  .service-group-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* The date picker must remain fully readable at 320px. Arrows are placed
+   below it instead of squeezing the native date input into 160px. */
+@media(max-width:560px){
+  .slot-day-nav{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    width:100%;gap:8px;
+  }
+  .slot-day-nav input[type="date"]{
+    grid-column:1/-1;grid-row:1;
+    width:100%;min-width:0;max-width:none;
+    min-height:46px;font-size:.95rem;
+  }
+  #day-prev{grid-column:1;grid-row:2;min-height:40px}
+  #day-next{grid-column:2;grid-row:2;min-height:40px}
+}
