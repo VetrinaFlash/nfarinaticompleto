@@ -19,8 +19,17 @@ jobs:
           node-version: '24'
       - name: Run project and booking regression suite
         run: node --test tests/*.test.mjs
+      - name: Validate standalone PWA, push transport and Cron syntax
+        run: |
+          node --check admin-push.js
+          node --check push-sw.js
+          node --check functions/_lib/push.js
+          node --check scripts/push-cron-worker.mjs
+          node --check scripts/generate-vapid.mjs
       - name: Validate Cloudflare Pages Functions bundle
         run: npx --yes wrangler@4 pages functions build functions
+      - name: Bundle optional Cron Worker without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.push-cron.toml --outdir=/tmp/nfarinati-push-cron
 
   browser:
     runs-on: ubuntu-latest
