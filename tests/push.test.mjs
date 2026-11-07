@@ -116,3 +116,31 @@ test("push registration, diagnostics and sending require admin authentication",a
  assert.equal(post.status,200);
  assert.equal((await pushDiagnostics(env,base)).activeDevices,1);
 });
+
+test("push queue retries failed provider deliveries without losing a confirmed order",async()=>{
+ const {env,db,subscription}=await createFixture();
+ await registerDevice(env,base,subscription);
+ await enqueuePushEvent(env,base,{kind:"order",id:"order-temporary",
+   title:"Nuovo ordine",body:"Ordine confermato",target:"/admin.html?section=orders"});
+ const first=await runPendingPush(env,base,{fetcher:async()=>new Response(null,{status:503})});
+ assert.equal(first.failed,1);
+ const row=db.prepare("SELECT delivered_ms,next_attempt_ms,attempts FROM push_events").get();
+ assert.equal(row.delivered_ms,null);assert.equal(row.attempts,1);
+ assert.ok(row.next_attempt_ms>Date.now()-1000);
+ const second=await runPendingPush(env,base,{
+   now:row.next_attempt_ms+1,fetcher:async()=>new Response(null,{status:201})
+ });
+ assert.equal(second.sent,1);
+ assert.ok(db.prepare("SELECT delivered_ms FROM push_events").get().delivered_ms);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_deliveries").get().n,1);
+});
+test("a device can opt into bookings without receiving order alerts",async()=>{
+ const {env,subscription}=await createFixture();
+ await registerDevice(env,base,subscription,{orders:false,bookings:true});
+ await enqueuePushEvent(env,base,{kind:"order",id:"o1",title:"Ordine",body:"Test",target:"/admin.html"});
+ await enqueuePushEvent(env,base,{kind:"booking",id:"b1",title:"Tavolo",body:"Test",
+   target:"/admin-prenotazioni.html?date=2026-11-08#agenda"});
+ let sent=0;
+ const outcome=await runPendingPush(env,base,{fetcher:async()=>{sent++;return new Response(null,{status:201})}});
+ assert.equal(outcome.processed,2);assert.equal(sent,1);
+});
