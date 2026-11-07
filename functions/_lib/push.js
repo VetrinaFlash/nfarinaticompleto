@@ -131,7 +131,7 @@ export async function enqueuePushEvent(env,origin,{kind,id,title,body,target},no
   if(!["order","booking","test"].includes(kind) || typeof id!=="string"||id.length>180)
     throw Error("Evento push non valido");
   if(typeof origin!=="string" || !/^https:\/\/[^/]+$/.test(origin) ||
-     !/^\/(?:admin\.html|admin-prenotazioni\.html)(?:[?#][^#]*)?$/.test(target))
+     !/^\/(?:admin\.html|admin-prenotazioni\.html)(?:\?[^#]{0,180})?(?:#[A-Za-z0-9_-]{0,30})?$/.test(target))
     throw Error("Destinazione push non valida");
   await ensurePushSchema(env);
   await env.DB.prepare(`INSERT OR IGNORE INTO push_events
