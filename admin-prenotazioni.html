@@ -18,7 +18,7 @@
 <main>
 <div id="loading" class="panel">Verifica accesso e caricamento prenotazioni…</div>
 <div id="app" class="hidden">
-<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Tutte le prenotazioni, i turni e i tavoli in una schermata semplice.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold hidden" id="new-booking" tabindex="-1" aria-hidden="true">+ Prenotazione telefonica</button></div></div>
+<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Le prenotazioni raggruppate per orario. I tavoli disponibili hanno una scheda dedicata.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold hidden" id="new-booking" tabindex="-1" aria-hidden="true">+ Prenotazione telefonica</button></div></div>
 <div class="tabs">
 <button class="tab active" data-tab="agenda">📆 Prenotazioni</button>
 <button class="tab" data-tab="availability">🪑 Disponibilità tavoli</button>
@@ -92,7 +92,12 @@
   <div id="table-schedule-grid" class="table-schedule-grid" aria-live="polite"></div>
 </section>
 </div>
-<div id="settings-tab" class="hidden"><section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
+<div id="settings-tab" class="hidden">
+<section class="panel"><h2>Notifiche push</h2>
+  <p class="muted">Qui puoi attivare o provare le notifiche di nuovi ordini e prenotazioni su questo dispositivo.</p>
+  <div class="sidebar-footer" id="booking-push-host"></div>
+</section>
+<section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
 <div class="field"><label>Capienza contemporanea</label><input name="capacity" type="number" min="1" max="1000" required></div>
 <div class="field"><label>Posti riservati fuori online</label><input name="holdback" type="number" min="0" max="999" required></div>
 <div class="field"><label>Massimo persone online</label><input name="max_party" type="number" min="1" max="100" required></div>
