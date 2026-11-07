@@ -3,6 +3,7 @@ name: Booking branch regression tests
 on:
   push:
     branches:
+      - main
       - feature/prenotazioni-tavoli
       - fix/fasce-tavoli-admin-20261107
   workflow_dispatch:
