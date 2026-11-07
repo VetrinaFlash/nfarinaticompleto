@@ -83,13 +83,17 @@ export async function onRequestGet({env,request}) {
     if(status && !["confirmed","arrived","seated","completed","cancelled","no_show"].includes(status))
       return json({error:"Stato non valido"},400);
     const time=u.searchParams.get("time");
+    const turn=u.searchParams.get("turn")||"all";
+    if(!["all","first","second"].includes(turn))return json({error:"Turno non valido"},400);
     const requestedMinute=time===null?null:parseTime(time);
     if(time!==null && (requestedMinute===null || requestedMinute%15!==0))
       return json({error:"Fascia oraria non valida"},400);
     const page=Math.max(1,Math.min(1000,Number(u.searchParams.get("page"))||1));
     const limit=50,offset=(page-1)*limit;
-    const where="date=?"+(status?" AND status=?":"")+(requestedMinute===null?"":" AND start_min=?");
-    const binds=[date,...(status?[status]:[]),...(requestedMinute===null?[]:[requestedMinute])];
+    const timeClause=requestedMinute!==null?" AND start_min=?":
+      turn==="first"?" AND start_min<?":turn==="second"?" AND start_min>=?":"";
+    const where="date=?"+(status?" AND status=?":"")+timeClause;
+    const binds=[date,...(status?[status]:[]),...(requestedMinute!==null?[requestedMinute]:turn==="all"?[]:[1230])];
     const [rows,dayCounts,filterCount,notifications,config]=await Promise.all([
       env.DB.prepare("SELECT id,source,name,phone,email,date,start_min,end_min,guests,status,notes,table_id,created_at FROM booking_reservations WHERE "+where+" ORDER BY start_min,created_at LIMIT ? OFFSET ?").bind(...binds,limit,offset).all(),
       env.DB.prepare("SELECT COUNT(*) AS total,COALESCE(SUM(CASE WHEN status IN('confirmed','arrived','seated') THEN guests ELSE 0 END),0) AS booked FROM booking_reservations WHERE date=?").bind(date).first(),
