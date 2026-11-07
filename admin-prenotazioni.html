@@ -27,6 +27,22 @@
 <button class="tab" data-tab="closures">🚫 Chiusure</button>
 </div>
 <div id="agenda-tab">
+<section class="panel slot-console">
+  <div class="slot-console-title"><div><h2>Fasce orarie</h2><p class="muted">Visualizza i turni, controlla i posti e aggiungi una prenotazione telefonica.</p></div>
+    <div class="slot-day-nav"><button class="btn small" type="button" id="day-prev" aria-label="Giorno precedente">←</button>
+      <input type="date" id="slot-date" aria-label="Data fasce orarie">
+      <button class="btn small" type="button" id="day-next" aria-label="Giorno successivo">→</button></div>
+  </div>
+  <div class="slot-turns" role="group" aria-label="Turni prenotazioni">
+    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti</button>
+    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">🌤 Primo turno</button>
+    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">🌙 Secondo turno</button>
+  </div>
+  <div class="slot-key"><span><i class="slot-dot free"></i> Posti online disponibili</span><span><i class="slot-dot nearly"></i> Quasi pieno</span><span><i class="slot-dot full"></i> Completo online</span></div>
+  <p class="status" id="slots-status" role="status"></p>
+  <div id="service-slots" class="service-slots" aria-live="polite"></div>
+  <small class="muted">I numeri sono i coperti online indicativi, soggetti alla capienza e all'eventuale assegnazione dei tavoli. Le prenotazioni telefoniche usano anche i posti riservati.</small>
+</section>
 <div class="grid" style="margin-bottom:16px"><div class="stat"><strong id="total">—</strong><span>Prenotazioni della giornata</span></div><div class="stat"><strong id="guests">—</strong><span>Coperti complessivi attivi (non simultanei)</span></div><div class="stat"><strong id="capacity">—</strong><span>Capienza contemporanea</span></div></div>
 <section class="panel"><div class="tools"><div class="field" style="max-width:240px"><label for="filter-date">Giorno da visualizzare</label><input type="date" id="filter-date"></div><div class="field" style="max-width:200px"><label for="filter-status">Stato</label><select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select></div><button class="btn" id="refresh">Aggiorna</button></div><div id="agenda-status" class="status"></div><div id="booking-list" class="booking-list"></div><div class="tools"><button class="btn" id="prev">← Precedenti</button><span class="muted" id="page-info"></span><button class="btn" id="next">Successive →</button></div></section>
 </div>
@@ -63,6 +79,7 @@ const minuteNowRome=()=>{
 const isAutoFreed=r=>['confirmed','arrived','seated'].includes(r.status) &&
   (r.date<today() || (r.date===today() && minuteNowRome()>=r.end_min));
 let state={page:1,rows:[],settings:null,alertLast:0,initialized:false};
+let slotData=null,slotTurn='all',slotFetch=0;
 async function api(url,opt){const response=await fetch(url,{cache:'no-store',...opt});const data=await response.json();if(!response.ok)throw Error(data.error||'Operazione non riuscita');return data}
 const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});
 function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
@@ -77,6 +94,73 @@ function tab(key){
 }
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 window.addEventListener('hashchange',()=>tab(location.hash.slice(1)));
+function setSlotTurn(turn){
+ slotTurn=turn;document.querySelectorAll('[data-slot-turn]').forEach(button=>{
+  const on=button.dataset.slotTurn===turn;button.classList.toggle('active',on);
+  button.setAttribute('aria-pressed',String(on));
+ });
+ renderSlotTiles();
+}
+document.querySelectorAll('[data-slot-turn]').forEach(button=>button.onclick=()=>setSlotTurn(button.dataset.slotTurn));
+function renderSlotTiles(){
+ const place=$('service-slots');place.replaceChildren();
+ if(!slotData || !slotData.open){
+   place.append(node('p','Nessun turno prenotabile in questo giorno. Controlla orari e chiusure.','muted'));
+   return;
+ }
+ const groups=[{key:'first',title:'🌤 Primo turno',test:t=>t.start<1230},
+               {key:'second',title:'🌙 Secondo turno',test:t=>t.start>=1230}];
+ for(const group of groups){
+  if(slotTurn!=='all'&&slotTurn!==group.key)continue;
+  const rows=slotData.slots.filter(group.test);
+  if(!rows.length)continue;
+  const block=node('section',undefined,'service-group');
+  const title=node('h3',group.title);
+  const grid=node('div',undefined,'service-group-grid');
+  for(const slot of rows){
+    const btn=node('button',undefined,'service-tile');
+    btn.type='button';const ratio=slot.capacity?slot.onlineFree/slot.capacity:0;
+    btn.classList.add(slot.onlineFree===0?'full':ratio<=.25?'nearly':'free');
+    const t=node('strong',slot.time);
+    const status=node('span',slot.onlineFree>0?slot.onlineFree+' posti online liberi':'Online completo','slot-remaining');
+    const info=node('small',slot.arrivals+' prenotazioni · '+slot.peopleArriving+' persone in arrivo');
+    btn.append(t,status,info);
+    btn.setAttribute('aria-label','Ore '+slot.time+', '+status.textContent+', apri prenotazione manuale');
+    btn.onclick=()=>{
+      openEdit();
+      formSet(f,'date',$('slot-date').value);
+      formSet(f,'time',slot.time);
+      $('modal-title').textContent='Prenotazione telefonica · '+slot.time;
+    };
+    grid.append(btn);
+  }
+  block.append(title,grid);place.append(block);
+ }
+ if(!place.children.length)place.append(node('p','Nessuna fascia prevista per questo turno.','muted'));
+}
+async function loadSlots(){
+ const seq=++slotFetch,date=$('slot-date').value;
+ if(!date)return;
+ message('slots-status','Caricamento turni e posti disponibili…');
+ try{
+  const d=await api('/admin/bookings?mode=timeline&date='+encodeURIComponent(date));
+  if(seq!==slotFetch)return;
+  slotData=d;renderSlotTiles();
+  message('slots-status',d.open?''+d.slots.length+' fasce disponibili nel calendario del locale':'Locale chiuso / prenotazioni sospese');
+ }catch(e){if(seq===slotFetch)message('slots-status',e.message,true)}
+}
+function shiftDate(days){
+ const base=$('slot-date').value,origin=new Date(base+'T12:00:00Z');
+ origin.setUTCDate(origin.getUTCDate()+days);
+ const next=origin.toISOString().slice(0,10);
+ $('slot-date').value=next;$('filter-date').value=next;state.page=1;
+ loadAgenda();loadSlots();
+}
+$('day-prev').onclick=()=>shiftDate(-1);
+$('day-next').onclick=()=>shiftDate(1);
+$('slot-date').onchange=()=>{
+ $('filter-date').value=$('slot-date').value;state.page=1;loadAgenda();loadSlots();
+};
 function tableRow(data) {
  const line=node('div',undefined,'booking'),time=node('time',hhmm(data.start_min));
  const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),
@@ -230,7 +314,10 @@ f.onsubmit=async e=>{
  }
 });
 $('refresh').onclick=()=>loadAgenda();$('prev').onclick=()=>{state.page--;loadAgenda()};$('next').onclick=()=>{state.page++;loadAgenda()};
-$('filter-date').onchange=()=>{state.page=1;loadAgenda()};$('filter-status').onchange=()=>{state.page=1;loadAgenda()};
+$('filter-date').onchange=()=>{
+ state.page=1;$('slot-date').value=$('filter-date').value;
+ loadAgenda();loadSlots();
+};$('filter-status').onchange=()=>{state.page=1;loadAgenda()};
 async function alerts(){
  try{const d=await api('/admin/bookings?mode=alerts');$('unread').textContent=d.unread;state.alertLast=Math.max(state.alertLast,d.last_id);
  }catch{}
@@ -242,10 +329,11 @@ async function init(){
   $('loading').classList.add('hidden');$('app').classList.remove('hidden');
   const requested=new URLSearchParams(location.search).get("date");
   $('filter-date').value=/^\d{4}-\d{2}-\d{2}$/.test(requested||"")?requested:today();
+  $('slot-date').value=$('filter-date').value;
   $('close-form').elements.date.min=today();
-  await Promise.all([loadSettings(),loadAgenda(),alerts()]);
+  await Promise.all([loadSettings(),loadAgenda(),alerts(),loadSlots()]);
   tab(location.hash.slice(1));
-  setInterval(()=>{if(document.visibilityState!=='hidden'){loadAgenda();alerts()}},20000);
+  setInterval(()=>{if(document.visibilityState!=='hidden'){loadAgenda();alerts();loadSlots()}},20000);
  }catch(e){$('loading').replaceChildren(node('p',e.message,'error'),node('a','Vai all’accesso amministratore'));$('loading').lastChild.href='/admin.html'}
 }
 init();
