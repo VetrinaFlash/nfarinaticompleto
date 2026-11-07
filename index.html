@@ -256,7 +256,6 @@
         font-size:.9rem;gap:0;
       }
       .nav a .nav-label{display:none}
-      .nav a.booking-nav-link{display:none} /* Preserve original compact mobile header; hero CTA remains visible */
       .nav a.cta{width:auto;padding:0 12px;gap:5px;border-radius:10px}
       .nav a.cta .nav-label{display:inline;font-size:.72rem;letter-spacing:.3px}
     }
@@ -295,7 +294,6 @@
           <a href="#le-nostre-pizze"><i class="fa-solid fa-pizza-slice"></i><span class="nav-label"> Le Pizze</span></a>
           <a href="#chi-siamo"><i class="fa-solid fa-user"></i><span class="nav-label"> Chi siamo</span></a>
           <a href="#dove-siamo"><i class="fa-solid fa-location-dot"></i><span class="nav-label"> Dove siamo</span></a>
-          <a class="booking-nav-link" href="prenota.html"><i class="fa-solid fa-calendar-check"></i><span class="nav-label"> Prenota tavolo</span></a>
           <a class="cta" href="menu.html"><i class="fa-solid fa-cart-shopping"></i><span class="nav-label"> Ordina</span></a>
         </div>
       </div>
@@ -314,7 +312,6 @@
             <p class="lead">Pizze classiche, americane e gourmet. Panini, Wraps e Philly Steaks. Ordina online per <strong>asporto</strong> o <strong>consegna a domicilio</strong> saltando la fila!</p>
             <div class="hero-actions" id="hero-actions">
               <a class="btn primary" href="menu.html"><i class="fa-solid fa-pizza-slice"></i> Apri il Menù</a>
-              <a class="btn" href="prenota.html"><i class="fa-solid fa-calendar-check"></i> Prenota un tavolo</a>
               <a class="btn" href="tel:+390918432674"><i class="fa-solid fa-phone"></i> Chiama</a>
             </div>
           </div>
@@ -349,11 +346,10 @@
             </div>
           </div>
           <div class="dark-card" id="contatti">
-            <h3>Prenota un Tavolo</h3>
-            <p>Vieni a gustare la tua pizza in compagnia! Scegli data, orario e numero di persone: conferma immediata senza registrazione. Potrai anche aggiungere la prenotazione al calendario del telefono.</p>
+            <h3>Ordina online</h3>
+            <p>Scegli le tue pizze, personalizza l'ordine e invialo direttamente in cucina per asporto o consegna a domicilio.</p>
             <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:22px;">
-              <a class="dark-btn primary" href="prenota.html"><i class="fa-solid fa-calendar-check"></i> Prenota un Tavolo</a>
-              <a class="dark-btn" href="menu.html"><i class="fa-solid fa-pizza-slice"></i> Ordina online</a>
+              <a class="dark-btn primary" href="menu.html"><i class="fa-solid fa-pizza-slice"></i> Apri il menù</a>
             </div>
           </div>
         </div>
@@ -599,6 +595,8 @@
                 let target;
                 try { target = new URL(String(b.link || ''), location.href); } catch { return; }
                 if (!['http:', 'https:', 'tel:', 'mailto:'].includes(target.protocol)) return;
+                // Keep the direct booking page shareable, without showing a booking button on the homepage.
+                if (target.origin === location.origin && target.pathname === '/prenota.html') return;
                 link.className = b.style === 'primary' ? 'btn primary' : 'btn';
                 link.href = target.href;
                 if (typeof b.icon === 'string' && /^[a-zA-Z0-9 _-]{1,100}$/.test(b.icon)) {
@@ -607,13 +605,6 @@
                 link.append(document.createTextNode(String(b.text || '')));
                 container.append(link);
               });
-              if (!Array.from(container.querySelectorAll('a')).some(a => new URL(a.href).pathname === '/prenota.html')) {
-                const bookingCta = document.createElement('a');
-                bookingCta.href = '/prenota.html';
-                bookingCta.className = 'btn';
-                bookingCta.textContent = '📅 Prenota un tavolo';
-                container.append(bookingCta);
-              }
             }
           } catch {}
         }
