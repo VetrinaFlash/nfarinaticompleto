@@ -2446,8 +2446,7 @@ async function repairMenuOptions() {
       if (lastPending !== null && data.pending > lastPending) {
         const nuovi = data.pending - lastPending;
         try {
-          notify(`📦 ${nuovi === 1 ? 'Nuovo ordine magazzino' : nuovi + ' nuovi ordini magazzino'} da evadere`, 'info', 8000);
-          playBeep();
+          // Warehouse badge is informational only; never send/imitate a customer-order alert.
         } catch (e) {}
       }
       lastPending = data.pending;
