@@ -395,12 +395,39 @@ button:disabled{opacity:.45;transform:none}
  .fork-filter-line label{display:none}
 }
 
+
+/* Compact, always-discoverable push status without expanding the booking agenda. */
+.top .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top .row #ack{flex:0 0 auto}
+.top .row .nf-push-quick{flex:0 1 auto}
+.nf-push-quick{display:inline-flex;gap:7px;align-items:center;flex-wrap:wrap;max-width:100%;min-width:0}
+.nf-push-quick button{border:1px solid #9c7824;border-radius:9px;background:#3d321b;
+ color:#f8e2ac;padding:9px 12px;min-height:39px;font:800 .74rem 'Poppins',sans-serif;cursor:pointer}
+.nf-push-quick button:hover{background:#5b4721;border-color:#e5b94a}
+.nf-push-quick button:disabled{opacity:.55;cursor:not-allowed}
+.nf-push-quick #nf-push-quick-enable{background:#af810b;color:#14110b}
+.nf-push-quick #nf-push-quick-test{background:#284738;border-color:#4baa77;color:#c8f3d6}
+.nf-push-quick #nf-push-quick-status{font:700 .69rem 'Poppins',sans-serif;color:#c3bcae;
+ max-width:190px;overflow-wrap:anywhere}
+.nf-push-quick #nf-push-quick-status[data-kind="success"]{color:#9ee7ac}
+.nf-push-quick #nf-push-quick-status[data-kind="error"]{color:#ffb0a9}
+@media(max-width:560px){
+ .top .row{width:100%;justify-content:flex-start}
+ .nf-push-quick{gap:5px}
+ .nf-push-quick button{min-height:36px;padding:8px 10px;font-size:.68rem}
+ .nf-push-quick #nf-push-quick-status{max-width:135px;font-size:.64rem}
+}
 </style></head><body>
 <header><h1><img class="admin-brand-mark" src="/images/logo.jpg" alt=""> N'Farinati · Prenotazioni</h1><a class="back" href="/admin.html">← Pannello admin</a></header>
 <main>
 <div id="loading" class="panel">Verifica accesso e caricamento prenotazioni…</div>
 <div id="app" class="hidden">
-<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Le prenotazioni raggruppate per orario. I tavoli disponibili hanno una scheda dedicata.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold hidden" id="new-booking" tabindex="-1" aria-hidden="true">+ Prenotazione telefonica</button></div></div>
+<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Le prenotazioni raggruppate per orario. I tavoli disponibili hanno una scheda dedicata.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><div id="nf-push-quick" class="nf-push-quick" aria-label="Notifiche push sul telefono">
+  <button id="nf-push-quick-enable" type="button" hidden>🔕 Attiva push</button>
+  <button id="nf-push-quick-test" type="button" hidden>🔔 Prova push</button>
+  <button id="nf-push-quick-settings" type="button" hidden>⚙ Verifica push</button>
+  <span id="nf-push-quick-status" role="status" aria-live="polite">Controllo push…</span>
+</div><button class="btn gold hidden" id="new-booking" tabindex="-1" aria-hidden="true">+ Prenotazione telefonica</button></div></div>
 <div class="tabs">
 <button class="tab active" data-tab="agenda">📆 Prenotazioni</button>
 <button class="tab" data-tab="availability">🪑 Disponibilità tavoli</button>
