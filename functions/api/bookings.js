@@ -1,5 +1,6 @@
 import {json,rateLimit} from "../_lib/auth.js";
 import {bookingConfig,availableTimes,createBooking,bookingError,validDate} from "../_lib/booking.js";
+import {enqueuePushEvent,runPendingPush} from "../_lib/push.js";
 
 export async function onRequestGet({env,request}) {
   try {
@@ -14,7 +15,8 @@ export async function onRequestGet({env,request}) {
       max_party:config.max_party, enabled:!!config.enabled});
   } catch(e) {return bookingError(e);}
 }
-export async function onRequestPost({env,request}) {
+export async function onRequestPost(context) {
+  const {env,request}=context;
   try {
     if(!(await rateLimit(env,request,"booking_create",8,600)))
       return json({error:"Troppe richieste. Riprova più tardi."},429,{"Retry-After":"600"});
@@ -29,6 +31,15 @@ export async function onRequestPost({env,request}) {
       if(!response.ok || !(await response.json()).success) return json({error:"Verifica antispam non superata"},403);
     }
     const booking=await createBooking(env,body,"online");
+    try{
+      const origin=new URL(request.url).origin;
+      await enqueuePushEvent(env,origin,{kind:"booking",id:booking.id,
+        title:"📅 Nuova prenotazione tavolo",
+        body:booking.date+" · ore "+booking.time+" · "+booking.guests+" persone",
+        target:"/admin-prenotazioni.html?date="+booking.date+"#agenda"});
+      const task=runPendingPush(env,origin).catch(e=>console.error("Booking push dispatch",e?.name));
+      if(context.waitUntil)context.waitUntil(task);else await task;
+    }catch(e){console.error("Booking push queue failed",e?.name)}
     return json({ok:true,booking},201);
   } catch(e) {return bookingError(e);}
 }
