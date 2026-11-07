@@ -241,3 +241,46 @@ button:disabled{opacity:.45;transform:none}
   #day-prev{grid-column:1;grid-row:2;min-height:40px}
   #day-next{grid-column:2;grid-row:2;min-height:40px}
 }
+
+/* Table-by-time visualization: physically assigned tables in the selected
+   service window, visually aligned with N'Farinati's dark and gold admin. */
+.table-schedule-panel{margin:0 0 16px}
+.table-schedule-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.table-schedule-heading h2{margin:3px 0 5px;line-height:1.35;color:#f3f0e9}
+.table-schedule-heading p{margin:0}
+.table-schedule-eyebrow{font:800 .64rem Montserrat,sans-serif;color:#d4a017;letter-spacing:1.6px}
+#table-schedule-note{margin:7px 0 13px;font-size:.78rem;line-height:1.55}
+.table-schedule-grid{display:grid;gap:17px}
+.table-zone h3{margin:0 0 10px;color:#d6b973;font:800 .82rem Montserrat,sans-serif;letter-spacing:.3px}
+.table-schedule-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.schedule-table-card{min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:9px;min-height:128px;
+  border:1px solid rgba(255,255,255,.12);border-left:4px solid #8a8c90;border-radius:12px;
+  background:linear-gradient(145deg,#252525,#1f1f1f);padding:14px}
+.schedule-table-card.is-free{border-left-color:#57c682;background:linear-gradient(145deg,#1e2923,#202321)}
+.schedule-table-card.is-occupied{border-left-color:#d7a02b;background:linear-gradient(145deg,#302719,#26221c)}
+.schedule-table-card.is-unassigned{border-left-color:#747e8d}
+.schedule-table-card-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.schedule-table-card-header strong{font:800 .85rem Montserrat,sans-serif;color:#f4f0e8}
+.table-seats{border-radius:999px;padding:4px 8px;background:rgba(255,255,255,.07);font:700 .67rem Poppins,sans-serif;white-space:nowrap}
+.table-occupancy-status{font:800 .73rem Montserrat,sans-serif}
+.is-free .table-occupancy-status{color:#76d9a0}
+.is-occupied .table-occupancy-status{color:#ffd388}
+.is-unassigned .table-occupancy-status{color:#b4bac1}
+.table-guest-name{font:700 .77rem Poppins,sans-serif;color:#f9f0db;overflow-wrap:anywhere}
+.table-guest-time{font-size:.69rem;color:#c7b89d}
+.schedule-table-action{margin-top:auto;align-self:flex-start;border-color:rgba(87,198,130,.45);color:#a3edbc}
+.schedule-table-action:hover{background:rgba(87,198,130,.14)}
+@media(max-width:950px){.table-schedule-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){
+ .table-schedule-heading{align-items:start}
+ .table-schedule-heading h2{font-size:1rem}
+ .table-schedule-heading .btn{min-height:38px}
+ .table-schedule-items{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .schedule-table-card{padding:10px;min-height:124px;border-radius:10px;gap:8px}
+ .schedule-table-card-header{display:block}
+ .schedule-table-card-header strong{display:block;font-size:.78rem}
+ .table-seats{display:inline-block;font-size:.61rem;margin-top:5px}
+ .table-guest-name{font-size:.72rem}
+ .schedule-table-action{width:100%;font-size:.64rem}
+}
+@media(max-width:360px){.table-schedule-items{grid-template-columns:1fr}.schedule-table-card-header{display:flex}.table-seats{margin-top:0}}

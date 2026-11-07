@@ -323,3 +323,75 @@ test("restaurant admin creates a physical table and books a telephone guest usin
  assert.equal(db.prepare("SELECT status FROM booking_reservations WHERE id=?").get(booking.id).status,"no_show");
  assert.ok((await availableTimes(env,date,4)).times.includes("19:00"));
 });
+
+test("admin service timeline actually loads first/second turns and physical table details",async()=>{
+ const {db,env,date,req}=await fixture();
+ const cookie=await adminCookie(env);
+ db.prepare("UPDATE booking_config SET table_mode=1,capacity=10,holdback=0").run();
+ db.prepare("INSERT INTO booking_tables(id,label,seats,zone,active) VALUES('table-sala','Sala 1',4,'Sala',1),('table-veranda','Veranda 2',2,'Veranda',1)").run();
+ const booking=await createBooking(env,{...req,guests:4});
+ assert.ok(booking.id);
+ const unauth=await adminGet({env,request:request("/admin/bookings?mode=timeline&date="+date)});
+ assert.equal(unauth.status,401);
+ const res=await adminGet({env,request:request("/admin/bookings?mode=timeline&date="+date,undefined,cookie)});
+ assert.equal(res.status,200,"timeline GET must not return generic operation error");
+ const data=await res.json();
+ assert.equal(data.open,true);
+ assert.equal(data.table_mode,true);
+ assert.equal(data.tables.length,2);
+ assert.ok(data.slots.some(s=>s.time==="19:00"),"first service has 19:00");
+ assert.ok(data.slots.some(s=>s.time==="20:30"),"second service has 20:30");
+ assert.equal(data.booked.length,1);
+ assert.equal(data.booked[0].table_id,"table-sala");
+ assert.equal(data.booked[0].start_min,1140);
+ const invalid=await adminGet({env,request:request("/admin/bookings?mode=timeline&date=2026-02-30",undefined,cookie)});
+ assert.equal(invalid.status,400);
+});
+test("admin timeline renders table occupancy after a phone no-show and releases capacity",async()=>{
+ const {db,env,date,req}=await fixture();
+ db.prepare("UPDATE booking_config SET table_mode=1,capacity=4,holdback=0").run();
+ db.prepare("INSERT INTO booking_tables(id,label,seats,zone,active) VALUES('t1','Tavolo 1',4,'Sala',1)").run();
+ const b=await createBooking(env,req,"manual");
+ const cookie=await adminCookie(env);
+ async function timeline(){
+  const r=await adminGet({env,request:request("/admin/bookings?mode=timeline&date="+date,undefined,cookie)});
+  assert.equal(r.status,200);
+  return r.json();
+ }
+ let x=await timeline();
+ assert.equal(x.booked.length,1);
+ assert.equal(x.booked[0].table_id,"t1");
+ await changeStatus(env,b.id,"no_show");
+ x=await timeline();
+ assert.equal(x.booked.length,0);
+ assert.equal(x.slots.find(s=>s.time==="19:00").used,0);
+});
+
+test("changing the admin turn filters the booking list without changing daily totals",async()=>{
+ const {env,req,date}=await fixture(),cookie=await adminCookie(env);
+ const first=await createBooking(env,{...req,time:"19:00",name:"Primo turno"});
+ const second=await createBooking(env,{...req,time:"21:00",name:"Secondo turno"});
+ assert.notEqual(first.id,second.id);
+ const get=async(params)=>{
+   const res=await adminGet({env,request:request("/admin/bookings?date="+date+"&"+params,undefined,cookie)});
+   assert.equal(res.status,200);
+   return res.json();
+ };
+ const all=await get("turn=all");
+ assert.equal(all.bookings.length,2);
+ const one=await get("turn=first");
+ assert.equal(one.bookings.length,1);
+ assert.equal(one.bookings[0].name,"Primo turno");
+ assert.equal(one.total,2,"daily summary remains unchanged");
+ assert.equal(one.filtered_total,1);
+ const two=await get("turn=second");
+ assert.equal(two.bookings.length,1);
+ assert.equal(two.bookings[0].name,"Secondo turno");
+ assert.equal(two.total,2);
+ assert.equal(two.filtered_total,1);
+ const exact=await get("turn=second&time=19%3A00");
+ assert.equal(exact.bookings.length,1,"a specifically selected hour overrides turn filters");
+ assert.equal(exact.bookings[0].name,"Primo turno");
+ const invalid=await adminGet({env,request:request("/admin/bookings?date="+date+"&turn=imaginary",undefined,cookie)});
+ assert.equal(invalid.status,400);
+});
