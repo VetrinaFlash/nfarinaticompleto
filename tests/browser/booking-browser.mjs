@@ -41,7 +41,9 @@ for(const viewport of VIEWS){
  });
  await page.goto(ROOT+"/index.html",{waitUntil:"domcontentloaded"});
  await clearOverflow(page,viewport.label+" original homepage with reservation CTA");
- assert.ok(await page.locator('a[href="prenota.html"]').count()>=2,"home and hero reservation links exist");
+ assert.equal(await page.locator('a[href="prenota.html"]').count(),0,
+   "the table-booking button must remain hidden on the homepage");
+ assert.ok(await page.locator('a[href="menu.html"]').count()>0,"the existing online-order links remain visible");
  await page.goto(ROOT+"/prenota.html",{waitUntil:"domcontentloaded"});
  await page.locator(".time").first().waitFor();
  await page.locator("#guests").selectOption("4");
