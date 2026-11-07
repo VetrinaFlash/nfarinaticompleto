@@ -1,4 +1,5 @@
 import {adminIdentity,json} from "../_lib/auth.js";
+import {enqueuePushEvent,runPendingPush} from "../_lib/push.js";
 import {ensureBookingSchema,bookingConfig,createBooking,updateBooking,changeStatus,extendBooking,bookingError,validDate,parseTime,timeText,italyNow,addDays} from "../_lib/booking.js";
 
 async function admin(env,request) {
@@ -61,7 +62,8 @@ export async function onRequestGet({env,request}) {
       capacity:config.capacity,page,limit,date});
   } catch(e){return bookingError(e);}
 }
-export async function onRequestPost({env,request}) {
+export async function onRequestPost(context) {
+  const {env,request}=context;
   try {
     if(!await admin(env,request))return json({error:"Non autorizzato"},401);
     const body=await request.json();
@@ -106,7 +108,19 @@ export async function onRequestPost({env,request}) {
           .bind(id,label,seats,zone,active).run();
         return json({ok:true,id});
       }
-      case "create": return json({ok:true,booking:await createBooking(env,body,"manual")},201);
+      case "create": {
+        const booking=await createBooking(env,body,"manual");
+        try{
+          const origin=new URL(request.url).origin;
+          await enqueuePushEvent(env,origin,{kind:"booking",id:booking.id,
+            title:"📅 Prenotazione telefonica inserita",
+            body:booking.date+" · "+booking.time+" · "+booking.guests+" persone",
+            target:"/admin-prenotazioni.html?date="+booking.date+"#agenda"});
+          const task=runPendingPush(env,origin).catch(e=>console.error("Manual booking push dispatch",e?.name));
+          if(context.waitUntil)context.waitUntil(task);else await task;
+        }catch(e){console.error("Manual booking push queue",e?.name)}
+        return json({ok:true,booking},201);
+      }
       case "edit": {
         if(typeof body.id!=="string" || body.id.length>80)return json({error:"ID non valido"},400);
         return json(await updateBooking(env,body.id,body));
