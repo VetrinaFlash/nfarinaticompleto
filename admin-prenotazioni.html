@@ -20,8 +20,9 @@
 <div id="app" class="hidden">
 <div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Tutte le prenotazioni, i turni e i tavoli in una schermata semplice.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold" id="new-booking">+ Prenotazione telefonica</button></div></div>
 <div class="tabs">
-<button class="tab active" data-tab="agenda">📆 Agenda</button>
-<button class="tab" data-tab="tables">🪑 Tavoli</button>
+<button class="tab active" data-tab="agenda">📆 Prenotazioni</button>
+<button class="tab" data-tab="availability">🪑 Disponibilità tavoli</button>
+<button class="tab" data-tab="tables">⚙ Gestione tavoli</button>
 <button class="tab" data-tab="settings">⚙️ Capienza</button>
 <button class="tab" data-tab="hours">🕒 Orari</button>
 <button class="tab" data-tab="closures">🚫 Chiusure</button>
@@ -48,7 +49,6 @@
     <span><strong id="capacity">—</strong> capienza</span>
   </div>
   <div class="fork-view-controls">
-    <button class="fork-view-button" id="show-tables-by-time" type="button" aria-expanded="false" aria-controls="availability-details">▦ Tavoli per fascia oraria</button>
     <button class="fork-view-button" type="button" id="book-selected">＋ Nuova prenotazione</button>
   </div>
 </section>
@@ -69,7 +69,8 @@
   <div class="fork-paging"><button class="btn small" id="prev">← Precedenti</button>
     <span class="muted" id="page-info"></span><button class="btn small" id="next">Successive →</button></div>
 </section>
-<div id="availability-details" class="hidden">
+</div>
+<div id="availability-tab" class="hidden">
 <section class="panel slot-console">
   <h2>Disponibilità per fascia</h2>
   <p class="muted">Seleziona un orario per visualizzare disponibilità e tavoli occupati.</p>
@@ -90,7 +91,6 @@
   <p id="table-schedule-note" class="muted" role="status"></p>
   <div id="table-schedule-grid" class="table-schedule-grid" aria-live="polite"></div>
 </section>
-</div>
 </div>
 <div id="settings-tab" class="hidden"><section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
 <div class="field"><label>Capienza contemporanea</label><input name="capacity" type="number" min="1" max="1000" required></div>
@@ -131,9 +131,10 @@ const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Cont
 function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
 const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!==undefined)el.textContent=value;if(className)el.className=className;return el};
 const badges=(r)=>node('span',titles[r.status]||r.status,'badge '+r.status);
-const bookingTabs=['agenda','settings','hours','tables','closures'];
+const bookingTabs=['agenda','availability','settings','hours','tables','closures'];
 function tab(key){
   if(!bookingTabs.includes(key))key='agenda';
+  if(key==='availability' && slotData)renderTableSchedule();
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
   bookingTabs.forEach(k=>$(k+'-tab').classList.toggle('hidden',key!==k));
   if(location.hash!=='#'+key)history.replaceState(null,'','#'+key);
