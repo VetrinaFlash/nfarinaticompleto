@@ -49,6 +49,9 @@ for(const viewport of VIEWS){
  assert.equal(await page.locator("body").evaluate(e=>getComputedStyle(e).backgroundColor),"rgb(255, 255, 255)");
  await clearOverflow(page,viewport.label+" public");
  await page.screenshot({path:"artifacts/booking-browser/"+viewport.label+"-public.png",fullPage:true});
+ await page.getByRole("button",{name:/Primo turno/}).click();
+ assert.equal(await page.getByRole("button",{name:"20:30",exact:true}).count(),0);
+ await page.getByRole("button",{name:/Secondo turno/}).click();
  await page.getByRole("button",{name:"20:30",exact:true}).click();
  await page.locator("#name").fill("Mario Rossi");
  await page.locator("#phone").fill("+393331234567");
@@ -95,11 +98,18 @@ for(const viewport of VIEWS){
   name:"Cliente telefonico",phone:"+393331231234",email:"",notes:"",date,
   start_min:1200,end_min:1305,guests:3,status:"confirmed",table_id:null,created_at:"2026-11-10"};
  await page.route("**/admin/check",r=>r.fulfill({json:{authenticated:true}}));
+ await page.route("**/admin/push",r=>r.fulfill({json:{configured:false,publicKey:null,activeDevices:0,pending:0}}));
  await page.route(/\/admin\/bookings(?:\?|$)/,r=>{
    if(r.request().method()==="GET"){
      const mode=new URL(r.request().url()).searchParams.get("mode");
      if(mode==="settings")return r.fulfill({json:settings});
      if(mode==="alerts")return r.fulfill({json:{unread:1,last_id:1,recent:[]}});
+     if(mode==="timeline")return r.fulfill({json:{
+       date,open:true,capacity:50,holdback:5,duration_min:90,buffer_min:15,
+       slots:[{time:"18:30",start:1110,end:1200,used:0,onlineFree:45,capacity:50,arrivals:0,peopleArriving:0},
+        {time:"19:00",start:1140,end:1230,used:4,onlineFree:41,capacity:50,arrivals:1,peopleArriving:4},
+        {time:"20:30",start:1230,end:1320,used:0,onlineFree:45,capacity:50,arrivals:0,peopleArriving:0}],
+       booked:[]}}); 
      return r.fulfill({json:{bookings:[manual],total:1,booked:manual.guests,unread:1,
        capacity:50,page:1,limit:50,date}});
    }
@@ -112,6 +122,14 @@ for(const viewport of VIEWS){
  await page.locator("#app").waitFor({state:"visible"});
  await page.locator("#filter-date").fill(date);
  await page.locator("#refresh").click();
+ await page.locator(".service-tile").first().waitFor();
+ assert.equal(await page.locator(".service-tile").count(),3);
+ assert.ok(await page.locator("#nf-push-widget").isVisible());
+ await page.getByRole("button",{name:/Primo turno/}).first().click();
+ assert.equal(await page.locator(".service-tile").count(),2);
+ await page.getByRole("button",{name:/Secondo turno/}).first().click();
+ assert.equal(await page.locator(".service-tile").count(),1);
+ await page.getByRole("button",{name:/Tutti/}).first().click();
  await clearOverflow(page,viewport.label+" admin");
  if(viewport.width<=390){
    const dateInput=await page.locator("#filter-date").boundingBox();
