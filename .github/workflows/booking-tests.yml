@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - fix/remove-prenotazioni-order-push-only-20261107
+      - fix/admin-mobile-overflow-post-booking-removal
       - feature/prenotazioni-tavoli
       - fix/fasce-tavoli-admin-20261107
       - fix/agenda-oraria-compatta-20261107
