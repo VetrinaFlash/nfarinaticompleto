@@ -14,8 +14,9 @@ const times=["18:30","19:00","19:30","20:00","20:30","21:00","21:30"];
 const config={enabled:true,max_party:8,advance_days:60,duration_min:90,buffer_min:15,interval_min:30,turnstile_site_key:null};
 const actions=[];
 const mainAdminSource=await readFile("admin.html","utf8");
-assert.match(mainAdminSource,/href="admin-prenotazioni\.html#tables"/,
-  "The existing admin sidebar needs a direct Tavoli link");
+assert.equal((mainAdminSource.match(/class="nav-item" href="admin-prenotazioni\.html"/g)||[]).length,1,
+  "Admin sidebar has exactly one Prenotazioni e tavoli entry");
+assert.ok(mainAdminSource.includes("Prenotazioni e tavoli"));
 function agentError(page){const errors=[];page.on("pageerror",error=>errors.push(String(error)));return errors}
 async function clearOverflow(page,label) {
  const x=await page.evaluate(()=>({width:innerWidth,content:document.documentElement.scrollWidth}));
@@ -120,10 +121,16 @@ for(const viewport of VIEWS){
  });
  await page.goto(ROOT+"/admin-prenotazioni.html",{waitUntil:"domcontentloaded"});
  await page.locator("#app").waitFor({state:"visible"});
- await page.locator("#filter-date").fill(date);
+ await page.locator("#slot-date").fill(date);
  await page.locator("#refresh").click();
  await page.locator(".service-tile").first().waitFor();
  assert.equal(await page.locator(".service-tile").count(),3);
+ await page.getByRole("button",{name:/Ore 19:00/}).click();
+ await page.locator("#booking-view-title").getByText("Ospiti delle 19:00").waitFor();
+ assert.equal(await page.locator(".service-tile.selected").count(),1);
+ await page.locator("#book-selected").getByText("+ Prenota alle 19:00").waitFor();
+ await page.locator("#reset-slot").click();
+ await page.locator("#booking-view-title").getByText("Tutte le prenotazioni").waitFor();
  assert.ok(await page.locator("#nf-push-widget").isVisible());
  await page.getByRole("button",{name:/Primo turno/}).first().click();
  assert.equal(await page.locator(".service-tile").count(),2);
@@ -132,7 +139,7 @@ for(const viewport of VIEWS){
  await page.getByRole("button",{name:/Tutti/}).first().click();
  await clearOverflow(page,viewport.label+" admin");
  if(viewport.width<=390){
-   const dateInput=await page.locator("#filter-date").boundingBox();
+   const dateInput=await page.locator("#slot-date").boundingBox();
    assert.ok(dateInput.width>=220,"admin date must remain readable at "+viewport.width+"px");
  }
  assert.ok(await page.locator("body").evaluate(e=>getComputedStyle(e).fontFamily.includes("Poppins")));
@@ -159,7 +166,7 @@ for(const viewport of VIEWS){
  await page.locator('#booking-edit [name="time"]').fill("20:00");
  await page.locator("#save-booking").click();
  await page.waitForFunction(()=>document.querySelector("#modal").classList.contains("hidden"));
- await page.getByRole("button",{name:/Apri \/ modifica/}).click();
+ await page.getByRole("button",{name:"Dettagli",exact:true}).first().click();
  page.once("dialog",dialog=>dialog.accept());
  await page.locator("#status-no_show").click();
  await page.waitForFunction(()=>document.querySelector("#modal").classList.contains("hidden"));
