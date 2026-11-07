@@ -21,7 +21,16 @@ const decode = value => {
   const text=atob(value.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(value.length/4)*4,"="));
   return Uint8Array.from(text,c=>c.charCodeAt(0));
 };
-export const pushConfigured = env => !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY);
+const vapidKeyState=(value,length,uncompressed=false)=>{
+  if(typeof value!=="string" || !value.trim())return "missing";
+  try{
+    const bytes=decode(value.trim());
+    return bytes.length===length && (!uncompressed||bytes[0]===4)?"ok":"invalid";
+  }catch{return "invalid"}
+};
+export const pushConfigured = env =>
+  vapidKeyState(env.VAPID_PUBLIC_KEY,65,true)==="ok" &&
+  vapidKeyState(env.VAPID_PRIVATE_KEY,32)==="ok";
 export function isAllowedPushEndpoint(endpoint) {
   try {
     const u=new URL(endpoint);
@@ -267,6 +276,14 @@ export async function pushDiagnostics(env,origin){
     env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_events WHERE origin=? AND delivered_ms IS NULL AND created_ms>?").bind(origin,Date.now()-12*3600000).first(),
     env.DB.prepare("SELECT kind,created_ms,delivered_ms,attempts,last_error FROM nf_webpush_events WHERE origin=? ORDER BY created_ms DESC LIMIT 5").bind(origin).all()
   ]);
-  return {configured:pushConfigured(env),publicKey:env.VAPID_PUBLIC_KEY||null,
-    activeDevices:Number(subs?.count||0),pending:Number(events?.count||0),recent:(errors.results||[])};
+  const publicKeyState=vapidKeyState(env.VAPID_PUBLIC_KEY,65,true);
+  const privateKeyState=vapidKeyState(env.VAPID_PRIVATE_KEY,32);
+  return {
+    configured:publicKeyState==="ok" && privateKeyState==="ok",
+    publicKey:publicKeyState==="ok"?env.VAPID_PUBLIC_KEY:null,
+    keyStatus:{public:publicKeyState,private:privateKeyState},
+    // Only the branch identifier is shown; secret contents are never exposed.
+    runtimeBranch:typeof env.CF_PAGES_BRANCH==="string"?env.CF_PAGES_BRANCH:null,
+    activeDevices:Number(subs?.count||0),pending:Number(events?.count||0),recent:(errors.results||[])
+  };
 }
