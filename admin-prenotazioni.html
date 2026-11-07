@@ -3,6 +3,10 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer"><meta name="theme-color" content="#131416">
 <title>Prenotazioni | N'Farinati Admin</title>
+<link rel="manifest" href="/admin.webmanifest">
+<meta name="theme-color" content="#b8860b">
+<link rel="apple-touch-icon" href="/images/logo.jpg">
+<link rel="stylesheet" href="/admin-push.css">
 <link rel="icon" href="/images/logo.jpg" type="image/jpeg">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -236,11 +240,13 @@ async function init(){
  try{
   const check=await api('/admin/check');if(!check.authenticated)throw Error('Effettua prima l’accesso dal pannello amministrativo.');
   $('loading').classList.add('hidden');$('app').classList.remove('hidden');
-  $('filter-date').value=today();$('close-form').elements.date.min=today();
+  const requested=new URLSearchParams(location.search).get("date");
+  $('filter-date').value=/^\d{4}-\d{2}-\d{2}$/.test(requested||"")?requested:today();
+  $('close-form').elements.date.min=today();
   await Promise.all([loadSettings(),loadAgenda(),alerts()]);
   tab(location.hash.slice(1));
   setInterval(()=>{if(document.visibilityState!=='hidden'){loadAgenda();alerts()}},20000);
  }catch(e){$('loading').replaceChildren(node('p',e.message,'error'),node('a','Vai all’accesso amministratore'));$('loading').lastChild.href='/admin.html'}
 }
 init();
-</script></body></html>
+</script><script src="/admin-push.js" defer></script></body></html>
