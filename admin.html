@@ -2503,7 +2503,7 @@ async function repairMenuOptions() {
     if(!parent)return;
     const box=document.createElement("section");
     box.id="nf-push-widget";box.setAttribute("aria-label","Notifiche push amministratore");
-    box.innerHTML='<strong>🔔 Notifiche ordini e tavoli</strong>'+
+    box.innerHTML='<strong>🔔 Notifiche nuovi ordini</strong>'+
       '<button id="nf-push-enable" type="button">Attiva push su questo dispositivo</button>'+
       '<button id="nf-push-test" type="button" hidden>Invia una prova</button>'+
       '<button id="nf-push-reconnect" type="button" hidden>↻ Riattiva push</button>'+
@@ -2642,8 +2642,8 @@ async function repairMenuOptions() {
       if(!sub)sub=await deadline(()=>registration.pushManager.subscribe({
         userVisibleOnly:true,applicationServerKey:decode(config.publicKey)
       }),12000);
-      await api({action:"subscribe",subscription:sub.toJSON(),orders:true,bookings:true});
-      say("Attivate! Riceverai push per ordini e prenotazioni. Prova il pulsante di test.","success","Push attivate");
+      await api({action:"subscribe",subscription:sub.toJSON(),orders:true,bookings:false});
+      say("Attivate! Riceverai push soltanto per nuovi ordini confermati. Premi Prova per verificare questo telefono.","success","Push ordini attive");
     }catch(e){say("Attivazione non riuscita: "+(e.message||"errore"),"error","Attivazione fallita")}
     finally{busy=false;await refresh()}
   }
@@ -2659,9 +2659,12 @@ async function repairMenuOptions() {
   }
   async function test(){
     if(busy)return;busy=true;buttons(true,true);
-    say("Invio notifica di prova...","","Prova in invio…");
+    say("Invio notifica di prova SOLO su questo dispositivo...","","Prova in invio…");
     try{
-      const r=await api({action:"test"});
+      const reg=await deadline(()=>navigator.serviceWorker.getRegistration("/"));
+      const sub=reg?await deadline(()=>reg.pushManager.getSubscription()):null;
+      if(!sub?.endpoint)throw Error("Attiva le notifiche su questo dispositivo prima della prova");
+      const r=await api({action:"test",endpoint:sub.endpoint});
       say(r.accepted>0?"Push accettata su "+r.accepted+" dispositivo/i. Controlla il telefono.":
         "Nessuna push accettata: verifica impostazioni e connettività.",r.accepted>0?"success":"error",
       r.accepted>0?"Prova inviata":"Prova non riuscita");
