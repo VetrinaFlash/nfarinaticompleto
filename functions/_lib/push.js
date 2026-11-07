@@ -47,12 +47,6 @@ export async function buildWebPushRequest(message,subscription,env,now=Date.now(
   const localPublic=new Uint8Array(await crypto.subtle.exportKey("raw",pair.publicKey));
   const remote=await crypto.subtle.importKey("raw",userPublic,{name:"ECDH",namedCurve:"P-256"},false,[]);
   const shared=new Uint8Array(await crypto.subtle.deriveBits({name:"ECDH",public:remote},pair.privateKey,256));
-  const derive=async(secret,salt,info,bits)=>{
-    const key=await crypto.subtle.importKey("raw",secret,"HKDF",false,["deriveBits"]);
-    return new Uint8Array(await crypto.subtle.deriveBits({
-      name:"HKDF",hash:"SHA-256",salt,info:encoder.encode(info) instanceof Uint8Array?info:new Uint8Array()
-    },key,bits));
-  };
   // RFC 8291: the first HKDF info includes BOTH public keys (not just text).
   const secretKey=await crypto.subtle.importKey("raw",shared,"HKDF",false,["deriveBits"]);
   const ikm=new Uint8Array(await crypto.subtle.deriveBits({
@@ -93,22 +87,22 @@ export async function ensurePushSchema(env) {
   if(!env?.DB)throw Error("D1 non configurato");
   if(init.has(env.DB))return init.get(env.DB);
   const promise=env.DB.batch([
-    env.DB.prepare(\`CREATE TABLE IF NOT EXISTS push_subscriptions (
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_subscriptions (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,endpoint TEXT NOT NULL,p256dh TEXT NOT NULL,auth TEXT NOT NULL,
       orders INTEGER NOT NULL DEFAULT 1,bookings INTEGER NOT NULL DEFAULT 1,active INTEGER NOT NULL DEFAULT 1,
       created_ms INTEGER NOT NULL,updated_ms INTEGER NOT NULL,last_error TEXT NOT NULL DEFAULT ''
-    )\`),
+    )`),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS push_subscriptions_active_idx ON push_subscriptions(origin,active)"),
-    env.DB.prepare(\`CREATE TABLE IF NOT EXISTS push_events (
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_events (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,kind TEXT NOT NULL,title TEXT NOT NULL,body TEXT NOT NULL,
       target TEXT NOT NULL,created_ms INTEGER NOT NULL,delivered_ms INTEGER,attempts INTEGER NOT NULL DEFAULT 0,
       next_attempt_ms INTEGER NOT NULL DEFAULT 0,claim_until_ms INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT ''
-    )\`),
+    )`),
     env.DB.prepare("CREATE INDEX IF NOT EXISTS push_events_queue_idx ON push_events(origin,delivered_ms,next_attempt_ms,created_ms)"),
-    env.DB.prepare(\`CREATE TABLE IF NOT EXISTS push_deliveries (
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS push_deliveries (
       event_id TEXT NOT NULL,subscription_id TEXT NOT NULL,sent_ms INTEGER NOT NULL,
       PRIMARY KEY(event_id,subscription_id)
-    )\`)
+    )`)
   ]);
   init.set(env.DB,promise);
   try{await promise}catch(e){init.delete(env.DB);throw e;}
@@ -116,12 +110,12 @@ export async function ensurePushSchema(env) {
 export async function registerDevice(env,origin,raw,category={orders:true,bookings:true}){
   const sub=validateSubscription(raw);await ensurePushSchema(env);
   const id=await sha256(sub.endpoint),now=Date.now();
-  await env.DB.prepare(\`INSERT INTO push_subscriptions
+  await env.DB.prepare(`INSERT INTO push_subscriptions
     (id,origin,endpoint,p256dh,auth,orders,bookings,active,created_ms,updated_ms)
     VALUES(?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET origin=excluded.origin,endpoint=excluded.endpoint,
     p256dh=excluded.p256dh,auth=excluded.auth,orders=excluded.orders,bookings=excluded.bookings,
-    active=1,updated_ms=excluded.updated_ms,last_error=''\`)
+    active=1,updated_ms=excluded.updated_ms,last_error=''`)
     .bind(id,origin,sub.endpoint,sub.p256dh,sub.auth,
       Number(category.orders!==false),Number(category.bookings!==false),1,now,now).run();
   return {ok:true,id};
@@ -140,27 +134,27 @@ export async function enqueuePushEvent(env,origin,{kind,id,title,body,target},no
      !/^\/(?:admin\.html|admin-prenotazioni\.html)(?:[?#][^#]*)?$/.test(target))
     throw Error("Destinazione push non valida");
   await ensurePushSchema(env);
-  await env.DB.prepare(\`INSERT OR IGNORE INTO push_events
-    (id,origin,kind,title,body,target,created_ms) VALUES(?,?,?,?,?,?,?)\`)
+  await env.DB.prepare(`INSERT OR IGNORE INTO push_events
+    (id,origin,kind,title,body,target,created_ms) VALUES(?,?,?,?,?,?,?)`)
     .bind(kind+":"+id,origin,kind,String(title).slice(0,110),
       String(body).slice(0,240),target,now).run();
 }
 export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,limit=10}={}){
   await ensurePushSchema(env);
   if(!pushConfigured(env))return {ok:false,reason:"vapid_missing",sent:0,failed:0};
-  const claimed=await env.DB.prepare(\`UPDATE push_events
+  const claimed=await env.DB.prepare(`UPDATE push_events
     SET claim_until_ms=?,attempts=attempts+1
     WHERE id IN (
       SELECT id FROM push_events WHERE origin=? AND delivered_ms IS NULL
       AND next_attempt_ms<=? AND claim_until_ms<? AND created_ms>?
       ORDER BY created_ms ASC LIMIT ?
     )
-    RETURNING id,kind,title,body,target,attempts\`)
+    RETURNING id,kind,title,body,target,attempts`)
     .bind(now+60000,origin,now,now,now-12*3600000,Math.max(1,Math.min(20,limit))).all();
   const events=claimed.results||[];let sent=0,failed=0;
   for(const event of events){
-    const list=await env.DB.prepare(\`SELECT id,endpoint,p256dh,auth FROM push_subscriptions
-      WHERE origin=? AND active=1 AND (orders=1 AND ?='order' OR bookings=1 AND ?='booking' OR ?='test')\`)
+    const list=await env.DB.prepare(`SELECT id,endpoint,p256dh,auth FROM push_subscriptions
+      WHERE origin=? AND active=1 AND (orders=1 AND ?='order' OR bookings=1 AND ?='booking' OR ?='test')`)
       .bind(origin,event.kind,event.kind,event.kind).all();
     let errors=0;
     for(const sub of (list.results||[])){
