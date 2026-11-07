@@ -9,6 +9,7 @@ on:
       - fix/agenda-oraria-compatta-20261107
       - fix/admin-css-inline-20261107
       - fix/push-quick-enable-test-20261107
+      - fix/push-status-not-stuck-20261107
   workflow_dispatch:
 
 permissions:
