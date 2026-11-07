@@ -103,7 +103,7 @@ const minuteNowRome=()=>{
 const isAutoFreed=r=>['confirmed','arrived','seated'].includes(r.status) &&
   (r.date<today() || (r.date===today() && minuteNowRome()>=r.end_min));
 let state={page:1,rows:[],settings:null,alertLast:0,initialized:false};
-let slotData=null,slotTurn='all',slotFetch=0,selectedMinute=null;
+let slotData=null,slotTurn='all',slotFetch=0,agendaFetch=0,selectedMinute=null;
 async function api(url,opt){const response=await fetch(url,{cache:'no-store',...opt});const data=await response.json();if(!response.ok)throw Error(data.error||'Operazione non riuscita');return data}
 const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});
 function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
@@ -352,19 +352,21 @@ function tableRow(data) {
  line.append(time,who,actions);return line
 }
 async function loadAgenda(){
+ const seq=++agendaFetch;
  try{
   const u=new URLSearchParams({date:$('filter-date').value,page:String(state.page)});
   if($('filter-status').value)u.set('status',$('filter-status').value);
   if(selectedMinute!==null)u.set('time',hhmm(selectedMinute));
   else if(slotTurn!=='all')u.set('turn',slotTurn);
   const d=await api('/admin/bookings?'+u);
+  if(seq!==agendaFetch)return;
   state.rows=d.bookings;$('total').textContent=d.total;$('guests').textContent=d.booked;$('capacity').textContent=d.capacity;
   $('booking-list').replaceChildren(...d.bookings.map(tableRow));if(!d.bookings.length)$('booking-list').append(node('p','Nessuna prenotazione per i filtri selezionati.','muted'));
   const showing=Number(d.filtered_total ?? d.total);
   $('page-info').textContent='Pagina '+state.page+' · '+showing+(selectedMinute!==null?' prenotazioni nella fascia':' prenotazioni');
   $('prev').disabled=state.page===1;$('next').disabled=state.page*d.limit>=showing;
   $('unread').textContent=d.unread;message('agenda-status','Ultimo aggiornamento: '+new Date().toLocaleTimeString('it-IT'));
- }catch(e){message('agenda-status',e.message,true)}
+ }catch(e){if(seq===agendaFetch)message('agenda-status',e.message,true)}
 }
 function formSet(form,key,val){const input=form.elements.namedItem(key);if(input){if(input.type==='checkbox')input.checked=!!val;else input.value=val??''}}
 async function loadSettings(){
