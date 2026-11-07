@@ -80,17 +80,23 @@ export async function onRequestGet({env,request}) {
     const status=u.searchParams.get("status")||"";
     if(status && !["confirmed","arrived","seated","completed","cancelled","no_show"].includes(status))
       return json({error:"Stato non valido"},400);
+    const time=u.searchParams.get("time");
+    const requestedMinute=time===null?null:parseTime(time);
+    if(time!==null && (requestedMinute===null || requestedMinute%15!==0))
+      return json({error:"Fascia oraria non valida"},400);
     const page=Math.max(1,Math.min(1000,Number(u.searchParams.get("page"))||1));
     const limit=50,offset=(page-1)*limit;
-    const where="date=?"+(status?" AND status=?":"");
-    const binds=status?[date,status]:[date];
-    const [rows,counts,notifications,config]=await Promise.all([
+    const where="date=?"+(status?" AND status=?":"")+(requestedMinute===null?"":" AND start_min=?");
+    const binds=[date,...(status?[status]:[]),...(requestedMinute===null?[]:[requestedMinute])];
+    const [rows,dayCounts,filterCount,notifications,config]=await Promise.all([
       env.DB.prepare("SELECT id,source,name,phone,email,date,start_min,end_min,guests,status,notes,table_id,created_at FROM booking_reservations WHERE "+where+" ORDER BY start_min,created_at LIMIT ? OFFSET ?").bind(...binds,limit,offset).all(),
       env.DB.prepare("SELECT COUNT(*) AS total,COALESCE(SUM(CASE WHEN status IN('confirmed','arrived','seated') THEN guests ELSE 0 END),0) AS booked FROM booking_reservations WHERE date=?").bind(date).first(),
+      env.DB.prepare("SELECT COUNT(*) AS total FROM booking_reservations WHERE "+where).bind(...binds).first(),
       env.DB.prepare("SELECT COUNT(*) AS total FROM booking_notifications WHERE seen=0").first(),
       bookingConfig(env)
     ]);
-    return json({bookings:rows.results||[],total:Number(counts?.total||0),booked:Number(counts?.booked||0),unread:Number(notifications?.total||0),
+    return json({bookings:rows.results||[],total:Number(dayCounts?.total||0),booked:Number(dayCounts?.booked||0),
+      filtered_total:Number(filterCount?.total||0),unread:Number(notifications?.total||0),
       capacity:config.capacity,page,limit,date});
   } catch(e){return bookingError(e);}
 }
