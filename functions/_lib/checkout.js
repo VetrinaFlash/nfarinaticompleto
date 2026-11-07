@@ -337,7 +337,8 @@ export async function verifyPaid(env, intent) {
 export async function finalizeIntent(env, intent, origin = null) {
   const order = JSON.parse(intent.payload_json);
   if (intent.finalized_at) {
-    if(origin)await queueOrderPushSafely(env,origin,order);
+    // An old/replayed checkout or repeated SumUp callback is NOT a new order.
+    // Never enqueue a push for an order that was already finalized.
     return order;
   }
   if (order.paymentMethod === "carta") await verifyPaid(env, intent);

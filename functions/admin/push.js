@@ -1,7 +1,7 @@
 import { adminIdentity, json } from "../_lib/auth.js";
 import {
-  pushDiagnostics,registerDevice,unregisterDevice,enqueuePushEvent,
-  runPendingPush,pushConfigured,ensurePushSchema
+  pushDiagnostics,registerDevice,unregisterDevice,sendPushTestToDevice,
+  runPendingPush,pushConfigured
 } from "../_lib/push.js";
 
 export async function onRequestGet({env,request}) {
@@ -36,25 +36,17 @@ export async function onRequestPost(context){
   try{
     if(body.action==="subscribe"){
       if(!pushConfigured(env))return json({error:"Configurare prima le chiavi VAPID su Cloudflare"},503);
-      const r=await registerDevice(env,origin,body.subscription,{
-        orders:body.orders!==false,bookings:body.bookings!==false
-      });
+      const r=await registerDevice(env,origin,body.subscription,{orders:true,bookings:false});
       return json({ok:true,id:r.id});
     }
     if(body.action==="unsubscribe"){
       return json(await unregisterDevice(env,origin,body.endpoint));
     }
     if(body.action==="test"){
-      if(!pushConfigured(env))return json({error:"Web Push non configurato"},503);
-      const state=await pushDiagnostics(env,origin);
-      if(!state.activeDevices)return json({error:"Nessun dispositivo attivato per questo indirizzo del sito"},409);
-      await enqueuePushEvent(env,origin,{kind:"test",id:crypto.randomUUID(),
-        title:"🔔 Prova notifiche N'Farinati",
-        body:"Le push di ordini e prenotazioni sono configurate per questo dispositivo.",
-        target:"/admin.html?section=orders"});
-      const result=await runPendingPush(env,origin,{limit:10});
-      return json({ok:true,accepted:result.sent,failed:result.failed,
-        message:result.sent?"Notifica accettata dal servizio push":"Nessuna notifica ancora accettata"});
+      // A test is NEVER broadcast or enqueued. It targets ONLY the device
+      // the currently authenticated admin selected on this browser.
+      const result=await sendPushTestToDevice(env,origin,body.endpoint);
+      return json(result);
     }
     if(body.action==="retry"){
       const r=await runPendingPush(env,origin,{limit:10});

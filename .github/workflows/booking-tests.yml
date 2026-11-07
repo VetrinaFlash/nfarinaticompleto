@@ -1,9 +1,10 @@
-name: Booking branch regression tests
+name: N'Farinati order and push regression tests
 
 on:
   push:
     branches:
       - main
+      - fix/remove-prenotazioni-order-push-only-20261107
       - feature/prenotazioni-tavoli
       - fix/fasce-tavoli-admin-20261107
       - fix/agenda-oraria-compatta-20261107
@@ -54,7 +55,7 @@ jobs:
           python3 -m http.server 8874 --bind 127.0.0.1 > /tmp/booking-preview.log 2>&1 &
           echo $! > /tmp/booking-preview.pid
           sleep 2
-          node tests/browser/booking-browser.mjs
+          node tests/browser/ops-browser.mjs
       - name: Upload desktop/mobile screenshots
         if: always()
         uses: actions/upload-artifact@v4

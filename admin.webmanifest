@@ -2,7 +2,7 @@
   "id": "/admin.html",
   "name": "N'Farinati · Gestionale",
   "short_name": "N'Farinati Admin",
-  "description": "Ordini, prenotazioni tavoli e notifiche in tempo reale",
+  "description": "Ordini confermati, magazzino e notifiche push degli ordini",
   "lang": "it",
   "start_url": "/admin.html",
   "scope": "/",

@@ -3,8 +3,6 @@ import assert from "node:assert/strict";
 import {DatabaseSync} from "node:sqlite";
 import {d1} from "./helpers.mjs";
 import {finalizeIntent} from "../functions/_lib/checkout.js";
-import {onRequestPost as bookingPost} from "../functions/api/bookings.js";
-import {addDays,italyNow,weekday} from "../functions/_lib/booking.js";
 
 test("confirmed cash orders enqueue a single durable push without changing checkout status",async()=>{
  const db=new DatabaseSync(":memory:");
@@ -29,23 +27,15 @@ test("confirmed cash orders enqueue a single durable push without changing check
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
 });
 
-test("confirmed customer booking queues an admin push, idempotent customer retries do not duplicate it",async()=>{
- const db=new DatabaseSync(":memory:"),env={DB:d1(db)};
- let date=addDays(italyNow().date,4);
- while(weekday(date)===1)date=addDays(date,1);
- const payload={date,time:"19:00",guests:2,name:"Mario Rossi",phone:"+393331234567",request_token:"d".repeat(64)};
- const makeRequest=()=>new Request("https://preview.example.com/api/bookings",{
-   method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
- const first=await bookingPost({env,request:makeRequest()});
- assert.equal(first.status,201);
- const result=await first.json();
- assert.ok(result.booking.id);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
- const event=db.prepare("SELECT kind,target FROM nf_webpush_events").get();
- assert.equal(event.kind,"booking");assert.ok(event.target.includes(date));
- const second=await bookingPost({env,request:makeRequest()});
- assert.equal(second.status,201);
- assert.equal((await second.json()).booking.id,result.booking.id);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM booking_reservations").get().n,1);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_events").get().n,1);
+
+test("replayed finalized checkout that predates push does NOT generate a surprise notification",async()=>{
+ const db=new DatabaseSync(":memory:");
+ db.exec("CREATE TABLE checkout_intents(id TEXT PRIMARY KEY,finalized_at INTEGER)");
+ const env={DB:d1(db)};
+ const order={orderId:"old-123",paymentMethod:"contanti"};
+ const result=await finalizeIntent(env,{
+   id:"old-123",payload_json:JSON.stringify(order),finalized_at:Date.now()-86400000
+ },"https://preview.example.com");
+ assert.equal(result.orderId,"old-123");
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE name='nf_webpush_events'").get().n,0);
 });
