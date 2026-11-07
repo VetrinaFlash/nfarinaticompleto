@@ -7,15 +7,18 @@ self.addEventListener("push",event=>{
     try{info=event.data?.json()||{}}catch{
       try{info={body:event.data?.text()||""}}catch{}
     }
+    // Drop all stale booking pushes and historical queued test broadcasts.
+    // Only finalized orders and explicitly requested per-device tests are shown.
+    if(info.kind!=="order" && !(info.kind==="test" && info.manualTest===true))return;
     const targetUrl=new URL(typeof info.url==="string"?info.url:"/admin.html",self.location.origin);
     const allowed=targetUrl.origin===self.location.origin &&
-      /^\/(?:admin\.html|admin-prenotazioni\.html)$/.test(targetUrl.pathname);
+      /^\/admin\.html$/.test(targetUrl.pathname);
     const target=allowed?targetUrl.pathname+targetUrl.search+targetUrl.hash:"/admin.html";
-    const kind=["order","booking","test"].includes(info.kind)?info.kind:"test";
+    const kind=info.kind;
     await self.registration.showNotification(String(info.title||"N'Farinati · Novità").slice(0,110),{
       body:String(info.body||"Apri il pannello amministrativo").slice(0,200),
       icon:"/images/logo.jpg",badge:"/images/logo.jpg",tag:String(info.eventId||"nf-"+Date.now()),
-      renotify:true,requireInteraction:kind==="order",
+      renotify:false,requireInteraction:kind==="order",
       data:{url:target},actions:[{action:"open",title:"Apri il pannello"}]
     });
   })());
