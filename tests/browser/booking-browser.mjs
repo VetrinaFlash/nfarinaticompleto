@@ -142,6 +142,10 @@ for(const viewport of VIEWS){
  await page.locator("#refresh").click();
  await page.locator(".fork-time-group").first().waitFor();
  assert.equal(await page.locator(".fork-time-head").first().evaluate(e=>getComputedStyle(e).display),"flex");
+ await page.waitForFunction(()=>{
+   const el=document.querySelector(".fork-reservation-summary");
+   return el?.isConnected && getComputedStyle(el).display==="flex";
+ },null,{timeout:10000});
  assert.equal(await page.locator(".fork-reservation-summary").first().evaluate(e=>getComputedStyle(e).display),"flex",
    "customer name, covers and status must render as spaced columns");
  assert.ok(await page.locator("#agenda-tab").isVisible(),"reservations is the default admin view");
@@ -160,6 +164,11 @@ for(const viewport of VIEWS){
  assert.ok(!await page.locator(".fork-reservation-details").first().isVisible());
  assert.equal(await page.locator("#nf-push-widget").count(),1);
  assert.ok(!await page.locator("#nf-push-widget").isVisible(),"push settings must not clutter the booking agenda");
+ assert.ok(await page.locator("#nf-push-quick").isVisible(),"push activation must be discoverable from the admin header");
+ await page.locator("#nf-push-quick-settings").waitFor({state:"visible"});
+ await page.locator("#nf-push-quick-settings").click();
+ assert.ok(await page.locator("#nf-push-widget").isVisible(),"push diagnostic shortcut opens the settings tab");
+ await page.locator('[data-tab="agenda"]').click();
  await page.locator('[data-slot-turn="first"]').click();
  assert.ok((await page.locator("#booking-view-title").textContent()).includes("Primo turno"));
  await page.locator('[data-slot-turn="second"]').click();
@@ -227,5 +236,81 @@ for(const viewport of VIEWS){
  assert.equal(errors.length,0,viewport.label+" admin page errors: "+errors.join(";"));
  await context.close();
 }
+
+// Browser-level push journey: opt-in, test delivery and recovery from stale
+// browser subscriptions. The provider and OS are mocked; no real push is sent.
+{
+ const ctx=await browser.newContext({viewport:{width:390,height:844}});
+ await ctx.addInitScript(()=>{
+   let subscription=null;
+   const reg={
+     pushManager:{
+       getSubscription:async()=>subscription,
+       subscribe:async()=>{
+         subscription={
+           endpoint:"https://fcm.googleapis.com/fcm/send/mock-registered-phone",
+           keys:{p256dh:"mock",auth:"mock"},
+           toJSON(){return {endpoint:this.endpoint,keys:this.keys}},
+           async unsubscribe(){subscription=null;return true}
+         };
+         return subscription;
+       }
+     }
+   };
+   Object.defineProperty(window,"PushManager",{configurable:true,value:class FakePushManager{}});
+   const FakeNotification={permission:"default",requestPermission:async()=>{
+     FakeNotification.permission="granted";return "granted";
+   }};
+   Object.defineProperty(window,"Notification",{configurable:true,value:FakeNotification});
+   Object.defineProperty(navigator,"serviceWorker",{configurable:true,value:{
+     getRegistration:async()=>reg,register:async()=>reg,ready:Promise.resolve(reg)
+   }});
+ });
+ const page=await ctx.newPage();
+ const actions=[];let devices=0;
+ await page.route("**/admin/check",r=>r.fulfill({json:{authenticated:true}}));
+ await page.route("**/admin/push",r=>{
+   if(r.request().method()==="GET")
+     return r.fulfill({json:{configured:true,publicKey:"BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+       activeDevices:devices,pending:0}});
+   const payload=r.request().postDataJSON();
+   actions.push(payload.action);
+   if(payload.action==="subscribe"){
+     devices=1;return r.fulfill({json:{ok:true,id:"mock-device"}});
+   }
+   if(payload.action==="test")return r.fulfill({json:{ok:true,accepted:1,failed:0}});
+   if(payload.action==="unsubscribe"){devices=0;return r.fulfill({json:{ok:true}})}
+   return r.fulfill({status:400,json:{error:"Azione non supportata"}});
+ });
+ await page.route(/\/admin\/bookings(?:\?|$)/,r=>{
+   const mode=new URL(r.request().url()).searchParams.get("mode");
+   if(mode==="settings")return r.fulfill({json:settings});
+   if(mode==="alerts")return r.fulfill({json:{unread:0,last_id:0,recent:[]}});
+   if(mode==="timeline")return r.fulfill({json:{date,open:true,slots:[],capacity:50,holdback:5,
+     table_mode:true,tables:settings.tables,booked:[]}});
+   return r.fulfill({json:{bookings:[],total:0,filtered_total:0,booked:0,
+      capacity:50,page:1,limit:50,date}});
+ });
+ await page.goto(ROOT+"/admin-prenotazioni.html",{waitUntil:"domcontentloaded"});
+ await page.locator("#app").waitFor({state:"visible"});
+ await page.locator("#nf-push-quick-enable").waitFor({state:"visible"});
+ assert.equal(await page.locator("#nf-push-quick-test").isVisible(),false,
+   "test is available only after notifications have been activated");
+ await page.locator("#nf-push-quick-enable").click();
+ await page.locator("#nf-push-quick-test").waitFor({state:"visible"});
+ assert.ok(actions.includes("subscribe"),"device is registered server-side");
+ await page.locator("#nf-push-quick-test").click();
+ await page.waitForFunction(()=>document.querySelector("#nf-push-quick-status")?.textContent==="Prova inviata");
+ assert.ok(actions.includes("test"),"a test notification is requested from the server");
+ await page.locator('[data-tab="settings"]').click();
+ await page.locator("#nf-push-reconnect").waitFor({state:"visible"});
+ await page.locator("#nf-push-reconnect").click();
+ await page.locator("#nf-push-quick-test").waitFor({state:"visible"});
+ assert.ok(actions.filter(a=>a==="subscribe").length>=2,
+   "recovery control renews the server registration");
+ assert.equal(await page.locator("#nf-push-quick-enable").isVisible(),false);
+ await ctx.close();
+}
+
 await browser.close();
 console.log("PASS: mobile/desktop browser flows, responsive overflow, form, confirmation, calendar, admin manual booking, no-show.");
