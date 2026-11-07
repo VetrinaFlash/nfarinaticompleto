@@ -1,10 +1,13 @@
 import {json} from "../_lib/auth.js";
-import {bookingConfig,bookingError} from "../_lib/booking.js";
-export async function onRequestGet({env}) {
-  try {
-    const c=await bookingConfig(env);
-    return json({enabled:!!c.enabled,max_party:c.max_party,advance_days:c.advance_days,
-      duration_min:c.duration_min,buffer_min:c.buffer_min,interval_min:c.interval_min,
-      turnstile_site_key:env.TURNSTILE_SITE_KEY||null});
-  } catch(e) {return bookingError(e);}
-}
+
+// Historical booking records remain in D1 and are NOT deleted.
+// Disable both reads and mutations so stale clients cannot create
+// or change table reservations after removal of the booking service.
+const retired=()=>json({
+  error:"Il servizio di prenotazione tavoli online non è più attivo. Contatta direttamente il locale.",
+  code:"TABLE_BOOKING_RETIRED"
+},410,{"Cache-Control":"no-store"});
+export const onRequestGet=retired;
+export const onRequestPost=retired;
+export const onRequestPut=retired;
+export const onRequestDelete=retired;
