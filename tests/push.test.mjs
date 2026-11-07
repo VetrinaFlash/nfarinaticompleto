@@ -161,3 +161,24 @@ test("legacy push_subscriptions without origin remains untouched while new isola
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get().n,1);
  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_subscriptions").get().n,1);
 });
+
+test("diagnostics identify missing or invalid preview VAPID keys without revealing the private secret",async()=>{
+ const {env}=await createFixture();
+ const good=await pushDiagnostics(env,base);
+ assert.deepEqual(good.keyStatus,{public:"ok",private:"ok"});
+ assert.equal(good.configured,true);
+ delete env.VAPID_PRIVATE_KEY;
+ const missing=await pushDiagnostics(env,base);
+ assert.equal(missing.configured,false);
+ assert.equal(missing.keyStatus.private,"missing");
+ assert.equal(missing.keyStatus.public,"ok");
+ assert.ok(!JSON.stringify(missing).includes("VAPID_PRIVATE_KEY:"));
+ env.VAPID_PRIVATE_KEY="invalid-secret";
+ const invalid=await pushDiagnostics(env,base);
+ assert.equal(invalid.configured,false);
+ assert.equal(invalid.keyStatus.private,"invalid");
+ delete env.VAPID_PUBLIC_KEY;
+ const noPublic=await pushDiagnostics(env,base);
+ assert.equal(noPublic.keyStatus.public,"missing");
+ assert.equal(noPublic.publicKey,null);
+});
