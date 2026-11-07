@@ -88,8 +88,8 @@ test("D1 outbox sends each event once and does not duplicate on retry",async()=>
  assert.equal(a.sent,1);assert.equal(a.failed,0);
  let b=await runPendingPush(env,base,{fetcher});
  assert.equal(b.processed,0);assert.equal(deliveries,1);
- assert.equal(db.prepare("SELECT COUNT(*) AS count FROM push_events").get().count,1);
- assert.equal(db.prepare("SELECT COUNT(*) AS count FROM push_deliveries").get().count,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS count FROM nf_webpush_events").get().count,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS count FROM nf_webpush_deliveries").get().count,1);
 });
 test("expired subscriptions are disabled without retrying them forever",async()=>{
  const {env,db,subscription}=await createFixture();
@@ -98,8 +98,8 @@ test("expired subscriptions are disabled without retrying them forever",async()=
     target:"/admin-prenotazioni.html?date=2026-11-08#agenda"});
  const outcome=await runPendingPush(env,base,{fetcher:async()=>new Response(null,{status:410})});
  assert.equal(outcome.failed,0);
- assert.equal(db.prepare("SELECT active FROM push_subscriptions").get().active,0);
- assert.ok(db.prepare("SELECT delivered_ms FROM push_events").get().delivered_ms);
+ assert.equal(db.prepare("SELECT active FROM nf_webpush_subscriptions").get().active,0);
+ assert.ok(db.prepare("SELECT delivered_ms FROM nf_webpush_events").get().delivered_ms);
 });
 test("push registration, diagnostics and sending require admin authentication",async()=>{
  const {env,subscription}=await createFixture();
@@ -124,15 +124,15 @@ test("push queue retries failed provider deliveries without losing a confirmed o
    title:"Nuovo ordine",body:"Ordine confermato",target:"/admin.html?section=orders"});
  const first=await runPendingPush(env,base,{fetcher:async()=>new Response(null,{status:503})});
  assert.equal(first.failed,1);
- const row=db.prepare("SELECT delivered_ms,next_attempt_ms,attempts FROM push_events").get();
+ const row=db.prepare("SELECT delivered_ms,next_attempt_ms,attempts FROM nf_webpush_events").get();
  assert.equal(row.delivered_ms,null);assert.equal(row.attempts,1);
  assert.ok(row.next_attempt_ms>Date.now()-1000);
  const second=await runPendingPush(env,base,{
    now:row.next_attempt_ms+1,fetcher:async()=>new Response(null,{status:201})
  });
  assert.equal(second.sent,1);
- assert.ok(db.prepare("SELECT delivered_ms FROM push_events").get().delivered_ms);
- assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_deliveries").get().n,1);
+ assert.ok(db.prepare("SELECT delivered_ms FROM nf_webpush_events").get().delivered_ms);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_deliveries").get().n,1);
 });
 test("a device can opt into bookings without receiving order alerts",async()=>{
  const {env,subscription}=await createFixture();
@@ -143,4 +143,21 @@ test("a device can opt into bookings without receiving order alerts",async()=>{
  let sent=0;
  const outcome=await runPendingPush(env,base,{fetcher:async()=>{sent++;return new Response(null,{status:201})}});
  assert.equal(outcome.processed,2);assert.equal(sent,1);
+});
+
+
+test("legacy push_subscriptions without origin remains untouched while new isolated Web Push works",async()=>{
+ const {env,db,subscription}=await createFixture();
+ db.exec("CREATE TABLE push_subscriptions(id TEXT PRIMARY KEY,endpoint TEXT,created_at TEXT)");
+ db.prepare("INSERT INTO push_subscriptions(id,endpoint,created_at) VALUES(?,?,?)")
+  .run("legacy-test","https://legacy.example.org/device","2026-10-01");
+ const response=await pushDiagnostics(env,base);
+ assert.equal(response.activeDevices,0);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get().n,1);
+ const legacyCols=db.prepare("PRAGMA table_info(push_subscriptions)").all().map(x=>x.name);
+ assert.ok(!legacyCols.includes("origin"),"legacy schema must remain untouched");
+ await registerDevice(env,base,subscription);
+ assert.equal((await pushDiagnostics(env,base)).activeDevices,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get().n,1);
+ assert.equal(db.prepare("SELECT COUNT(*) AS n FROM nf_webpush_subscriptions").get().n,1);
 });
