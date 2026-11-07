@@ -26,49 +26,71 @@
 <button class="tab" data-tab="hours">🕒 Orari</button>
 <button class="tab" data-tab="closures">🚫 Chiusure</button>
 </div>
-<div id="agenda-tab">
-<div class="grid agenda-summary" aria-label="Riepilogo della giornata">
-  <div class="stat"><strong id="total">—</strong><span>Prenotazioni del giorno</span></div>
-  <div class="stat"><strong id="guests">—</strong><span>Coperti prenotati</span></div>
-  <div class="stat"><strong id="capacity">—</strong><span>Capienza del locale</span></div>
-</div>
+
+<div id="agenda-tab" class="fork-agenda">
+<section class="fork-agenda-head" aria-label="Agenda per orario">
+  <div class="fork-date-navigation">
+    <button class="fork-day-arrow" type="button" id="day-prev" aria-label="Giorno precedente">‹</button>
+    <label class="fork-date-label" for="slot-date">
+      <span>PRENOTAZIONI DI</span>
+      <input type="date" id="slot-date" aria-label="Seleziona giorno prenotazioni">
+    </label>
+    <button class="fork-day-arrow" type="button" id="day-next" aria-label="Giorno successivo">›</button>
+  </div>
+  <div class="fork-service-tabs" role="group" aria-label="Servizi">
+    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti i turni <span class="fork-cover-count" id="all-turn-covers">0p</span></button>
+    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">Primo turno <span class="fork-cover-count" id="first-turn-covers">0p</span></button>
+    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">Secondo turno <span class="fork-cover-count" id="second-turn-covers">0p</span></button>
+  </div>
+  <div class="fork-agenda-metrics" aria-label="Riepilogo del giorno">
+    <span><strong id="total">—</strong> prenotazioni</span>
+    <span><strong id="guests">—</strong> coperti</span>
+    <span><strong id="capacity">—</strong> capienza</span>
+  </div>
+  <div class="fork-view-controls">
+    <button class="fork-view-button" id="show-tables-by-time" type="button" aria-expanded="false" aria-controls="availability-details">▦ Tavoli per fascia oraria</button>
+    <button class="fork-view-button" type="button" id="book-selected">＋ Nuova prenotazione</button>
+  </div>
+</section>
+<section class="fork-reservations-panel" aria-label="Prenotazioni raggruppate per orario">
+  <div class="fork-reservations-toolbar">
+    <div><h2 id="booking-view-title">Tutte le prenotazioni</h2>
+      <p class="muted" id="booking-view-description">Prenotazioni ordinate per ora di arrivo.</p></div>
+    <button type="button" class="btn small hidden" id="reset-slot">Tutte le fasce</button>
+  </div>
+  <div class="fork-filter-line">
+    <input type="date" id="filter-date" class="hidden" tabindex="-1" aria-hidden="true">
+    <label for="filter-status">Stato</label>
+    <select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select>
+    <button class="fork-refresh" type="button" id="refresh" aria-label="Aggiorna prenotazioni">↻ Aggiorna</button>
+  </div>
+  <div id="agenda-status" class="fork-agenda-status" role="status" aria-live="polite"></div>
+  <div id="booking-list" class="fork-booking-list"></div>
+  <div class="fork-paging"><button class="btn small" id="prev">← Precedenti</button>
+    <span class="muted" id="page-info"></span><button class="btn small" id="next">Successive →</button></div>
+</section>
+<div id="availability-details" class="hidden">
 <section class="panel slot-console">
-  <div class="slot-console-title"><div><h2>Scegli giorno e turno</h2><p class="muted">Tocca una fascia per vedere gli ospiti e gestire quel turno.</p></div>
-    <div class="slot-day-nav"><button class="btn small" type="button" id="day-prev" aria-label="Giorno precedente">←</button>
-      <input type="date" id="slot-date" aria-label="Data fasce orarie">
-      <button class="btn small" type="button" id="day-next" aria-label="Giorno successivo">→</button></div>
-  </div>
-  <div class="slot-turns" role="group" aria-label="Turni prenotazioni">
-    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti</button>
-    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">🌤 Primo turno</button>
-    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">🌙 Secondo turno</button>
-  </div>
+  <h2>Disponibilità per fascia</h2>
+  <p class="muted">Seleziona un orario per visualizzare disponibilità e tavoli occupati.</p>
   <div class="slot-key"><span><i class="slot-dot free"></i> Disponibile</span><span><i class="slot-dot nearly"></i> Quasi pieno</span><span><i class="slot-dot full"></i> Completo</span></div>
   <p class="status" id="slots-status" role="status"></p>
   <div id="service-slots" class="service-slots" aria-live="polite"></div>
-  <small class="muted">I coperti disponibili sono calcolati per l'intera permanenza di 90 minuti, riassetto incluso. Le prenotazioni telefoniche rispettano sempre la capienza totale.</small>
+  <small class="muted">I coperti disponibili comprendono i 90 minuti della fascia, riassetto incluso.</small>
 </section>
-<section class="panel table-schedule-panel" aria-label="Disponibilità dei tavoli per fascia oraria">
+<section class="panel table-schedule-panel" aria-label="Disponibilità fisica dei tavoli">
   <div class="table-schedule-heading">
     <div>
       <span class="table-schedule-eyebrow">SALA · DISPONIBILITÀ</span>
       <h2 id="table-schedule-title">Tavoli per fascia oraria</h2>
-      <p id="table-schedule-subtitle" class="muted">Scegli un orario per visualizzare i singoli tavoli.</p>
+      <p id="table-schedule-subtitle" class="muted">Seleziona una fascia per visualizzare i tavoli.</p>
     </div>
     <button type="button" class="btn small" id="configure-sala">⚙ Gestisci tavoli</button>
   </div>
   <p id="table-schedule-note" class="muted" role="status"></p>
   <div id="table-schedule-grid" class="table-schedule-grid" aria-live="polite"></div>
 </section>
-<section class="panel booking-panel">
-<div class="booking-toolbar"><div><h2 id="booking-view-title">Tutte le prenotazioni</h2><p class="muted" id="booking-view-description">Seleziona un orario per vedere solo i clienti di quella fascia.</p></div>
-<div class="booking-toolbar-actions">
-  <button type="button" class="btn small hidden" id="reset-slot">Mostra tutte</button>
-  <button type="button" class="btn gold" id="book-selected">+ Prenota</button>
-</div></div>
-<div class="tools booking-filters">
-<input type="date" id="filter-date" class="hidden" tabindex="-1" aria-hidden="true">
-<div class="field"><label for="filter-status">Filtra per stato</label><select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select></div><button class="btn" id="refresh">↻ Aggiorna</button></div><div id="agenda-status" class="status"></div><div id="booking-list" class="booking-list"></div><div class="tools"><button class="btn" id="prev">← Precedenti</button><span class="muted" id="page-info"></span><button class="btn" id="next">Successive →</button></div></section>
+</div>
 </div>
 <div id="settings-tab" class="hidden"><section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
 <div class="field"><label>Capienza contemporanea</label><input name="capacity" type="number" min="1" max="1000" required></div>
