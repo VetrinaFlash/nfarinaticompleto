@@ -2,7 +2,10 @@
 (() => {
   "use strict";
   const $=id=>document.getElementById(id);
-  let config=null, busy=false;
+  let config=null, busy=false, checking=false;
+  // The inline copy on each admin page should never initialize twice.
+  if(window.__nfPushInitialized)return;
+  window.__nfPushInitialized=true;
   function mount(){
     const quickEnable=$("nf-push-quick-enable");
     const quickTest=$("nf-push-quick-test");
@@ -21,6 +24,7 @@
         if(tab)tab.click();
         const widget=$("nf-push-widget");
         if(widget)widget.scrollIntoView({behavior:"smooth",block:"center"});
+        refresh();
       });
       quickSettings.dataset.bound="true";
     }
@@ -74,12 +78,28 @@
       quickSettings.disabled=busy;
     }
   }
+  function deadline(operation,ms=6500){
+    // Prevent the UI hanging forever when a Pages Function or a Service Worker stalls.
+    let timer;
+    return Promise.race([
+      Promise.resolve().then(operation),
+      new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("Tempo scaduto. Verifica connessione e servizio notifiche.")),ms)})
+    ]).finally(()=>clearTimeout(timer));
+  }
   async function api(body){
-    const response=await fetch("/admin/push",{method:body?"POST":"GET",credentials:"same-origin",
-      cache:"no-store",...(body?{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{})});
-    const data=await response.json();
-    if(!response.ok)throw Error(data.error||"Servizio notifiche non disponibile");
-    return data;
+    const controller=new AbortController();
+    let timer=setTimeout(()=>controller.abort(),6500);
+    try{
+      const response=await fetch("/admin/push",{method:body?"POST":"GET",credentials:"same-origin",
+        cache:"no-store",signal:controller.signal,
+        ...(body?{headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:{})});
+      const data=await deadline(()=>response.json(),3500);
+      if(!response.ok)throw Error(data.error||"Servizio notifiche non disponibile ("+response.status+")");
+      return data;
+    }catch(e){
+      if(e.name==="AbortError")throw Error("Il controllo push non risponde (timeout). Apri Impostazioni e riprova.");
+      throw e;
+    }finally{clearTimeout(timer)}
   }
   function decode(key){
     const s=atob(key.replace(/-/g,"+").replace(/_/g,"/").padEnd(Math.ceil(key.length/4)*4,"="));
@@ -87,7 +107,12 @@
   }
   async function refresh(){
     mount();
-    if(busy||!$("nf-push-enable"))return;
+    if(busy||checking||!$("nf-push-enable"))return;
+    checking=true;
+    const settings=$("nf-push-quick-settings");
+    if(settings)settings.hidden=false; // Never leave only a spinning label.
+    say("Verifica stato notifiche in corso...","","Verifica push…");
+    try{
     if(!available()){
       say("Browser non compatibile. Su iPhone aggiungi il sito alla schermata Home prima di attivare le push.","error","Push non supportate");
       buttons(false,false);return;
@@ -107,14 +132,22 @@
         say("Permesso negato: abilita le notifiche nelle impostazioni di questo sito.","error","Push bloccate");
         buttons(false,true);return;
       }
-      const reg=await navigator.serviceWorker.getRegistration("/");
-      const sub=reg?await reg.pushManager.getSubscription():null;
+      const reg=await deadline(()=>navigator.serviceWorker.getRegistration("/"));
+      const sub=reg?await deadline(()=>reg.pushManager.getSubscription()):null;
       const active=Notification.permission==="granted"&&!!sub;
       buttons(active,true);
       say(active?"Push abilitate su questo telefono · Dispositivi attivi: "+config.activeDevices+
         " · In attesa: "+config.pending+".":"Attiva per ricevere ordini e prenotazioni anche a pannello chiuso.",
         active?"success":"",active?"Push attive":"Push non attive");
-    }catch(e){say(e.message||"Controllo push non disponibile","error","Controlla le push");buttons(false,false)}
+    }catch(e){
+      say("Stato push non disponibile: "+(e.message||"errore sconosciuto")+
+        ". Puoi riprovare da Impostazioni, senza toccare gli ordini.","error","Push non disponibili");
+      buttons(false,false);
+    }finally{checking=false}
+    }catch(e){
+      say("Errore controllo notifiche: "+String(e?.message||"errore"),"error","Controlla push");
+      buttons(false,false);checking=false;
+    }
   }
   async function enable(replaceExisting=false){
     if(busy)return;
@@ -126,17 +159,17 @@
       if(permission!=="granted")throw Error("Permesso negato nelle impostazioni del browser");
       config=await api();
       if(!config.configured||!config.publicKey)throw Error("Chiavi Web Push non configurate sul server");
-      const registration=await navigator.serviceWorker.register("/push-sw.js",{scope:"/",updateViaCache:"none"});
-      await navigator.serviceWorker.ready;
-      let sub=await registration.pushManager.getSubscription();
+      const registration=await deadline(()=>navigator.serviceWorker.register("/push-sw.js",{scope:"/",updateViaCache:"none"}),9000);
+      await deadline(()=>navigator.serviceWorker.ready,9000);
+      let sub=await deadline(()=>registration.pushManager.getSubscription(),9000);
       if(sub&&replaceExisting){await sub.unsubscribe();sub=null}
       if(sub&&sub.options?.applicationServerKey){
         const old=new Uint8Array(sub.options.applicationServerKey),next=decode(config.publicKey);
         if(old.length!==next.length||old.some((n,i)=>n!==next[i])){await sub.unsubscribe();sub=null}
       }
-      if(!sub)sub=await registration.pushManager.subscribe({
+      if(!sub)sub=await deadline(()=>registration.pushManager.subscribe({
         userVisibleOnly:true,applicationServerKey:decode(config.publicKey)
-      });
+      }),12000);
       await api({action:"subscribe",subscription:sub.toJSON(),orders:true,bookings:true});
       say("Attivate! Riceverai push per ordini e prenotazioni. Prova il pulsante di test.","success","Push attivate");
     }catch(e){say("Attivazione non riuscita: "+(e.message||"errore"),"error","Attivazione fallita")}
