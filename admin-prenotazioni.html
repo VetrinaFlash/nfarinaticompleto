@@ -308,6 +308,14 @@ function renderTableSchedule(){
  }
 }
 $('configure-sala').onclick=()=>tab('tables');
+function updateTurnBadges(){
+ const active=slotData?.booked||[];
+ const first=active.filter(r=>r.start_min<1230).reduce((n,r)=>n+Number(r.guests||0),0);
+ const second=active.filter(r=>r.start_min>=1230).reduce((n,r)=>n+Number(r.guests||0),0);
+ $('all-turn-covers').textContent=(first+second)+'p';
+ $('first-turn-covers').textContent=first+'p';
+ $('second-turn-covers').textContent=second+'p';
+}
 async function loadSlots(){
  const seq=++slotFetch,date=$('slot-date').value;
  if(!date)return;
@@ -315,11 +323,11 @@ async function loadSlots(){
  try{
   const d=await api('/admin/bookings?mode=timeline&date='+encodeURIComponent(date));
   if(seq!==slotFetch)return;
-  slotData=d;renderSlotTiles();renderTableSchedule();
+  slotData=d;renderSlotTiles();renderTableSchedule();updateTurnBadges();
   message('slots-status',d.open?''+d.slots.length+' fasce disponibili nel calendario del locale':'Locale chiuso / prenotazioni sospese');
  }catch(e){
     if(seq!==slotFetch)return;
-    slotData=null;renderSlotTiles();renderTableSchedule();
+    slotData=null;renderSlotTiles();renderTableSchedule();updateTurnBadges();
     message('slots-status',e.message,true);
   }
 }
