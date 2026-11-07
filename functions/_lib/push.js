@@ -84,6 +84,13 @@ export async function buildWebPushRequest(message,subscription,env,now=Date.now(
   }};
 }
 /*
+ * These dedicated nf_webpush_* tables intentionally DO NOT share the
+ * old push_subscriptions table: existing D1 installations may contain
+ * an unrelated legacy push system lacking an origin column. New push
+ * subscriptions are origin-scoped and must be explicitly opt-in.
+ * Existing legacy rows remain untouched; re-activate on each device.
+ */
+/*
  * D1 schema bootstrap must survive interrupted deploys. All steps are
  * idempotent and label the exact failing D1 operation for diagnostics.
  */
@@ -102,39 +109,39 @@ export async function ensurePushSchema(env) {
         throw error;
       }
     };
-    await exec("subscriptions-table",`CREATE TABLE IF NOT EXISTS push_subscriptions (
+    await exec("subscriptions-table",`CREATE TABLE IF NOT EXISTS nf_webpush_subscriptions (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,endpoint TEXT NOT NULL,p256dh TEXT NOT NULL,auth TEXT NOT NULL,
       orders INTEGER NOT NULL DEFAULT 1,bookings INTEGER NOT NULL DEFAULT 1,active INTEGER NOT NULL DEFAULT 1,
       created_ms INTEGER NOT NULL,updated_ms INTEGER NOT NULL,last_error TEXT NOT NULL DEFAULT ''
     )`);
-    await exec("events-table",`CREATE TABLE IF NOT EXISTS push_events (
+    await exec("events-table",`CREATE TABLE IF NOT EXISTS nf_webpush_events (
       id TEXT PRIMARY KEY,origin TEXT NOT NULL,kind TEXT NOT NULL,title TEXT NOT NULL,body TEXT NOT NULL,
       target TEXT NOT NULL,created_ms INTEGER NOT NULL,delivered_ms INTEGER,attempts INTEGER NOT NULL DEFAULT 0,
       next_attempt_ms INTEGER NOT NULL DEFAULT 0,claim_until_ms INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT ''
     )`);
-    await exec("deliveries-table",`CREATE TABLE IF NOT EXISTS push_deliveries (
+    await exec("deliveries-table",`CREATE TABLE IF NOT EXISTS nf_webpush_deliveries (
       event_id TEXT NOT NULL,subscription_id TEXT NOT NULL,sent_ms INTEGER NOT NULL,
       PRIMARY KEY(event_id,subscription_id)
     )`);
     // Additive migration: do not delete subscriptions or pending alerts.
     const optional={
-      push_subscriptions:{
+      nf_webpush_subscriptions:{
         orders:"INTEGER NOT NULL DEFAULT 1",bookings:"INTEGER NOT NULL DEFAULT 1",
         active:"INTEGER NOT NULL DEFAULT 1",created_ms:"INTEGER NOT NULL DEFAULT 0",
         updated_ms:"INTEGER NOT NULL DEFAULT 0",last_error:"TEXT NOT NULL DEFAULT ''"
       },
-      push_events:{
+      nf_webpush_events:{
         delivered_ms:"INTEGER",attempts:"INTEGER NOT NULL DEFAULT 0",
         next_attempt_ms:"INTEGER NOT NULL DEFAULT 0",claim_until_ms:"INTEGER NOT NULL DEFAULT 0",
         last_error:"TEXT NOT NULL DEFAULT ''"
       }
     };
     const required={
-      push_subscriptions:["id","origin","endpoint","p256dh","auth"],
-      push_events:["id","origin","kind","title","body","target","created_ms"],
-      push_deliveries:["event_id","subscription_id","sent_ms"]
+      nf_webpush_subscriptions:["id","origin","endpoint","p256dh","auth"],
+      nf_webpush_events:["id","origin","kind","title","body","target","created_ms"],
+      nf_webpush_deliveries:["event_id","subscription_id","sent_ms"]
     };
-    for(const table of ["push_subscriptions","push_events","push_deliveries"]){
+    for(const table of ["nf_webpush_subscriptions","nf_webpush_events","nf_webpush_deliveries"]){
       let columns;
       try {
         const response=await env.DB.prepare("PRAGMA table_info("+table+")").all();
@@ -156,8 +163,8 @@ export async function ensurePushSchema(env) {
             "ALTER TABLE "+table+" ADD COLUMN "+col+" "+definition);
       }
     }
-    await exec("subscriptions-index","CREATE INDEX IF NOT EXISTS push_subscriptions_active_idx ON push_subscriptions(origin,active)");
-    await exec("events-index","CREATE INDEX IF NOT EXISTS push_events_queue_idx ON push_events(origin,delivered_ms,next_attempt_ms,created_ms)");
+    await exec("subscriptions-index","CREATE INDEX IF NOT EXISTS nf_webnf_webpush_subscriptions_active_idx ON nf_webpush_subscriptions(origin,active)");
+    await exec("events-index","CREATE INDEX IF NOT EXISTS nf_webnf_webpush_events_queue_idx ON nf_webpush_events(origin,delivered_ms,next_attempt_ms,created_ms)");
   })();
   init.set(env.DB,promise);
   try {await promise} catch(e){init.delete(env.DB);throw e;}
@@ -165,7 +172,7 @@ export async function ensurePushSchema(env) {
 export async function registerDevice(env,origin,raw,category={orders:true,bookings:true}){
   const sub=validateSubscription(raw);await ensurePushSchema(env);
   const id=await sha256(sub.endpoint),now=Date.now();
-  await env.DB.prepare(`INSERT INTO push_subscriptions
+  await env.DB.prepare(`INSERT INTO nf_webpush_subscriptions
     (id,origin,endpoint,p256dh,auth,orders,bookings,active,created_ms,updated_ms)
     VALUES(?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(id) DO UPDATE SET origin=excluded.origin,endpoint=excluded.endpoint,
@@ -178,7 +185,7 @@ export async function registerDevice(env,origin,raw,category={orders:true,bookin
 export async function unregisterDevice(env,origin,endpoint){
   await ensurePushSchema(env);
   if(!isAllowedPushEndpoint(endpoint))throw Error("Endpoint non valido");
-  await env.DB.prepare("UPDATE push_subscriptions SET active=0,updated_ms=? WHERE id=? AND origin=?")
+  await env.DB.prepare("UPDATE nf_webpush_subscriptions SET active=0,updated_ms=? WHERE id=? AND origin=?")
     .bind(Date.now(),await sha256(endpoint),origin).run();
   return {ok:true};
 }
@@ -189,7 +196,7 @@ export async function enqueuePushEvent(env,origin,{kind,id,title,body,target},no
      !/^\/(?:admin\.html|admin-prenotazioni\.html)(?:\?[^#]{0,180})?(?:#[A-Za-z0-9_-]{0,30})?$/.test(target))
     throw Error("Destinazione push non valida");
   await ensurePushSchema(env);
-  await env.DB.prepare(`INSERT OR IGNORE INTO push_events
+  await env.DB.prepare(`INSERT OR IGNORE INTO nf_webpush_events
     (id,origin,kind,title,body,target,created_ms) VALUES(?,?,?,?,?,?,?)`)
     .bind(kind+":"+id,origin,kind,String(title).slice(0,110),
       String(body).slice(0,240),target,now).run();
@@ -197,10 +204,10 @@ export async function enqueuePushEvent(env,origin,{kind,id,title,body,target},no
 export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,limit=10}={}){
   await ensurePushSchema(env);
   if(!pushConfigured(env))return {ok:false,reason:"vapid_missing",sent:0,failed:0};
-  const claimed=await env.DB.prepare(`UPDATE push_events
+  const claimed=await env.DB.prepare(`UPDATE nf_webpush_events
     SET claim_until_ms=?,attempts=attempts+1
     WHERE id IN (
-      SELECT id FROM push_events WHERE origin=? AND delivered_ms IS NULL
+      SELECT id FROM nf_webpush_events WHERE origin=? AND delivered_ms IS NULL
       AND next_attempt_ms<=? AND claim_until_ms<? AND created_ms>?
       ORDER BY created_ms ASC LIMIT ?
     )
@@ -208,12 +215,12 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
     .bind(now+60000,origin,now,now,now-12*3600000,Math.max(1,Math.min(20,limit))).all();
   const events=claimed.results||[];let sent=0,failed=0;
   for(const event of events){
-    const list=await env.DB.prepare(`SELECT id,endpoint,p256dh,auth FROM push_subscriptions
+    const list=await env.DB.prepare(`SELECT id,endpoint,p256dh,auth FROM nf_webpush_subscriptions
       WHERE origin=? AND active=1 AND (orders=1 AND ?='order' OR bookings=1 AND ?='booking' OR ?='test')`)
       .bind(origin,event.kind,event.kind,event.kind).all();
     let errors=0;
     for(const sub of (list.results||[])){
-      const delivered=await env.DB.prepare("SELECT event_id FROM push_deliveries WHERE event_id=? AND subscription_id=?")
+      const delivered=await env.DB.prepare("SELECT event_id FROM nf_webpush_deliveries WHERE event_id=? AND subscription_id=?")
         .bind(event.id,sub.id).first();
       if(delivered)continue;
       try{
@@ -222,19 +229,19 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
         const {url,options}=await buildWebPushRequest(payload,sub,env,now);
         const response=await fetcher(url,{...options,signal:AbortSignal.timeout(6500)});
         if(response.status===404 || response.status===410){
-          await env.DB.prepare("UPDATE push_subscriptions SET active=0,last_error=? WHERE id=?")
+          await env.DB.prepare("UPDATE nf_webpush_subscriptions SET active=0,last_error=? WHERE id=?")
             .bind("scaduta ("+response.status+")",sub.id).run();
           continue;
         }
         if(!response.ok){
           errors++;failed++;
-          await env.DB.prepare("UPDATE push_subscriptions SET last_error=? WHERE id=?")
+          await env.DB.prepare("UPDATE nf_webpush_subscriptions SET last_error=? WHERE id=?")
             .bind("Push provider "+response.status,sub.id).run();
           continue;
         }
-        await env.DB.prepare("INSERT OR IGNORE INTO push_deliveries(event_id,subscription_id,sent_ms) VALUES(?,?,?)")
+        await env.DB.prepare("INSERT OR IGNORE INTO nf_webpush_deliveries(event_id,subscription_id,sent_ms) VALUES(?,?,?)")
           .bind(event.id,sub.id,now).run();
-        await env.DB.prepare("UPDATE push_subscriptions SET last_error='',updated_ms=? WHERE id=?")
+        await env.DB.prepare("UPDATE nf_webpush_subscriptions SET last_error='',updated_ms=? WHERE id=?")
           .bind(now,sub.id).run();
         sent++;
       }catch(e){
@@ -243,11 +250,11 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
       }
     }
     if(!errors){
-      await env.DB.prepare("UPDATE push_events SET delivered_ms=?,claim_until_ms=0,last_error='' WHERE id=?")
+      await env.DB.prepare("UPDATE nf_webpush_events SET delivered_ms=?,claim_until_ms=0,last_error='' WHERE id=?")
         .bind(now,event.id).run();
     }else{
       const pause=Math.min(3600000,15000*2**Math.min(event.attempts,7));
-      await env.DB.prepare("UPDATE push_events SET claim_until_ms=0,next_attempt_ms=?,last_error=? WHERE id=?")
+      await env.DB.prepare("UPDATE nf_webpush_events SET claim_until_ms=0,next_attempt_ms=?,last_error=? WHERE id=?")
         .bind(now+pause,"Provider temporaneamente non disponibile",event.id).run();
     }
   }
@@ -256,9 +263,9 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
 export async function pushDiagnostics(env,origin){
   await ensurePushSchema(env);
   const [subs,events,errors]=await Promise.all([
-    env.DB.prepare("SELECT COUNT(*) AS count FROM push_subscriptions WHERE origin=? AND active=1").bind(origin).first(),
-    env.DB.prepare("SELECT COUNT(*) AS count FROM push_events WHERE origin=? AND delivered_ms IS NULL AND created_ms>?").bind(origin,Date.now()-12*3600000).first(),
-    env.DB.prepare("SELECT kind,created_ms,delivered_ms,attempts,last_error FROM push_events WHERE origin=? ORDER BY created_ms DESC LIMIT 5").bind(origin).all()
+    env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_subscriptions WHERE origin=? AND active=1").bind(origin).first(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_events WHERE origin=? AND delivered_ms IS NULL AND created_ms>?").bind(origin,Date.now()-12*3600000).first(),
+    env.DB.prepare("SELECT kind,created_ms,delivered_ms,attempts,last_error FROM nf_webpush_events WHERE origin=? ORDER BY created_ms DESC LIMIT 5").bind(origin).all()
   ]);
   return {configured:pushConfigured(env),publicKey:env.VAPID_PUBLIC_KEY||null,
     activeDevices:Number(subs?.count||0),pending:Number(events?.count||0),recent:(errors.results||[])};
