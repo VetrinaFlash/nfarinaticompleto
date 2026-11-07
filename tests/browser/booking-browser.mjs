@@ -91,7 +91,8 @@ for(const viewport of VIEWS){
 const settings={config:{id:1,enabled:1,capacity:50,holdback:5,max_party:8,duration_min:90,buffer_min:15,
  interval_min:30,advance_days:60,notice_min:0,grace_min:15,table_mode:1},
  hours:Array.from({length:7},(_,i)=>({weekday:i,enabled:i===1?0:1,opens:"18:30",closes:"23:30"})),
- closures:[],tables:[{id:"t1",label:"Sala 1",seats:4,zone:"Sala",active:1}]};
+ closures:[],tables:[{id:"t1",label:"Sala 1",seats:4,zone:"Sala",active:1},
+ {id:"t2",label:"Veranda 2",seats:2,zone:"Veranda",active:1}]};
 for(const viewport of VIEWS){
  const context=await browser.newContext({viewport:{width:viewport.width,height:viewport.height}});
  const page=await context.newPage(),errors=agentError(page);
@@ -107,10 +108,12 @@ for(const viewport of VIEWS){
      if(mode==="alerts")return r.fulfill({json:{unread:1,last_id:1,recent:[]}});
      if(mode==="timeline")return r.fulfill({json:{
        date,open:true,capacity:50,holdback:5,duration_min:90,buffer_min:15,
+       table_mode:true,tables:settings.tables,
        slots:[{time:"18:30",start:1110,end:1200,used:0,onlineFree:45,capacity:50,arrivals:0,peopleArriving:0},
         {time:"19:00",start:1140,end:1230,used:4,onlineFree:41,capacity:50,arrivals:1,peopleArriving:4},
         {time:"20:30",start:1230,end:1320,used:0,onlineFree:45,capacity:50,arrivals:0,peopleArriving:0}],
-       booked:[]}}); 
+       booked:[{id:"occupied-1",name:"Marco Bianchi",guests:4,status:"confirmed",source:"online",
+          start_min:1140,end_min:1230,table_id:"t1"}]}}); 
      return r.fulfill({json:{bookings:[manual],total:1,booked:manual.guests,unread:1,
        capacity:50,page:1,limit:50,date}});
    }
@@ -129,6 +132,14 @@ for(const viewport of VIEWS){
  await page.locator("#booking-view-title").getByText("Ospiti delle 19:00").waitFor();
  assert.equal(await page.locator(".service-tile.selected").count(),1);
  await page.locator("#book-selected").getByText("+ Prenota alle 19:00").waitFor();
+ await page.locator("#table-schedule-title").getByText("Tavoli · 19:00 – 20:30").waitFor();
+ assert.equal(await page.locator(".schedule-table-card.is-occupied").count(),1,"one table is reserved for 19:00");
+ assert.equal(await page.locator(".schedule-table-card.is-free").count(),1,"another table is genuinely free");
+ assert.ok(await page.getByText("Marco Bianchi").count()>=1,"reservation guest is visible on table card");
+ await page.locator(".schedule-table-card.is-free .schedule-table-action").click();
+ assert.equal(await page.locator('#booking-edit [name="table_id"]').inputValue(),"t2");
+ assert.equal(await page.locator('#booking-edit [name="time"]').inputValue(),"19:00");
+ await page.locator("#close-modal").click();
  await page.locator("#reset-slot").click();
  await page.locator("#booking-view-title").getByText("Tutte le prenotazioni").waitFor();
  assert.ok(await page.locator("#nf-push-widget").isVisible());
@@ -136,6 +147,8 @@ for(const viewport of VIEWS){
  assert.equal(await page.locator(".service-tile").count(),2);
  await page.getByRole("button",{name:/Secondo turno/}).first().click();
  assert.equal(await page.locator(".service-tile").count(),1);
+ await page.locator("#table-schedule-title").getByText("Tavoli · 20:30 – 22:00").waitFor();
+ assert.equal(await page.locator(".schedule-table-card.is-free").count(),2);
  await page.getByRole("button",{name:/Tutti/}).first().click();
  await clearOverflow(page,viewport.label+" admin");
  if(viewport.width<=390){
