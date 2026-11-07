@@ -126,9 +126,24 @@ for(const viewport of VIEWS){
  });
  await page.goto(ROOT+"/admin-prenotazioni.html",{waitUntil:"domcontentloaded"});
  await page.locator("#app").waitFor({state:"visible"});
+ // Production safety: all booking styles must remain available even if the
+ // external theme asset cannot be fetched (stale cache / missing Pages asset).
+ assert.equal(await page.locator("#booking-admin-theme-inline").count(),1,
+   "the reservations stylesheet must be embedded in the HTML response");
+ assert.equal(await page.locator('link[href="/booking-admin-theme.css"]').count(),0,
+   "the reservations layout must not depend on a second HTTP request");
+ assert.equal(await page.locator(".fork-service-tabs").evaluate(e=>getComputedStyle(e).display),"grid",
+   "service turn tabs must be styled instead of using native buttons");
+ assert.equal(await page.locator(".fork-date-navigation").evaluate(e=>getComputedStyle(e).display),"flex",
+   "date arrows and picker must stay on one row");
+ assert.equal(await page.locator(".fork-date-label span").evaluate(e=>getComputedStyle(e).display),"none",
+   "compact date header must not show the fallback giant label");
  await page.locator("#slot-date").fill(date);
  await page.locator("#refresh").click();
  await page.locator(".fork-time-group").first().waitFor();
+ assert.equal(await page.locator(".fork-time-head").first().evaluate(e=>getComputedStyle(e).display),"flex");
+ assert.equal(await page.locator(".fork-reservation-summary").first().evaluate(e=>getComputedStyle(e).display),"flex",
+   "customer name, covers and status must render as spaced columns");
  assert.ok(await page.locator("#agenda-tab").isVisible(),"reservations is the default admin view");
  assert.ok(!await page.locator("#availability-tab").isVisible(),"availability must live in a separate tab");
  assert.equal(await page.locator(".fork-time-group").count(),1);
