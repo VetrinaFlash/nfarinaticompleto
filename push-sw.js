@@ -7,9 +7,10 @@ self.addEventListener("push",event=>{
     try{info=event.data?.json()||{}}catch{
       try{info={body:event.data?.text()||""}}catch{}
     }
-    const allowed=typeof info.url==="string" &&
-      /^\/(?:admin\.html|admin-prenotazioni\.html)(?:[?#][A-Za-z0-9_=%&+.-]*)?$/.test(info.url);
-    const target=allowed?info.url:"/admin.html";
+    const targetUrl=new URL(typeof info.url==="string"?info.url:"/admin.html",self.location.origin);
+    const allowed=targetUrl.origin===self.location.origin &&
+      /^\/(?:admin\.html|admin-prenotazioni\.html)$/.test(targetUrl.pathname);
+    const target=allowed?targetUrl.pathname+targetUrl.search+targetUrl.hash:"/admin.html";
     const kind=["order","booking","test"].includes(info.kind)?info.kind:"test";
     await self.registration.showNotification(String(info.title||"N'Farinati · Novità").slice(0,110),{
       body:String(info.body||"Apri il pannello amministrativo").slice(0,200),
