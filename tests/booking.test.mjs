@@ -366,3 +366,32 @@ test("admin timeline renders table occupancy after a phone no-show and releases 
  assert.equal(x.booked.length,0);
  assert.equal(x.slots.find(s=>s.time==="19:00").used,0);
 });
+
+test("changing the admin turn filters the booking list without changing daily totals",async()=>{
+ const {env,req,date}=await fixture(),cookie=await adminCookie(env);
+ const first=await createBooking(env,{...req,time:"19:00",name:"Primo turno"});
+ const second=await createBooking(env,{...req,time:"21:00",name:"Secondo turno"});
+ assert.notEqual(first.id,second.id);
+ const get=async(params)=>{
+   const res=await adminGet({env,request:request("/admin/bookings?date="+date+"&"+params,undefined,cookie)});
+   assert.equal(res.status,200);
+   return res.json();
+ };
+ const all=await get("turn=all");
+ assert.equal(all.bookings.length,2);
+ const one=await get("turn=first");
+ assert.equal(one.bookings.length,1);
+ assert.equal(one.bookings[0].name,"Primo turno");
+ assert.equal(one.total,2,"daily summary remains unchanged");
+ assert.equal(one.filtered_total,1);
+ const two=await get("turn=second");
+ assert.equal(two.bookings.length,1);
+ assert.equal(two.bookings[0].name,"Secondo turno");
+ assert.equal(two.total,2);
+ assert.equal(two.filtered_total,1);
+ const exact=await get("turn=second&time=19%3A00");
+ assert.equal(exact.bookings.length,1,"a specifically selected hour overrides turn filters");
+ assert.equal(exact.bookings[0].name,"Primo turno");
+ const invalid=await adminGet({env,request:request("/admin/bookings?date="+date+"&turn=imaginary",undefined,cookie)});
+ assert.equal(invalid.status,400);
+});
