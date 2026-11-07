@@ -8,7 +8,7 @@
     const quickTest=$("nf-push-quick-test");
     const quickSettings=$("nf-push-quick-settings");
     if(quickEnable && !quickEnable.dataset.bound){
-      quickEnable.addEventListener("click",enable);
+      quickEnable.addEventListener("click",()=>enable(false));
       quickEnable.dataset.bound="true";
     }
     if(quickTest && !quickTest.dataset.bound){
@@ -37,7 +37,7 @@
       '<button id="nf-push-disable" type="button" hidden>Disattiva</button>'+
       '<small role="status" aria-live="polite" id="nf-push-status">Verifica disponibilità...</small>';
     if(parent.classList.contains("sidebar-footer"))parent.prepend(box);else parent.append(box);
-    $("nf-push-enable").addEventListener("click",enable);
+    $("nf-push-enable").addEventListener("click",()=>enable(false));
     $("nf-push-disable").addEventListener("click",disable);
     $("nf-push-test").addEventListener("click",test);
     $("nf-push-reconnect").addEventListener("click",()=>enable(true));
