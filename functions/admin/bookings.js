@@ -1,6 +1,6 @@
 import {adminIdentity,json} from "../_lib/auth.js";
 import {enqueuePushEvent,runPendingPush} from "../_lib/push.js";
-import {ensureBookingSchema,bookingConfig,createBooking,updateBooking,changeStatus,extendBooking,bookingError,validDate,parseTime,timeText,italyNow,addDays} from "../_lib/booking.js";
+import {ensureBookingSchema,bookingConfig,createBooking,updateBooking,changeStatus,extendBooking,bookingError,validDate,parseTime,timeText,italyNow,addDays,weekday} from "../_lib/booking.js";
 
 async function admin(env,request) {
   const user=await adminIdentity(env,request);
@@ -43,11 +43,12 @@ export async function onRequestGet({env,request}) {
       if(!validDate(date))return json({error:"Data non valida"},400);
       const cfg=await bookingConfig(env);
       const day=weekday(date);
-      const [hourRow,closure,inventories,guests]=await Promise.all([
+      const [hourRow,closure,inventories,guests,tables]=await Promise.all([
         env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(day).first(),
         env.DB.prepare("SELECT date FROM booking_closed_dates WHERE date=?").bind(date).first(),
         env.DB.prepare("SELECT minute,total,online FROM booking_slot_inventory WHERE date=? ORDER BY minute").bind(date).all(),
-        env.DB.prepare("SELECT id,name,guests,status,source,start_min,end_min,table_id FROM booking_reservations WHERE date=? AND status IN('confirmed','arrived','seated') ORDER BY start_min").bind(date).all()
+        env.DB.prepare("SELECT id,name,guests,status,source,start_min,end_min,table_id FROM booking_reservations WHERE date=? AND status IN('confirmed','arrived','seated') ORDER BY start_min").bind(date).all(),
+        env.DB.prepare("SELECT id,label,seats,zone,active FROM booking_tables ORDER BY zone,label").all()
       ]);
       const opened=!!hourRow?.enabled && !closure && !!cfg.enabled;
       const opens=parseTime(hourRow?.opens),closes=parseTime(hourRow?.closes);
@@ -68,6 +69,7 @@ export async function onRequestGet({env,request}) {
       }
       return json({date,open:opened,slots,capacity:cfg.capacity,holdback:cfg.holdback,
         duration_min:cfg.duration_min,buffer_min:cfg.buffer_min,
+        table_mode:!!cfg.table_mode,tables:tables.results||[],
         booked:guests.results||[]});
     }
     if(mode==="alerts") {
