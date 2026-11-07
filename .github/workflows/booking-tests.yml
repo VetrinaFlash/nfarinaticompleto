@@ -1,0 +1,59 @@
+name: Booking branch regression tests
+
+on:
+  push:
+    branches:
+      - feature/prenotazioni-tavoli
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Run project and booking regression suite
+        run: node --test tests/*.test.mjs
+      - name: Validate standalone PWA, push transport and Cron syntax
+        run: |
+          node --check admin-push.js
+          node --check push-sw.js
+          node --check functions/_lib/push.js
+          node --check scripts/push-cron-worker.mjs
+          node --check scripts/generate-vapid.mjs
+      - name: Validate Cloudflare Pages Functions bundle
+        run: npx --yes wrangler@4 pages functions build functions
+      - name: Bundle optional Cron Worker without deploying
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.push-cron.toml --outdir=/tmp/nfarinati-push-cron
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare Playwright and system Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          command -v google-chrome || command -v google-chrome-stable
+      - name: Run responsive customer and admin browser flows
+        run: |
+          python3 -m http.server 8874 --bind 127.0.0.1 > /tmp/booking-preview.log 2>&1 &
+          echo $! > /tmp/booking-preview.pid
+          sleep 2
+          node tests/browser/booking-browser.mjs
+      - name: Upload desktop/mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-ui-screenshots
+          path: artifacts/booking-browser
+          if-no-files-found: ignore
+          retention-days: 7

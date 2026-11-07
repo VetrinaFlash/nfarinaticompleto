@@ -1,0 +1,267 @@
+/* N'Farinati — Booking visual system.
+   Adapted to the existing public homepage (white / pale grey / red,
+   dark branded editorial section, Poppins + Montserrat, subtle watermark). */
+:root {
+  color-scheme: light;
+  --bg: #fff;
+  --bg-alt: #f4f6f8;
+  --bg-dark: #111;
+  --bg-dark2: #181818;
+  --text: #2a3324;
+  --muted: #6b7a5d;
+  --red: #d32f2f;
+  --red-h: #b71c1c;
+  --border: #e2e6dd;
+  --shadow: 0 8px 24px rgba(42,51,36,.08);
+  --success: #28a745;
+  --panel: #fff;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{background:#fff;scroll-behavior:smooth}
+body {
+  background:#fff;
+  color:var(--text);
+  font-family:'Poppins',sans-serif;
+  font-weight:400;
+  font-size:15px;
+  line-height:1.65;
+  overflow-x:hidden;
+}
+body::after {
+  content:"";position:fixed;inset:0;
+  background:url('/images/filigrana.jpeg') repeat;
+  background-size:250px;
+  opacity:.035;pointer-events:none;z-index:5;
+}
+a{color:inherit;text-decoration:none}
+button,input,select,textarea{font-family:'Poppins',sans-serif}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:3px solid rgba(211,47,47,.48);
+  outline-offset:2px;
+}
+header{
+  position:sticky;top:0;z-index:20;
+  max-width:none;
+  padding:10px max(20px,calc((100vw - 1100px)/2));
+  background:rgba(255,255,255,.97);
+  backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+  box-shadow:0 3px 12px rgba(42,51,36,.03);
+}
+.brand{gap:10px}
+.brand img {
+  width:44px;height:44px;border-radius:10px;
+  box-shadow:0 4px 10px rgba(0,0,0,.1);
+}
+.brand b {
+  color:var(--text);
+  font-family:Montserrat,sans-serif;
+  font-weight:800;font-size:.95rem;letter-spacing:0;
+  text-transform:uppercase;line-height:1.15;
+}
+.brand span{color:var(--muted);letter-spacing:0;text-transform:none;font-size:.72rem}
+.back {
+  color:var(--text);
+  font-family:Montserrat,sans-serif;
+  font-weight:700;font-size:.8rem;
+  border:1px solid var(--border);
+  border-radius:999px;background:var(--bg-alt);
+  transition:border-color .2s,color .2s;
+}
+.back:hover{color:var(--red);border-color:var(--red)}
+main{position:relative;z-index:6;max-width:1100px;margin:0 auto 65px;padding:0 20px}
+.hero{
+  max-width:none;
+  padding:50px 14px 32px;
+  margin:0 auto 16px;
+  text-align:center;
+  background:transparent;
+}
+.eyebrow{
+  color:var(--muted);font:800 .74rem Montserrat,sans-serif;
+  letter-spacing:2.5px;text-transform:uppercase;
+}
+.hero h1 {
+  color:var(--text);font:800 clamp(2.05rem,5vw,3.25rem)/1.11 Montserrat,sans-serif;
+  letter-spacing:-1px;text-transform:uppercase;margin:12px 0 17px;
+}
+.hero h1 em{color:var(--red)}
+.hero p{color:var(--muted);font-size:.94rem;font-weight:500;max-width:650px;margin:auto}
+.layout{grid-template-columns:minmax(0,1.55fr) minmax(290px,.85fr);gap:22px;align-items:start}
+.panel{
+  color:var(--text);
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:28px;
+  box-shadow:var(--shadow);
+}
+h2{
+  color:var(--text);
+  font:800 1.3rem Montserrat,sans-serif;
+  text-transform:uppercase;letter-spacing:-.3px;
+}
+h2::after{content:"";display:block;width:49px;height:3px;background:var(--red);border-radius:10px;margin-top:12px}
+.sub{color:var(--muted);font-size:.86rem;margin-top:14px}
+.field{min-width:0}
+label{color:var(--text);font-weight:600;font-size:.8rem}
+.field input,.field select,.field textarea {
+  background:var(--bg-alt);color:var(--text);
+  border:1px solid var(--border);border-radius:10px;
+  font-size:.91rem;
+  box-shadow:none;
+  transition:border-color .2s,background .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{
+  background:#fff;border-color:var(--red);
+  box-shadow:0 0 0 3px rgba(211,47,47,.1);
+  outline:none;
+}
+.field input::placeholder,.field textarea::placeholder{color:#879180;opacity:1}
+.field select{cursor:pointer}
+.field select option{background:#fff;color:#2a3324}
+.times{gap:9px}
+.time {
+  background:#fff;color:var(--text);
+  border:1px solid var(--border);
+  border-radius:11px;font:800 .83rem Montserrat,sans-serif;
+  min-height:47px;
+  transition:transform .16s,border-color .16s,box-shadow .16s,background .16s;
+}
+.time:hover{border-color:var(--red);box-shadow:0 3px 12px rgba(211,47,47,.08);transform:translateY(-1px)}
+.time.active {
+  color:#fff;background:var(--red);border-color:var(--red);
+  box-shadow:0 5px 13px rgba(211,47,47,.2);
+}
+.time:focus-visible{outline:3px solid #f2a0a0;outline-offset:2px}
+.tip{
+  background:#fff5f5;border:1px solid #f8d3d3;
+  color:#853232;border-radius:11px;
+  padding:13px 14px;font-size:.84rem;
+}
+.primary {
+  color:#fff;border:1px solid var(--red);border-radius:12px;
+  background:var(--red);
+  font:800 .85rem Montserrat,sans-serif;
+  text-transform:uppercase;letter-spacing:.3px;
+  box-shadow:0 6px 15px rgba(211,47,47,.25);
+  transition:background .2s,transform .2s,box-shadow .2s;
+}
+.primary:hover:not(:disabled) {
+  background:var(--red-h);filter:none;transform:translateY(-2px);
+  box-shadow:0 9px 19px rgba(211,47,47,.27);
+}
+.secondary{
+  color:var(--text);border:1px solid var(--border);background:#fff;
+  border-radius:10px;font:700 .78rem Montserrat,sans-serif;
+  transition:border-color .2s,color .2s,background .2s;
+}
+.secondary:hover{color:var(--red);background:var(--bg-alt);border-color:var(--red)}
+.status,.muted,.help{color:var(--muted)}
+.status.error,.error{color:#be2525!important}
+.status.success,.success{color:#2e7d32!important}
+.check{color:var(--muted);font-size:.78rem}
+.check span a{color:var(--red);font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.check input{accent-color:var(--red)}
+.aside {
+  background:#111;
+  color:#fff;
+  border:1px solid #202020;
+  padding:22px;
+  position:relative;
+  box-shadow:0 12px 34px rgba(0,0,0,.15);
+}
+.aside::before{
+  content:"";display:block;
+  height:166px;margin-bottom:23px;
+  border-radius:12px;
+  background:linear-gradient(0deg,rgba(0,0,0,.16),rgba(0,0,0,.03)),
+    url('/images/quinta.jpeg') center 52% / cover no-repeat;
+}
+.aside h3 {
+  color:#fff;
+  font:800 1.12rem Montserrat,sans-serif;
+  text-transform:uppercase;
+  line-height:1.4;
+  margin-bottom:16px;
+}
+.aside h3::after{content:"";display:block;width:43px;height:3px;background:var(--red);margin-top:9px;border-radius:2px}
+.aside p,.aside li{color:rgba(255,255,255,.73)}
+.aside li{line-height:1.55}
+.aside strong{color:#fff}
+.aside .address{border-color:rgba(255,255,255,.12);color:rgba(255,255,255,.85)}
+.aside .address a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+.aside .muted{color:rgba(255,255,255,.52)}
+.done-icon{background:#e7f5e9;color:#23803b}
+.detail div{
+  background:var(--bg-alt);
+  border:1px solid var(--border);border-radius:11px;
+}
+.detail small{color:var(--muted)}
+.detail strong{color:var(--text)}
+.pill{background:#e7f5e9;color:#23783a;font:800 .68rem Montserrat,sans-serif;letter-spacing:.6px}
+footer{
+  position:relative;z-index:6;
+  background:#111;color:rgba(255,255,255,.6);
+  padding:23px 12px;font-family:Poppins,sans-serif;
+  font-size:.73rem;letter-spacing:.1px;
+}
+@media(max-width:850px){
+  .layout{grid-template-columns:1fr}
+  .aside{order:2}
+  .hero{padding:34px 12px 25px}
+}
+@media(max-width:540px){
+  header{padding:9px 13px}
+  .brand img{width:43px;height:43px}
+  .brand b{font-size:.85rem}
+  .brand span{font-size:.68rem}
+  .back{font-size:.73rem;padding:8px 10px}
+  main{padding:0 13px;margin-bottom:35px}
+  .hero{padding:32px 4px 21px}
+  .hero h1{font-size:1.93rem;line-height:1.15}
+  .hero p{font-size:.83rem}
+  .panel{padding:20px 16px;border-radius:14px}
+  h2{font-size:1.08rem}
+  .fields{gap:10px}
+  .times{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .time{min-height:45px}
+  .detail{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .actions .secondary{width:100%}
+  .aside::before{height:170px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
+
+/* At 320px, keep the native date-picker fully readable (including its icon). */
+@media(max-width:370px){
+  .fields{grid-template-columns:minmax(0,1fr)}
+  .field{margin-bottom:13px}
+  .field input[type="date"]{min-width:0;width:100%}
+  .detail{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+}
+
+/* Intuitive two-turn booking: same white/red N'Farinati visual language. */
+.booking-step{display:flex;align-items:center;gap:10px;font:800 .81rem Montserrat,sans-serif;margin:15px 0 13px;color:#34402c}
+.step-number{display:inline-grid;place-items:center;background:#d32f2f;color:white;width:26px;height:26px;border-radius:50%;font-size:.78rem}
+.booking-shifts{display:flex;gap:8px;overflow-x:auto;padding:1px 0 11px;margin:0 0 6px;scrollbar-width:thin}
+.shift-btn{white-space:nowrap;border:1px solid #e2e6dd;border-radius:999px;background:#fff;color:#52614a;font:700 .78rem Montserrat,sans-serif;padding:11px 13px;min-height:44px;cursor:pointer}
+.shift-btn.active{color:white;background:#d32f2f;border-color:#d32f2f;box-shadow:0 4px 13px rgba(211,47,47,.13)}
+.times-caption{font:600 .78rem Poppins,sans-serif;color:#6b7a5d;margin:8px 0 11px}
+#times{display:flex;flex-direction:column;gap:13px;margin:0 0 10px}
+.slot-group{padding:14px;border:1px solid #e2e6dd;border-radius:14px;background:#f8f9f6}
+.slot-group h3{font:800 .92rem Montserrat,sans-serif;color:#2a3324;margin:0 0 2px}
+.slot-group small{display:block;font:.74rem Poppins,sans-serif;color:#6b7a5d;margin:0 0 13px}
+.slot-group-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.booking-selection{background:#f0f7ed;color:#28532b;border-left:4px solid #4c9e58;padding:12px 14px;font:700 .83rem Montserrat,sans-serif;border-radius:8px;margin-bottom:17px}
+@media(max-width:540px){.booking-shifts{margin-right:-5px}.shift-btn{padding:10px 12px;font-size:.73rem}.slot-group{padding:11px}.slot-group-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.booking-step{font-size:.76rem}}
+
+/* The booking turn selector must scroll INSIDE the card, never enlarge its grid track. */
+.layout,.layout > .panel,.booking-shifts,#times,.slot-group{min-width:0;max-width:100%}
+@media(max-width:850px){.layout{grid-template-columns:minmax(0,1fr)}}
+.booking-shifts{width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+.slot-group-grid{min-width:0}
+
+/* All three TheFork-style filters visible together, even on 320px displays. */
+.booking-shifts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;overflow:visible;width:100%;margin-right:0}
+.shift-btn{min-width:0;white-space:nowrap;padding:10px 5px;font-size:.72rem;text-align:center}
+@media(max-width:370px){.shift-btn{font-size:.65rem;padding:9px 2px}}

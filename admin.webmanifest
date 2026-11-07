@@ -1,0 +1,20 @@
+{
+  "id": "/admin.html",
+  "name": "N'Farinati · Gestionale",
+  "short_name": "N'Farinati Admin",
+  "description": "Ordini, prenotazioni tavoli e notifiche in tempo reale",
+  "lang": "it",
+  "start_url": "/admin.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#b8860b",
+  "icons": [
+    {
+      "src": "/images/logo.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}

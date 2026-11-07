@@ -1,0 +1,14 @@
+name = "nfarinati-push-retry"
+main = "scripts/push-cron-worker.mjs"
+compatibility_date = "2026-11-01"
+
+[triggers]
+crons = ["*/2 * * * *"]
+
+[vars]
+PUSH_ORIGINS = "https://nfarinatimodernpizza.it"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nfarinati-db"
+database_id = "adb8fc57-6c98-4e1b-862e-fe82269614b4"

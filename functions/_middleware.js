@@ -5,7 +5,7 @@ const securityHeaders = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "Strict-Transport-Security": "max-age=31536000",
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://applepay.cdn-apple.com https://pay.google.com https://cdn.jsdelivr.net https://sumup.com https://gateway.sumup.com https://*.sumup.com https://*.sumup.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://pay.google.com https://applepay.cdn-apple.com https://*.sumup.com https://*.sumup.io; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'; upgrade-insecure-requests",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://applepay.cdn-apple.com https://pay.google.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://sumup.com https://gateway.sumup.com https://*.sumup.com https://*.sumup.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://challenges.cloudflare.com https://pay.google.com https://applepay.cdn-apple.com https://*.sumup.com https://*.sumup.io; frame-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self' https:; frame-ancestors 'none'; upgrade-insecure-requests",
 };
 export async function onRequest(context) {
   const { request, env } = context;
@@ -108,6 +108,8 @@ export async function onRequest(context) {
         "/paga",
         "/api/orders",
         "/api/validate-promo",
+        "/api/bookings",
+        "/api/booking-manage",
         "/api/payment-notification",
       ].includes(path)
     ) {

@@ -1,0 +1,407 @@
+<!doctype html><html lang="it"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#131416">
+<title>Prenotazioni | N'Farinati Admin</title>
+<link rel="manifest" href="/admin.webmanifest">
+<meta name="theme-color" content="#b8860b">
+<link rel="apple-touch-icon" href="/images/logo.jpg">
+<link rel="stylesheet" href="/admin-push.css">
+<link rel="icon" href="/images/logo.jpg" type="image/jpeg">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#101014;--panel:#1b1b22;--field:#111116;--border:#39363c;--text:#faf6ef;--muted:#a7a3a5;--gold:#eebe79;--red:#f07878;--green:#86e2a1}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px/1.5 'DM Sans',sans-serif;color:var(--text)}header{background:#19171b;border-bottom:1px solid var(--border);padding:18px max(18px,calc((100vw - 1200px)/2));display:flex;align-items:center;justify-content:space-between;gap:15px}h1,h2,h3{font-family:Montserrat,sans-serif}h1{font-size:1.2rem;margin:0}h2{font-size:1.1rem;margin:0 0 16px}h3{font-size:.9rem}main{max-width:1200px;margin:30px auto;padding:0 20px 70px}.top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px}a{color:var(--gold)}.back{border:1px solid var(--border);padding:10px 14px;border-radius:12px;text-decoration:none;color:#ddd;font-weight:700}.back:hover{border-color:var(--gold)}.tabs{display:flex;gap:6px;overflow:auto;padding-bottom:10px;margin-bottom:15px}.tab{white-space:nowrap;border:1px solid var(--border);background:#202027;border-radius:10px;color:#ddd;padding:12px 17px;font-weight:700}.tab.active{background:var(--gold);color:#241c10;border-color:var(--gold)}.panel{background:var(--panel);border:1px solid var(--border);padding:24px;border-radius:18px;margin-bottom:18px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{padding:16px;border-radius:12px;background:#232229}.stat strong{font:800 1.75rem Montserrat,sans-serif;display:block;color:var(--gold)}.stat span{color:var(--muted);font-size:.82rem}.tools{display:flex;flex-wrap:wrap;gap:9px;align-items:end;margin:14px 0}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;min-width:0;flex:1}.field label,.label{font-size:.8rem;color:#d8d2cf;font-weight:700}input,select,textarea{width:100%;min-height:43px;background:var(--field);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit}input[type=checkbox]{width:19px;height:19px;min-height:0;accent-color:#eebe79}input:focus,select:focus,textarea:focus{outline:2px solid #9f774a}button{font:700 .82rem 'DM Sans',sans-serif;cursor:pointer}.btn{border:1px solid #71645c;color:var(--text);border-radius:10px;background:#28262c;min-height:43px;padding:10px 16px}.btn:hover{border-color:var(--gold)}.btn.gold{background:var(--gold);color:#231910;border-color:var(--gold);font-weight:900}.btn.danger{color:var(--red);border-color:#78464a}.btn.small{padding:7px 11px;min-height:32px;font-size:.73rem}.btn:disabled{opacity:.48}.muted{color:var(--muted);font-size:.85rem}.status{min-height:24px;color:var(--muted);font-size:.85rem}.error{color:var(--red)}.good{color:var(--green)}.hidden{display:none!important}.booking-list{display:grid;gap:10px}.booking{display:grid;grid-template-columns:68px minmax(0,1fr) auto;align-items:center;gap:13px;background:#222128;border:1px solid var(--border);border-radius:13px;padding:13px 15px}.booking time{font:900 1rem Montserrat,sans-serif;color:var(--gold)}.booking strong{display:block}.booking small{display:block;color:var(--muted)}.badge{display:inline-block;border-radius:20px;background:#47404a;color:#eee;font-size:.68rem;padding:5px 9px;font-weight:800;white-space:nowrap}.badge.confirmed{background:#244432;color:#b3efc1}.badge.cancelled,.badge.no_show{background:#4d2c33;color:#ffaaaa}.badge.arrived,.badge.seated{background:#273d51;color:#abddff}.badge.completed{background:#33333b;color:#ddd}.booking .actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}.four{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.day{display:grid;grid-template-columns:130px 110px 1fr 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}.day:last-child{border:0}.toggle{display:flex;align-items:center;gap:9px}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.row>*{flex:1}.note{padding:11px 13px;border-radius:10px;background:rgba(238,190,121,.09);border:1px solid rgba(238,190,121,.2);color:#e5d2b7;font-size:.85rem;margin:12px 0}.table{display:grid;grid-template-columns:1fr 70px 1fr auto;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}.table:last-child{border:0}.overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.76);display:grid;place-items:center;padding:16px}.dialog{width:min(100%,650px);max-height:90dvh;overflow:auto;border:1px solid #514751;background:#211d24;border-radius:18px;padding:23px}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-head h2{margin:0}.actions-stack{display:flex;flex-wrap:wrap;gap:8px}.alert{background:#272329;border-left:3px solid var(--gold);padding:9px 13px;border-radius:7px;margin:7px 0}.alert strong{font-size:.85rem}.alert small{color:var(--muted);display:block}.inline{display:inline-flex;align-items:center;gap:8px;font-size:.83rem}
+@media(max-width:900px){.four{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.booking{grid-template-columns:60px minmax(0,1fr)}.booking .actions{grid-column:1/-1;justify-content:flex-start}}@media(max-width:560px){header{padding:16px}.top h1{font-size:1rem}.panel{padding:16px}.grid{grid-template-columns:1fr 1fr}.day{grid-template-columns:1fr 1fr}.day>*:first-child{grid-column:1/-1}.four{grid-template-columns:1fr 1fr}.table{grid-template-columns:1fr 50px}.table>*:nth-child(3){grid-column:1/-1}.table>*:nth-child(4){grid-column:1/-1}}
+</style><link rel="stylesheet" href="/booking-admin-theme.css"></head><body>
+<header><h1><img class="admin-brand-mark" src="/images/logo.jpg" alt=""> N'Farinati · Prenotazioni</h1><a class="back" href="/admin.html">← Pannello admin</a></header>
+<main>
+<div id="loading" class="panel">Verifica accesso e caricamento prenotazioni…</div>
+<div id="app" class="hidden">
+<div class="top"><div><h1>Agenda prenotazioni</h1><p class="muted">Tutte le prenotazioni, i turni e i tavoli in una schermata semplice.</p></div><div class="row"><button class="btn" id="ack">🔔 Notifiche <span id="unread">0</span></button><button class="btn gold" id="new-booking">+ Prenotazione telefonica</button></div></div>
+<div class="tabs">
+<button class="tab active" data-tab="agenda">📆 Agenda</button>
+<button class="tab" data-tab="tables">🪑 Tavoli</button>
+<button class="tab" data-tab="settings">⚙️ Capienza</button>
+<button class="tab" data-tab="hours">🕒 Orari</button>
+<button class="tab" data-tab="closures">🚫 Chiusure</button>
+</div>
+<div id="agenda-tab">
+<div class="grid agenda-summary" aria-label="Riepilogo della giornata">
+  <div class="stat"><strong id="total">—</strong><span>Prenotazioni del giorno</span></div>
+  <div class="stat"><strong id="guests">—</strong><span>Coperti prenotati</span></div>
+  <div class="stat"><strong id="capacity">—</strong><span>Capienza del locale</span></div>
+</div>
+<section class="panel slot-console">
+  <div class="slot-console-title"><div><h2>Scegli giorno e turno</h2><p class="muted">Tocca una fascia per vedere gli ospiti e gestire quel turno.</p></div>
+    <div class="slot-day-nav"><button class="btn small" type="button" id="day-prev" aria-label="Giorno precedente">←</button>
+      <input type="date" id="slot-date" aria-label="Data fasce orarie">
+      <button class="btn small" type="button" id="day-next" aria-label="Giorno successivo">→</button></div>
+  </div>
+  <div class="slot-turns" role="group" aria-label="Turni prenotazioni">
+    <button type="button" class="slot-turn active" data-slot-turn="all" aria-pressed="true">Tutti</button>
+    <button type="button" class="slot-turn" data-slot-turn="first" aria-pressed="false">🌤 Primo turno</button>
+    <button type="button" class="slot-turn" data-slot-turn="second" aria-pressed="false">🌙 Secondo turno</button>
+  </div>
+  <div class="slot-key"><span><i class="slot-dot free"></i> Disponibile</span><span><i class="slot-dot nearly"></i> Quasi pieno</span><span><i class="slot-dot full"></i> Completo</span></div>
+  <p class="status" id="slots-status" role="status"></p>
+  <div id="service-slots" class="service-slots" aria-live="polite"></div>
+  <small class="muted">I coperti disponibili sono calcolati per l'intera permanenza di 90 minuti, riassetto incluso. Le prenotazioni telefoniche rispettano sempre la capienza totale.</small>
+</section>
+<section class="panel booking-panel">
+<div class="booking-toolbar"><div><h2 id="booking-view-title">Tutte le prenotazioni</h2><p class="muted" id="booking-view-description">Seleziona un orario per vedere solo i clienti di quella fascia.</p></div>
+<div class="booking-toolbar-actions">
+  <button type="button" class="btn small hidden" id="reset-slot">Mostra tutte</button>
+  <button type="button" class="btn gold" id="book-selected">+ Prenota</button>
+</div></div>
+<div class="tools booking-filters">
+<input type="date" id="filter-date" class="hidden" tabindex="-1" aria-hidden="true">
+<div class="field"><label for="filter-status">Filtra per stato</label><select id="filter-status"><option value="">Tutti</option><option value="confirmed">Confermate</option><option value="arrived">Arrivati</option><option value="seated">Al tavolo</option><option value="completed">Completate</option><option value="cancelled">Cancellate</option><option value="no_show">No-show</option></select></div><button class="btn" id="refresh">↻ Aggiorna</button></div><div id="agenda-status" class="status"></div><div id="booking-list" class="booking-list"></div><div class="tools"><button class="btn" id="prev">← Precedenti</button><span class="muted" id="page-info"></span><button class="btn" id="next">Successive →</button></div></section>
+</div>
+<div id="settings-tab" class="hidden"><section class="panel"><h2>Impostazioni prenotazioni</h2><p class="note">La quota online è pari alla capienza meno i posti tenuti per telefono. La durata totale comprende già il riassetto: 90 minuti totali significano 75 minuti al tavolo e 15 minuti per prepararlo alla prenotazione successiva.</p><form id="config-form"><div class="four">
+<div class="field"><label>Capienza contemporanea</label><input name="capacity" type="number" min="1" max="1000" required></div>
+<div class="field"><label>Posti riservati fuori online</label><input name="holdback" type="number" min="0" max="999" required></div>
+<div class="field"><label>Massimo persone online</label><input name="max_party" type="number" min="1" max="100" required></div>
+<div class="field"><label>Durata TOTALE della fascia (minuti)</label><select name="duration_min"><option value="60">60 minuti</option><option value="90">90 minuti</option><option value="120">120 minuti</option><option value="150">150 minuti</option><option value="180">180 minuti</option><option value="240">240 minuti</option></select></div>
+<div class="field"><label>Riassetto INCLUSO nella fascia (minuti)</label><select name="buffer_min"><option value="0">0 minuti</option><option value="15">15 minuti</option><option value="30">30 minuti</option><option value="45">45 minuti</option><option value="60">60 minuti</option></select></div>
+<div class="field"><label>Orari ogni</label><select name="interval_min"><option value="15">15 minuti</option><option value="30">30 minuti</option><option value="60">60 minuti</option></select></div>
+<div class="field"><label>Prenotabile fino a (giorni)</label><input type="number" name="advance_days" min="1" max="365"></div>
+<div class="field"><label>Preavviso minimo (min)</label><input type="number" name="notice_min" min="0" max="10080"></div>
+<div class="field"><label>Ritardo di cortesia (min)</label><input type="number" name="grace_min" min="0" max="120"></div>
+</div><p class="note" id="booking-window-preview" aria-live="polite">90 minuti totali = 75 minuti a tavola + 15 minuti per il riassetto. Esempio: dalle 20:00 il tavolo torna disponibile alle 21:30.</p><div class="tools"><label class="inline"><input type="checkbox" name="enabled"> Abilita prenotazioni online</label><label class="inline"><input type="checkbox" name="table_mode"> Assegna automaticamente singoli tavoli fisici</label></div><p class="note">Attenzione: attivare l'assegnazione fisica solo dopo aver inserito i tavoli e i posti reali. La modifica del massimale non annulla le prenotazioni già confermate.</p><button class="btn gold">Salva configurazione</button><p id="config-status" class="status"></p></form></section></div>
+<div id="hours-tab" class="hidden"><section class="panel"><h2>Disponibilità settimanale</h2><p class="muted">Il cliente può prenotare solo se l'intera fascia configurata (compreso il riassetto) termina entro la chiusura. Non aggiungiamo minuti extra alla durata totale.</p><form id="hours-form"><div id="hours-list"></div><button class="btn gold" style="margin-top:18px">Salva orari</button><p id="hours-status" class="status"></p></form></section></div>
+<div id="tables-tab" class="hidden"><section class="panel"><h2>Tavoli e zone</h2><p class="muted">L'assegnazione fisica è opzionale. Senza questa modalità, il sistema usa i posti contemporanei configurati.</p><div id="tables-list"></div><form id="table-form" class="tools"><input name="id" type="hidden"><input name="active" type="hidden" value="1"><div class="field"><label>Nome tavolo</label><input name="label" placeholder="Tavolo 1" maxlength="50" required></div><div class="field"><label>Posti</label><input name="seats" type="number" min="1" max="40" value="4" required></div><div class="field"><label>Zona</label><input name="zone" placeholder="Sala" value="Sala"></div><button class="btn gold" id="save-table">Aggiungi tavolo</button><button type="button" class="btn hidden" id="cancel-table-edit">Annulla modifica</button></form><p id="tables-status" class="status"></p></section></div>
+<div id="closures-tab" class="hidden"><section class="panel"><h2>Chiusure straordinarie</h2><p class="note">Bloccare una data impedisce nuove prenotazioni ma non cancella quelle già esistenti. Verifica l'agenda prima di chiudere.</p><form id="close-form" class="tools"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Motivo (facoltativo)</label><input name="reason" maxlength="140" placeholder="Festività / evento privato"></div><button class="btn gold">Blocca giorno</button></form><div id="closures-list"></div><p id="closures-status" class="status"></p></section></div>
+</div>
+</main>
+<div class="overlay hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="dialog"><div class="modal-head"><h2 id="modal-title">Prenotazione</h2><button class="btn small" id="close-modal">Chiudi ✕</button></div><form id="booking-edit"><input type="hidden" name="id"><div class="two"><div class="field"><label>Data</label><input name="date" type="date" required></div><div class="field"><label>Ora</label><input name="time" type="time" step="900" required></div></div><div class="two"><div class="field"><label>Nome cliente</label><input name="name" required maxlength="80"></div><div class="field"><label>Telefono</label><input name="phone" type="tel" required maxlength="22"></div></div><div class="two"><div class="field"><label>Numero persone</label><input name="guests" type="number" min="1" max="100" required></div><div class="field"><label>Email (facoltativa)</label><input name="email" type="email" maxlength="160"></div></div><div class="field"><label>Note</label><textarea name="notes" maxlength="500" rows="3"></textarea></div><div class="field"><label>Assegna un tavolo (facoltativo)</label><select name="table_id" id="booking-table"><option value="">Assegnazione automatica</option></select></div><p id="modal-status" class="status"></p><div class="actions-stack"><button class="btn gold" type="submit" id="save-booking">Salva prenotazione</button><button type="button" id="extend15" class="btn hidden">+15 min</button><button type="button" id="extend30" class="btn hidden">+30 min</button><button type="button" id="status-arrived" class="btn hidden">Arrivato</button><button type="button" id="status-seated" class="btn hidden">Al tavolo</button><button type="button" id="status-completed" class="btn hidden">Libera tavolo</button><button type="button" id="status-no_show" class="btn danger hidden">No-show</button><button type="button" id="status-cancelled" class="btn danger hidden">Cancella</button></div></form></div></div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id),f=$('booking-edit');
+const titles={confirmed:'Confermata',arrived:'Arrivato',seated:'Al tavolo',completed:'Completata',cancelled:'Cancellata',no_show:'No-show'};
+const days=['Domenica','Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato'];
+const romeDate=()=>Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));
+const today=()=>{const x=romeDate();return x.year+'-'+x.month+'-'+x.day};
+const hhmm=n=>String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0');
+const minuteNowRome=()=>{
+  const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',hour:'2-digit',minute:'2-digit',hourCycle:'h23'})
+    .formatToParts(new Date()).map(x=>[x.type,x.value]));
+  return Number(p.hour)*60+Number(p.minute);
+};
+const isAutoFreed=r=>['confirmed','arrived','seated'].includes(r.status) &&
+  (r.date<today() || (r.date===today() && minuteNowRome()>=r.end_min));
+let state={page:1,rows:[],settings:null,alertLast:0,initialized:false};
+let slotData=null,slotTurn='all',slotFetch=0,selectedMinute=null;
+async function api(url,opt){const response=await fetch(url,{cache:'no-store',...opt});const data=await response.json();if(!response.ok)throw Error(data.error||'Operazione non riuscita');return data}
+const send=(action,data={})=>api('/admin/bookings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});
+function message(id,s,bad=false){$(id).textContent=s;$(id).className='status'+(bad?' error':' good')}
+const node=(tag,value,className)=>{const el=document.createElement(tag);if(value!==undefined)el.textContent=value;if(className)el.className=className;return el};
+const badges=(r)=>node('span',titles[r.status]||r.status,'badge '+r.status);
+const bookingTabs=['agenda','settings','hours','tables','closures'];
+function tab(key){
+  if(!bookingTabs.includes(key))key='agenda';
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===key));
+  bookingTabs.forEach(k=>$(k+'-tab').classList.toggle('hidden',key!==k));
+  if(location.hash!=='#'+key)history.replaceState(null,'','#'+key);
+}
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+window.addEventListener('hashchange',()=>tab(location.hash.slice(1)));
+function setSlotTurn(turn){
+ slotTurn=turn;document.querySelectorAll('[data-slot-turn]').forEach(button=>{
+  const on=button.dataset.slotTurn===turn;button.classList.toggle('active',on);
+  button.setAttribute('aria-pressed',String(on));
+ });
+ renderSlotTiles();
+}
+document.querySelectorAll('[data-slot-turn]').forEach(button=>button.onclick=()=>setSlotTurn(button.dataset.slotTurn));
+function setSelectedTime(minute=null){
+ selectedMinute=minute;
+ state.page=1;
+ const time=minute===null?'':hhmm(minute);
+ $('booking-view-title').textContent=time?'Ospiti delle '+time:'Tutte le prenotazioni';
+ $('booking-view-description').textContent=time
+   ?'Ospiti in arrivo alle '+time+'. Puoi confermare l’arrivo o segnalare un no-show direttamente qui.'
+   :'Seleziona una fascia qui sopra per vedere i clienti previsti a quell’orario.';
+ $('reset-slot').classList.toggle('hidden',minute===null);
+ $('book-selected').textContent=time?'+ Prenota alle '+time:'+ Prenotazione telefonica';
+ renderSlotTiles();
+ loadAgenda();
+}
+$('reset-slot').onclick=()=>setSelectedTime(null);
+$('book-selected').onclick=()=>{
+ openEdit();
+ if(selectedMinute!==null)formSet(f,'time',hhmm(selectedMinute));
+};
+function renderSlotTiles(){
+ const place=$('service-slots');place.replaceChildren();
+ if(!slotData || !slotData.open){
+   place.append(node('p','Nessun turno prenotabile in questo giorno. Controlla orari e chiusure.','muted'));
+   return;
+ }
+ const groups=[{key:'first',title:'🌤 Primo turno',test:t=>t.start<1230},
+               {key:'second',title:'🌙 Secondo turno',test:t=>t.start>=1230}];
+ for(const group of groups){
+  if(slotTurn!=='all'&&slotTurn!==group.key)continue;
+  const rows=slotData.slots.filter(group.test);
+  if(!rows.length)continue;
+  const block=node('section',undefined,'service-group');
+  const title=node('h3',group.title);
+  const grid=node('div',undefined,'service-group-grid');
+  for(const slot of rows){
+    const btn=node('button',undefined,'service-tile');
+    btn.type='button';const ratio=slot.capacity?slot.onlineFree/slot.capacity:0;
+    btn.classList.add(slot.onlineFree===0?'full':ratio<=.25?'nearly':'free');
+    if(selectedMinute===slot.start)btn.classList.add('selected');
+    btn.setAttribute('aria-pressed',String(selectedMinute===slot.start));
+    const t=node('strong',slot.time);
+    const status=node('span',slot.onlineFree>0?slot.onlineFree+' posti online liberi':'Online completo','slot-remaining');
+    const info=node('small',slot.arrivals+' prenotazioni · '+slot.peopleArriving+' persone in arrivo');
+    btn.append(t,status,info);
+    btn.setAttribute('aria-label','Ore '+slot.time+', '+status.textContent+', apri prenotazione manuale');
+    btn.onclick=()=>{
+      setSelectedTime(selectedMinute===slot.start?null:slot.start);
+      $('booking-view-title').scrollIntoView({behavior:'smooth',block:'nearest'});
+    };
+    grid.append(btn);
+  }
+  block.append(title,grid);place.append(block);
+ }
+ if(!place.children.length)place.append(node('p','Nessuna fascia prevista per questo turno.','muted'));
+}
+async function loadSlots(){
+ const seq=++slotFetch,date=$('slot-date').value;
+ if(!date)return;
+ message('slots-status','Caricamento turni e posti disponibili…');
+ try{
+  const d=await api('/admin/bookings?mode=timeline&date='+encodeURIComponent(date));
+  if(seq!==slotFetch)return;
+  slotData=d;renderSlotTiles();
+  message('slots-status',d.open?''+d.slots.length+' fasce disponibili nel calendario del locale':'Locale chiuso / prenotazioni sospese');
+ }catch(e){if(seq===slotFetch)message('slots-status',e.message,true)}
+}
+function shiftDate(days){
+ const base=$('slot-date').value,origin=new Date(base+'T12:00:00Z');
+ origin.setUTCDate(origin.getUTCDate()+days);
+ const next=origin.toISOString().slice(0,10);
+ $('slot-date').value=next;$('filter-date').value=next;state.page=1;
+ selectedMinute=null;
+ $('booking-view-title').textContent='Tutte le prenotazioni';
+ $('booking-view-description').textContent='Scegli una fascia oraria per vedere i relativi ospiti.';
+ $('reset-slot').classList.add('hidden');
+ $('book-selected').textContent='+ Prenotazione telefonica';
+ loadAgenda();loadSlots();
+}
+$('day-prev').onclick=()=>shiftDate(-1);
+$('day-next').onclick=()=>shiftDate(1);
+$('slot-date').onchange=()=>{
+ $('filter-date').value=$('slot-date').value;state.page=1;
+ selectedMinute=null;
+ $('booking-view-title').textContent='Tutte le prenotazioni';
+ $('booking-view-description').textContent='Scegli una fascia oraria per vedere i relativi ospiti.';
+ $('reset-slot').classList.add('hidden');
+ $('book-selected').textContent='+ Prenotazione telefonica';
+ loadAgenda();loadSlots();
+};
+function tableRow(data) {
+ const line=node('div',undefined,'booking'),time=node('time',hhmm(data.start_min));
+ const who=node('div');who.append(node('strong',data.name+' · '+data.guests+' persone'),
+   node('small',data.phone+' · '+(data.source==='manual'?'Telefono/admin':'Online')+
+     (data.table_id?' · '+(state.settings?.tables?.find(t=>t.id===data.table_id)?.label||'Tavolo assegnato'):'')),
+   node('small','Posti riutilizzabili dalle '+hhmm(data.end_min)+' (riassetto incluso)'),
+   badges(data));
+ if(isAutoFreed(data))who.append(node('span','Disponibilità liberata automaticamente','badge completed'));
+ const actions=node('div',undefined,'actions');
+ const edit=node('button','Dettagli','btn small');edit.type='button';edit.onclick=()=>openEdit(data);
+ actions.append(edit);
+ if(['confirmed','arrived','seated'].includes(data.status)){
+   const buttons=data.status==='confirmed'?[['arrived','✓ Arrivato'],['no_show','No-show']]:
+     data.status==='arrived'?[['seated','Al tavolo'],['no_show','No-show']]:
+     [['completed','Libera tavolo']];
+   for(const [status,label] of buttons){
+     const btn=node('button',label,'btn small'+(status==='no_show'?' danger':''));
+     btn.type='button';
+     btn.onclick=async()=>{
+       if(status==='no_show' && !confirm('Segnare '+data.name+' come non presentato e liberare i posti?'))return;
+       if(status==='completed' && !confirm('Il tavolo è realmente libero?'))return;
+       btn.disabled=true;
+       try{
+         await send('status',{id:data.id,status});
+         await Promise.all([loadAgenda(),loadSlots(),alerts()]);
+       }catch(e){message('agenda-status',e.message,true)}
+       finally{btn.disabled=false}
+     };
+     actions.append(btn);
+   }
+ }
+ line.append(time,who,actions);return line
+}
+async function loadAgenda(){
+ try{
+  const u=new URLSearchParams({date:$('filter-date').value,page:String(state.page)});
+  if($('filter-status').value)u.set('status',$('filter-status').value);
+  if(selectedMinute!==null)u.set('time',hhmm(selectedMinute));
+  const d=await api('/admin/bookings?'+u);
+  state.rows=d.bookings;$('total').textContent=d.total;$('guests').textContent=d.booked;$('capacity').textContent=d.capacity;
+  $('booking-list').replaceChildren(...d.bookings.map(tableRow));if(!d.bookings.length)$('booking-list').append(node('p','Nessuna prenotazione per i filtri selezionati.','muted'));
+  const showing=Number(d.filtered_total ?? d.total);
+  $('page-info').textContent='Pagina '+state.page+' · '+showing+(selectedMinute!==null?' prenotazioni nella fascia':' prenotazioni');
+  $('prev').disabled=state.page===1;$('next').disabled=state.page*d.limit>=showing;
+  $('unread').textContent=d.unread;message('agenda-status','Ultimo aggiornamento: '+new Date().toLocaleTimeString('it-IT'));
+ }catch(e){message('agenda-status',e.message,true)}
+}
+function formSet(form,key,val){const input=form.elements.namedItem(key);if(input){if(input.type==='checkbox')input.checked=!!val;else input.value=val??''}}
+async function loadSettings(){
+ try{
+  const d=await api('/admin/bookings?mode=settings');state.settings=d;
+  const cfg=$('config-form');Object.entries(d.config).forEach(([k,v])=>formSet(cfg,k,v));
+  showBookingWindowPreview();
+  $('hours-list').replaceChildren();
+  d.hours.forEach(h=>{
+   const row=node('div',undefined,'day');row.dataset.day=h.weekday;
+   const title=node('strong',days[h.weekday]);const toggle=node('label',undefined,'inline'),check=document.createElement('input');check.type='checkbox';check.checked=!!h.enabled;check.dataset.key='enabled';toggle.append(check,node('span','Aperto'));
+   const o=document.createElement('input');o.type='time';o.value=h.opens;o.dataset.key='opens';
+   const c=document.createElement('input');c.type='time';c.value=h.closes;c.dataset.key='closes';row.append(title,toggle,o,c);$('hours-list').append(row)
+  });
+  renderTables(d.tables);renderClosures(d.closures);
+ }catch(e){message('config-status',e.message,true)}
+}
+function showBookingWindowPreview(){
+ const f=$('config-form'),duration=Number(f.elements.duration_min.value),
+   buffer=Number(f.elements.buffer_min.value),stay=duration-buffer;
+ const p=$('booking-window-preview');
+ if(stay<=0){
+   p.textContent='Il riassetto deve essere più corto della durata totale.';
+   p.classList.add('error');
+   return;
+ }
+ p.classList.remove('error');
+ const minutes=20*60+duration;
+ const next=String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+ p.textContent=duration+' minuti totali = '+stay+' minuti al tavolo + '+buffer+
+   ' minuti di riassetto già inclusi. Esempio: alle 20:00 il tavolo sarà disponibile alle '+next+'.';
+}
+$('config-form').elements.duration_min.addEventListener('change',showBookingWindowPreview);
+$('config-form').elements.buffer_min.addEventListener('change',showBookingWindowPreview);
+$('config-form').onsubmit=async e=>{
+ e.preventDefault();
+ const f=e.currentTarget,keys=['enabled','table_mode','capacity','holdback','max_party','duration_min','buffer_min','interval_min','advance_days','notice_min','grace_min'];
+ const config={};keys.forEach(k=>config[k]=['enabled','table_mode'].includes(k)?Number(f.elements[k].checked):Number(f.elements[k].value));
+ try{await send('settings',{config});message('config-status','Impostazioni salvate correttamente');await loadSettings()}
+ catch(e){message('config-status',e.message,true)}
+};
+$('hours-form').onsubmit=async e=>{
+ e.preventDefault();
+ const hours=[...$('hours-list').children].map(r=>({weekday:Number(r.dataset.day),enabled:Number(r.querySelector('[data-key=enabled]').checked),opens:r.querySelector('[data-key=opens]').value,closes:r.querySelector('[data-key=closes]').value}));
+ try{await send('hours',{hours});message('hours-status','Orari aggiornati')}
+ catch(e){message('hours-status',e.message,true)}
+};
+function renderTables(rows){
+ $('tables-list').replaceChildren();
+ rows.forEach(t=>{
+  const line=node('div',undefined,'table');
+  line.append(node('strong',t.label),node('span',t.seats+' posti'),node('span',t.zone+' · '+(t.active?'Attivo':'Disattivo'),'muted'));
+  const controls=node('div',undefined,'actions-stack');
+  const edit=node('button','Modifica','btn small');
+  edit.onclick=()=>{
+    const form=$('table-form');form.elements.id.value=t.id;form.elements.active.value=String(t.active);
+    form.elements.label.value=t.label;form.elements.seats.value=t.seats;form.elements.zone.value=t.zone;
+    $('save-table').textContent='Salva modifiche';$('cancel-table-edit').classList.remove('hidden');
+    form.scrollIntoView({behavior:'smooth',block:'center'});form.elements.label.focus();
+  };
+  const toggle=node('button',t.active?'Disattiva':'Attiva','btn small');
+  toggle.onclick=async()=>{try{await send('table',{...t,active:t.active?0:1});await loadSettings()}catch(e){message('tables-status',e.message,true)}};
+  controls.append(edit,toggle);line.append(controls);$('tables-list').append(line);
+ })
+}
+$('table-form').onsubmit=async e=>{
+ e.preventDefault();const form=e.currentTarget;
+ try{
+  await send('table',{id:form.elements.id.value||undefined,label:form.elements.label.value,
+   seats:Number(form.elements.seats.value),zone:form.elements.zone.value,active:Number(form.elements.active.value)});
+  resetTableForm();await loadSettings();message('tables-status','Tavolo salvato correttamente');
+ }catch(e){message('tables-status',e.message,true)}
+};
+function resetTableForm(){
+ const form=$('table-form');form.reset();form.elements.id.value='';form.elements.active.value='1';
+ $('save-table').textContent='Aggiungi tavolo';$('cancel-table-edit').classList.add('hidden');
+}
+$('cancel-table-edit').onclick=resetTableForm;
+function renderClosures(rows){
+ $('closures-list').replaceChildren();
+ rows.forEach(c=>{
+  const el=node('div',undefined,'table');el.style.gridTemplateColumns='1fr 2fr auto';
+  el.append(node('strong',c.date),node('span',c.reason||'Chiusura','muted'));
+  const b=node('button','Rimuovi','btn small');b.onclick=async()=>{
+   try{await send('open_day',{date:c.date});await loadSettings()}catch(e){message('closures-status',e.message,true)}
+  };el.append(b);$('closures-list').append(el)
+ })
+}
+$('close-form').onsubmit=async e=>{
+ e.preventDefault();const f=e.currentTarget;
+ try{await send('close_day',{date:f.elements.date.value,reason:f.elements.reason.value});f.reset();await loadSettings();message('closures-status','Giorno bloccato')}
+ catch(e){message('closures-status',e.message,true)}
+};
+function openEdit(data=null){
+ f.reset();$('modal-status').textContent='';
+ $('modal').classList.remove('hidden');
+ $('modal-title').textContent=data?'Prenotazione '+data.name:'Nuova prenotazione telefonica';
+ formSet(f,'id',data?.id||'');formSet(f,'date',data?.date||$('filter-date').value);
+ formSet(f,'time',data?hhmm(data.start_min):selectedMinute!==null?hhmm(selectedMinute):'20:00');formSet(f,'guests',data?.guests||2);
+ ['name','phone','email','notes'].forEach(k=>formSet(f,k,data?.[k]||''));
+ const picker=$('booking-table');picker.replaceChildren(new Option('Assegnazione automatica',''));
+ (state.settings?.tables||[]).filter(t=>t.active||t.id===data?.table_id).forEach(t=>picker.add(new Option(t.label+' · '+t.seats+' posti · '+t.zone,t.id)));
+ formSet(f,'table_id',data?.table_id||'');
+ const active=data&&['confirmed','arrived','seated'].includes(data.status);
+ ['arrived','seated','completed','no_show','cancelled'].forEach(k=>$('status-'+k).classList.toggle('hidden',!active));
+ ['extend15','extend30'].forEach(k=>$(k).classList.toggle('hidden',!active));
+ $('save-booking').disabled=!!data&&!active;
+}
+$('new-booking').onclick=()=>openEdit();$('close-modal').onclick=()=>$('modal').classList.add('hidden');
+$('modal').onclick=e=>{if(e.target===$('modal'))$('modal').classList.add('hidden')};
+f.onsubmit=async e=>{
+ e.preventDefault();$('save-booking').disabled=true;
+ const body=Object.fromEntries(new FormData(f).entries());body.guests=Number(body.guests);
+ const action=body.id?'edit':'create';
+ try{await send(action,body);$('modal').classList.add('hidden');await Promise.all([loadAgenda(),loadSlots()])}
+ catch(e){message('modal-status',e.message,true)}finally{$('save-booking').disabled=false}
+};
+[15,30].forEach(minutes=>{
+ $('extend'+minutes).onclick=async()=>{
+  const id=f.elements.id.value;if(!id)return;
+  try{await send('extend',{id,minutes});$('modal').classList.add('hidden');await Promise.all([loadAgenda(),loadSlots()])}
+  catch(e){message('modal-status',e.message,true)}
+ };
+});
+['arrived','seated','completed','no_show','cancelled'].forEach(status=>{
+ $('status-'+status).onclick=async()=>{
+  const id=f.elements.id.value;if(!id)return;
+  if(['cancelled','no_show','completed'].includes(status) && !confirm('Confermi il cambio di stato?'))return;
+  try{await send('status',{id,status});$('modal').classList.add('hidden');await Promise.all([loadAgenda(),loadSlots()])}
+  catch(e){message('modal-status',e.message,true)}
+ }
+});
+$('refresh').onclick=()=>loadAgenda();$('prev').onclick=()=>{state.page--;loadAgenda()};$('next').onclick=()=>{state.page++;loadAgenda()};
+$('filter-date').onchange=()=>{
+ state.page=1;$('slot-date').value=$('filter-date').value;
+ loadAgenda();loadSlots();
+};$('filter-status').onchange=()=>{state.page=1;loadAgenda()};
+async function alerts(){
+ try{const d=await api('/admin/bookings?mode=alerts');$('unread').textContent=d.unread;state.alertLast=Math.max(state.alertLast,d.last_id);
+ }catch{}
+}
+$('ack').onclick=async()=>{try{await send('ack');await alerts();await loadAgenda()}catch(e){message('agenda-status',e.message,true)}};
+async function init(){
+ try{
+  const check=await api('/admin/check');if(!check.authenticated)throw Error('Effettua prima l’accesso dal pannello amministrativo.');
+  $('loading').classList.add('hidden');$('app').classList.remove('hidden');
+  const requested=new URLSearchParams(location.search).get("date");
+  $('filter-date').value=/^\d{4}-\d{2}-\d{2}$/.test(requested||"")?requested:today();
+  $('slot-date').value=$('filter-date').value;
+  $('close-form').elements.date.min=today();
+  await Promise.all([loadSettings(),loadAgenda(),alerts(),loadSlots()]);
+  tab(location.hash.slice(1));
+  setInterval(()=>{if(document.visibilityState!=='hidden'){loadAgenda();alerts();loadSlots()}},20000);
+ }catch(e){$('loading').replaceChildren(node('p',e.message,'error'),node('a','Vai all’accesso amministratore'));$('loading').lastChild.href='/admin.html'}
+}
+init();
+</script><script src="/admin-push.js" defer></script></body></html>

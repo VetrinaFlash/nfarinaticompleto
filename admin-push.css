@@ -1,0 +1,10 @@
+#nf-push-widget{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:12px;border:1px solid rgba(184,134,11,.26);border-radius:12px;background:rgba(184,134,11,.07);max-width:100%;font:12px/1.5 'Poppins',sans-serif;color:#eee}
+#nf-push-widget strong{color:#d4a017;font-weight:800;font-size:12px;flex-basis:100%}
+#nf-push-widget button{font:700 11px 'Poppins',sans-serif;background:#b8860b;color:#121212;border:0;border-radius:9px;padding:9px 11px;min-height:37px;cursor:pointer}
+#nf-push-widget button:not(#nf-push-enable){border:1px solid rgba(255,255,255,.2);background:transparent;color:#e9dfce}
+#nf-push-widget button:disabled{opacity:.5;cursor:not-allowed}
+#nf-push-widget small{color:rgba(255,255,255,.7);flex-basis:100%;font-size:11px;overflow-wrap:anywhere}
+#nf-push-widget small[data-kind="error"]{color:#ffb1b1}
+#nf-push-widget small[data-kind="success"]{color:#9ee7ac}
+.sidebar-footer #nf-push-widget{margin:0 0 12px}
+@media(max-width:520px){#nf-push-widget{width:100%}#nf-push-widget button{flex:1}}

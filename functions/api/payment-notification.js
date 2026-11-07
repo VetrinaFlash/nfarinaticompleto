@@ -4,7 +4,9 @@ import {
   checkoutFailure,
 } from "../_lib/checkout.js";
 import { json } from "../_lib/auth.js";
-export async function onRequestPost({ env, request }) {
+import { runPendingPush } from "../_lib/push.js";
+export async function onRequestPost(context) {
+  const {env,request}=context;
   try {
     const body = await request.json();
     if (body.event_type !== "CHECKOUT_STATUS_CHANGED")
@@ -18,7 +20,10 @@ export async function onRequestPost({ env, request }) {
       .bind(body.id)
       .first();
     if (!intent) return new Response(null, { status: 204 });
-    await finalizeIntent(env, intent);
+    const origin=new URL(request.url).origin;
+    await finalizeIntent(env,intent,origin);
+    const task=runPendingPush(env,origin).catch(e=>console.error("Payment push dispatch",e?.name));
+    if(context.waitUntil)context.waitUntil(task);else await task;
     return new Response(null, { status: 204 });
   } catch (e) {
     return checkoutFailure(e);
