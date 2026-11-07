@@ -1,5 +1,6 @@
 import { json, randomToken, sha256 } from "./auth.js";
 import { menuPrices } from "./menu-prices.js";
+import { enqueuePushEvent } from "./push.js";
 export class CheckoutError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -333,9 +334,12 @@ export async function verifyPaid(env, intent) {
   )
     throw new CheckoutError("Transazione non confermata", 409);
 }
-export async function finalizeIntent(env, intent) {
+export async function finalizeIntent(env, intent, origin = null) {
   const order = JSON.parse(intent.payload_json);
-  if (intent.finalized_at) return order;
+  if (intent.finalized_at) {
+    if(origin)await queueOrderPushSafely(env,origin,order);
+    return order;
+  }
   if (order.paymentMethod === "carta") await verifyPaid(env, intent);
   const now = new Date().toISOString().slice(0, 19).replace("T", " "),
     guard =
@@ -387,9 +391,23 @@ export async function finalizeIntent(env, intent) {
       "UPDATE checkout_intents SET finalized_at=? WHERE id=? AND finalized_at IS NULL",
     ).bind(Date.now(), intent.id),
   ]);
+  if(origin)await queueOrderPushSafely(env,origin,order);
   return order;
 }
-export async function confirmOrder(env, body) {
+async function queueOrderPushSafely(env,origin,order){
+  // A push failure must NEVER cause checkout confirmation to fail.
+  try{
+    await enqueuePushEvent(env,origin,{
+      kind:"order",id:String(order.orderId),
+      title:"🍕 Nuovo ordine N'Farinati",
+      body:(order.orderType==="delivery"?"Consegna":"Asporto")+
+        " · "+String(order.pickupTime||"Orario da verificare")+
+        " · €"+Number(order.total||0).toFixed(2),
+      target:"/admin.html?section=orders"
+    });
+  }catch(e){console.error("Order push queue error",e?.name)}
+}
+export async function confirmOrder(env, body, origin = null) {
   await ensureCheckout(env);
   if (
     typeof body.orderId !== "string" ||
@@ -405,7 +423,7 @@ export async function confirmOrder(env, body) {
   if (!intent) throw new CheckoutError("Ordine non trovato", 404);
   if (intent.expires_at < Date.now() && !intent.finalized_at)
     throw new CheckoutError("Ordine scaduto", 410);
-  return finalizeIntent(env, intent);
+  return finalizeIntent(env, intent, origin);
 }
 export function checkoutFailure(error) {
   console.error("Checkout failure", error?.name);
