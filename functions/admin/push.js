@@ -17,7 +17,7 @@ export async function onRequestGet({env,request}) {
   }catch(e){
     const stage=typeof e?.stage==="string" ? e.stage : "diagnostics-read";
     const detail=String(e?.message||"Errore database non specificato")
-      .replace(/(?:https?:\\/\\/|Bearer\\s+)[^\\s]+/gi,"[dato riservato]").slice(0,180);
+      .replace(/https?:\/\/[^\s]+/gi,"[URL]").replace(/Bearer\s+[^\s]+/gi,"[riservato]").slice(0,180);
     console.error("Push diagnostics failed",stage,e?.name,detail);
     return json({
       error:"Database D1: problema durante '"+stage+"'. "+detail+
