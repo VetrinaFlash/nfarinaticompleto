@@ -178,7 +178,7 @@ export async function ensurePushSchema(env) {
   init.set(env.DB,promise);
   try {await promise} catch(e){init.delete(env.DB);throw e;}
 }
-export async function registerDevice(env,origin,raw,category={orders:true,bookings:true}){
+export async function registerDevice(env,origin,raw,category={orders:true,bookings:false}){
   const sub=validateSubscription(raw);await ensurePushSchema(env);
   const id=await sha256(sub.endpoint),now=Date.now();
   await env.DB.prepare(`INSERT INTO nf_webpush_subscriptions
@@ -188,7 +188,7 @@ export async function registerDevice(env,origin,raw,category={orders:true,bookin
     p256dh=excluded.p256dh,auth=excluded.auth,orders=excluded.orders,bookings=excluded.bookings,
     active=1,updated_ms=excluded.updated_ms,last_error=''`)
     .bind(id,origin,sub.endpoint,sub.p256dh,sub.auth,
-      Number(category.orders!==false),Number(category.bookings!==false),1,now,now).run();
+      1,0,1,now,now).run();
   return {ok:true,id};
 }
 export async function unregisterDevice(env,origin,endpoint){
@@ -199,10 +199,10 @@ export async function unregisterDevice(env,origin,endpoint){
   return {ok:true};
 }
 export async function enqueuePushEvent(env,origin,{kind,id,title,body,target},now=Date.now()){
-  if(!["order","booking","test"].includes(kind) || typeof id!=="string"||id.length>180)
+  if(kind!=="order" || typeof id!=="string"||id.length>180)
     throw Error("Evento push non valido");
   if(typeof origin!=="string" || !/^https:\/\/[^/]+$/.test(origin) ||
-     !/^\/(?:admin\.html|admin-prenotazioni\.html)(?:\?[^#]{0,180})?(?:#[A-Za-z0-9_-]{0,30})?$/.test(target))
+     !/^\/admin\.html(?:\?[^#]{0,180})?$/.test(target))
     throw Error("Destinazione push non valida");
   await ensurePushSchema(env);
   await env.DB.prepare(`INSERT OR IGNORE INTO nf_webpush_events
@@ -216,17 +216,17 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
   const claimed=await env.DB.prepare(`UPDATE nf_webpush_events
     SET claim_until_ms=?,attempts=attempts+1
     WHERE id IN (
-      SELECT id FROM nf_webpush_events WHERE origin=? AND delivered_ms IS NULL
+      SELECT id FROM nf_webpush_events WHERE origin=? AND kind='order' AND delivered_ms IS NULL
       AND next_attempt_ms<=? AND claim_until_ms<? AND created_ms>?
       ORDER BY created_ms ASC LIMIT ?
     )
     RETURNING id,kind,title,body,target,attempts`)
-    .bind(now+60000,origin,now,now,now-12*3600000,Math.max(1,Math.min(20,limit))).all();
+    .bind(now+60000,origin,now,now,now-15*60000,Math.max(1,Math.min(20,limit))).all();
   const events=claimed.results||[];let sent=0,failed=0;
   for(const event of events){
     const list=await env.DB.prepare(`SELECT id,endpoint,p256dh,auth FROM nf_webpush_subscriptions
-      WHERE origin=? AND active=1 AND (orders=1 AND ?='order' OR bookings=1 AND ?='booking' OR ?='test')`)
-      .bind(origin,event.kind,event.kind,event.kind).all();
+      WHERE origin=? AND active=1 AND orders=1`)
+      .bind(origin).all();
     let errors=0;
     for(const sub of (list.results||[])){
       const delivered=await env.DB.prepare("SELECT event_id FROM nf_webpush_deliveries WHERE event_id=? AND subscription_id=?")
@@ -269,11 +269,37 @@ export async function runPendingPush(env,origin,{now=Date.now(),fetcher=fetch,li
   }
   return {ok:true,processed:events.length,sent,failed};
 }
+/**
+ * Manual test is sent ONLY to the requesting admin's active, registered endpoint.
+ * It never enters the background queue and cannot be broadcast to other staff.
+ */
+export async function sendPushTestToDevice(env,origin,endpoint,{now=Date.now(),fetcher=fetch}={}){
+  if(!pushConfigured(env))throw Error("Chiavi VAPID non configurate");
+  if(!isAllowedPushEndpoint(endpoint))throw Error("Endpoint notifiche non valido");
+  await ensurePushSchema(env);
+  const id=await sha256(endpoint);
+  const sub=await env.DB.prepare(`SELECT endpoint,p256dh,auth FROM nf_webpush_subscriptions
+    WHERE id=? AND origin=? AND active=1 AND orders=1`).bind(id,origin).first();
+  if(!sub)throw Error("Questo dispositivo non è registrato per le notifiche degli ordini");
+  const {url,options}=await buildWebPushRequest({
+    kind:"test",manualTest:true,title:"🔔 Test notifiche N'Farinati",
+    body:"È una prova richiesta da questo dispositivo, non un nuovo ordine.",
+    url:"/admin.html?section=orders",eventId:"manual-test:"+crypto.randomUUID(),issuedAt:now
+  },sub,env,now);
+  const response=await fetcher(url,{...options,signal:AbortSignal.timeout(6500)});
+  if(response.status===404 || response.status===410){
+    await env.DB.prepare("UPDATE nf_webpush_subscriptions SET active=0,last_error=? WHERE id=?")
+      .bind("Iscrizione scaduta ("+response.status+")",id).run();
+    throw Error("Iscrizione push scaduta: riattiva le notifiche su questo dispositivo");
+  }
+  if(!response.ok)throw Error("Provider push non disponibile ("+response.status+")");
+  return {ok:true,accepted:1,failed:0};
+}
 export async function pushDiagnostics(env,origin){
   await ensurePushSchema(env);
   const [subs,events,errors]=await Promise.all([
     env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_subscriptions WHERE origin=? AND active=1").bind(origin).first(),
-    env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_events WHERE origin=? AND delivered_ms IS NULL AND created_ms>?").bind(origin,Date.now()-12*3600000).first(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM nf_webpush_events WHERE origin=? AND kind='order' AND delivered_ms IS NULL AND created_ms>?").bind(origin,Date.now()-15*60000).first(),
     env.DB.prepare("SELECT kind,created_ms,delivered_ms,attempts,last_error FROM nf_webpush_events WHERE origin=? ORDER BY created_ms DESC LIMIT 5").bind(origin).all()
   ]);
   const publicKeyState=vapidKeyState(env.VAPID_PUBLIC_KEY,65,true);
