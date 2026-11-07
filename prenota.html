@@ -26,8 +26,17 @@
 <div id="booking-form-view">
 <h2>Prenota un tavolo</h2><p class="sub">Seleziona giorno, orario e persone. Ti mostriamo solo la disponibilità reale.</p>
 <div class="fields"><div class="field"><label for="date">Quando vuoi venire?</label><input type="date" id="date" required></div><div class="field"><label for="guests">Quante persone?</label><select id="guests" required></select></div></div>
-<label id="times-label">Seleziona un orario disponibile</label><div class="times" id="times"></div><p class="status" id="availability-status" role="status" aria-live="polite"></p>
+<div class="booking-step"><span class="step-number">1</span><span>Scegli il giorno e gli ospiti</span></div>
+<div class="booking-step"><span class="step-number">2</span><span>Seleziona la fascia oraria</span></div>
+<div class="booking-shifts" id="shift-filters" aria-label="Fascia oraria">
+  <button type="button" class="shift-btn active" data-shift="all" aria-pressed="true">Tutti gli orari</button>
+  <button type="button" class="shift-btn" data-shift="first" aria-pressed="false">🌤️ Primo turno</button>
+  <button type="button" class="shift-btn" data-shift="second" aria-pressed="false">🌙 Secondo turno</button>
+</div>
+<div id="times-label" class="times-caption">Orari disponibili per il giorno selezionato</div>
+<div class="times" id="times"></div><p class="status" id="availability-status" role="status" aria-live="polite"></p>
 <form id="booking-form" class="hidden">
+<div class="booking-selection" id="booking-selection" aria-live="polite"></div>
 <div class="tip">✓ La fascia dura <strong id="duration">90 minuti</strong> complessivi: <strong id="dining-duration">75 minuti</strong> a tavola e <strong id="cleanup-duration">15 minuti</strong> di riassetto inclusi. Ti chiediamo di arrivare puntuale.</div>
 <div class="fields"><div class="field"><label for="name">Nome e cognome *</label><input id="name" minlength="2" maxlength="80" autocomplete="name" required placeholder="Mario Rossi"></div><div class="field"><label for="phone">Telefono *</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel" minlength="8" maxlength="22" pattern="[+0-9() -]{8,22}" required placeholder="+39 333 123 4567"></div></div>
 <div class="field"><label for="email">Email (facoltativa)</label><input id="email" type="email" maxlength="160" autocomplete="email" placeholder="nome@esempio.it"></div>
@@ -47,6 +56,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 let cfg=null,selected=null,details=null,personalToken=null,loadSerial=0,manageSlot=null,requestToken=null;
+let shift="all",loadedTimes=[];
 const nowRome=()=>{const p=Object.fromEntries(new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day};
 const pad=n=>String(n).padStart(2,'0');
 const dateText=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
@@ -60,18 +70,68 @@ function renderTimes(container,times,chosen,select){
   const el=$(container);el.replaceChildren();
   times.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='time'+(chosen===t?' active':'');b.textContent=t;b.setAttribute('aria-pressed',chosen===t?'true':'false');b.onclick=()=>select(t);el.appendChild(b)});
 }
+function renderPublicTimes(){
+ const target=$('times');target.replaceChildren();
+ const groups=[{id:'first',title:'🌤️ Primo turno',desc:'Dal primo orario fino alle 20:00',start:0,end:1230},
+ {id:'second',title:'🌙 Secondo turno',desc:'Dalle 20:30 in poi',start:1230,end:1440}];
+ for(const group of groups){
+   if(shift!=='all'&&shift!==group.id)continue;
+   const times=loadedTimes.filter(t=>minutes(t)>=group.start&&minutes(t)<group.end);
+   if(!times.length)continue;
+   const panel=document.createElement('section');panel.className='slot-group';
+   const heading=document.createElement('h3');heading.textContent=group.title;
+   const hint=document.createElement('small');hint.textContent=times.length+' orari prenotabili';
+   const options=document.createElement('div');options.className='slot-group-grid';
+   for(const t of times){
+     const b=document.createElement('button');b.type='button';b.className='time'+(selected===t?' active':'');
+     b.textContent=t;b.setAttribute('aria-label','Prenota alle '+t);
+     b.setAttribute('aria-pressed',String(selected===t));
+     b.onclick=()=>{
+       selected=t;requestToken=null;
+       renderPublicTimes();
+       $('booking-form').classList.remove('hidden');
+       const n=$('guests').value;
+       $('booking-selection').textContent='✓ '+dateText($('date').value)+' · ore '+t+' · '+n+' '+(n==='1'?'persona':'persone');
+       $('booking-form').scrollIntoView({behavior:'smooth',block:'nearest'});
+     };
+     options.appendChild(b);
+   }
+   panel.append(heading,hint,options);target.appendChild(panel);
+ }
+ if(!target.children.length){
+   const p=document.createElement('p');p.className='muted';p.textContent='Nessun orario in questa fascia. Prova l’altro turno o un’altra data.';
+   target.appendChild(p);
+ }
+}
+function chooseShift(v){
+ shift=v;document.querySelectorAll('.shift-btn').forEach(b=>{
+   const active=b.dataset.shift===v;b.classList.toggle('active',active);
+   b.setAttribute('aria-pressed',String(active));
+ });
+ if(selected&&v!=='all'){
+   const t=minutes(selected);
+   if((v==='first'&&t>=1230)||(v==='second'&&t<1230)){
+     selected=null;$('booking-form').classList.add('hidden');
+   }
+ }
+ renderPublicTimes();
+}
+document.querySelectorAll('.shift-btn').forEach(b=>b.addEventListener('click',()=>chooseShift(b.dataset.shift)));
 async function availability(){
- const serial=++loadSerial;selected=null;requestToken=null;$('booking-form').classList.add('hidden');status('availability-status','Controllo disponibilità…');
+ const serial=++loadSerial;selected=null;requestToken=null;loadedTimes=[];
+ $('booking-form').classList.add('hidden');status('availability-status','Verifica tavoli disponibili…');
  const date=$('date').value,guests=$('guests').value;
  if(!date||!guests)return;
- try{const result=await get('/api/bookings?date='+encodeURIComponent(date)+'&guests='+encodeURIComponent(guests));
+ try{
+   const result=await get('/api/bookings?date='+encodeURIComponent(date)+'&guests='+encodeURIComponent(guests));
    if(serial!==loadSerial)return;
-   renderTimes('times',result.times,null,t=>{selected=t;renderTimes('times',result.times,t,s=>{selected=s;availabilitySelected(result.times)});availabilitySelected(result.times)});
-   if(!result.times.length)status('availability-status','Nessun orario disponibile in questa data: prova un altro giorno.');
-   else status('availability-status',result.times.length+' orari disponibili · scegli quello che preferisci');
+   loadedTimes=result.times||[];
+   renderPublicTimes();
+   status('availability-status',loadedTimes.length
+     ?loadedTimes.length+' orari disponibili · scegli il turno e poi l’orario'
+     :'Nessun posto libero: prova una data diversa.');
  }catch(e){if(serial===loadSerial)status('availability-status',e.message,true)}
 }
-function availabilitySelected(times){renderTimes('times',times,selected,t=>{selected=t;availabilitySelected(times)});$('booking-form').classList.remove('hidden');$('submit-status').textContent='';}
 function romeAsUtc(date,time){
   const [y,m,d]=date.split('-').map(Number),h=Number(time.slice(0,2)),minute=Number(time.slice(3));
   const target=Date.UTC(y,m-1,d,h,minute),formatter=new Intl.DateTimeFormat('en-GB',{
