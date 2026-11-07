@@ -38,6 +38,38 @@ export async function onRequestGet({env,request}) {
       ]);
       return json({config,hours:hours.results||[],closures:closures.results||[],tables:tables.results||[]});
     }
+    if(mode==="timeline") {
+      const date=u.searchParams.get("date")||italyNow().date;
+      if(!validDate(date))return json({error:"Data non valida"},400);
+      const cfg=await bookingConfig(env);
+      const day=weekday(date);
+      const [hourRow,closure,inventories,guests]=await Promise.all([
+        env.DB.prepare("SELECT * FROM booking_hours WHERE weekday=?").bind(day).first(),
+        env.DB.prepare("SELECT date FROM booking_closed_dates WHERE date=?").bind(date).first(),
+        env.DB.prepare("SELECT minute,total,online FROM booking_slot_inventory WHERE date=? ORDER BY minute").bind(date).all(),
+        env.DB.prepare("SELECT id,name,guests,status,source,start_min,end_min,table_id FROM booking_reservations WHERE date=? AND status IN('confirmed','arrived','seated') ORDER BY start_min").bind(date).all()
+      ]);
+      const opened=!!hourRow?.enabled && !closure && !!cfg.enabled;
+      const opens=parseTime(hourRow?.opens),closes=parseTime(hourRow?.closes);
+      const slots=[];
+      if(opened && opens!==null && closes!==null) {
+        const inventory=inventories.results||[],all=guests.results||[];
+        const startAt=Math.ceil(opens/cfg.interval_min)*cfg.interval_min;
+        for(let start=startAt;start+cfg.duration_min<=closes;start+=cfg.interval_min){
+          const end=start+cfg.duration_min;
+          const overlap=inventory.filter(r=>r.minute>=start&&r.minute<end);
+          const used=Math.max(0,...overlap.map(x=>x.total));
+          const usedOnline=Math.max(0,...overlap.map(x=>x.online));
+          const onlineFree=Math.max(0,Math.min(cfg.capacity-used,cfg.capacity-cfg.holdback-usedOnline));
+          const arrivals=all.filter(r=>r.start_min===start);
+          slots.push({time:timeText(start),start,end,used,capacity:cfg.capacity,
+            onlineFree,arrivals:arrivals.length,peopleArriving:arrivals.reduce((n,r)=>n+r.guests,0)});
+        }
+      }
+      return json({date,open:opened,slots,capacity:cfg.capacity,holdback:cfg.holdback,
+        duration_min:cfg.duration_min,buffer_min:cfg.buffer_min,
+        booked:guests.results||[]});
+    }
     if(mode==="alerts") {
       const row=await env.DB.prepare("SELECT COUNT(*) AS total, MAX(id) AS last_id FROM booking_notifications WHERE seen=0").first();
       const recent=await env.DB.prepare("SELECT n.id,n.kind,n.created_at,r.name,r.guests,r.date,r.start_min FROM booking_notifications n JOIN booking_reservations r ON r.id=n.reservation_id WHERE n.seen=0 ORDER BY n.id DESC LIMIT 5").all();
