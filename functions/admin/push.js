@@ -5,12 +5,22 @@ import {
 } from "../_lib/push.js";
 
 export async function onRequestGet({env,request}) {
-  if(!await adminIdentity(env,request))return json({error:"Accesso amministratore richiesto"},401);
-  try{
+  try {
+    if(!await adminIdentity(env,request))return json({error:"Accesso amministratore richiesto"},401);
+    if(!env.DB)return json({
+      error:"Binding D1 'DB' assente nell'ambiente Cloudflare Preview. Configura D1 e ripubblica il branch.",
+      code:"PUSH_D1_MISSING"
+    },503);
     const origin=new URL(request.url).origin;
     const data=await pushDiagnostics(env,origin);
     return json({...data,permissionRequired:true});
-  }catch(e){console.error("Push diagnostics failed",e?.name);return json({error:"Impossibile leggere lo stato push"},503)}
+  }catch(e){
+    console.error("Push diagnostics failed",e?.name,String(e?.message||"").slice(0,240));
+    return json({
+      error:"Impossibile inizializzare le tabelle push nel database D1. Verifica il binding DB e i log Cloudflare Pages Functions: aggiungere le chiavi VAPID da solo non risolve questo errore.",
+      code:"PUSH_D1_INIT_FAILED"
+    },503);
+  }
 }
 export async function onRequestPost(context){
   const {env,request}=context;
